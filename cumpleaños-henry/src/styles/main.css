@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap');
+
+:root {
+  --oro: #d4af37;
+  --negro: #000;
+  --rojo: #e63946;
+  --azul: #1d3557;
+  --blanco: #f1faee;
+}
+
+/* Fondo tipo poste de barbería */
+body {
+  margin: 0;
+  height: 100vh;
+  background-color: var(--negro);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--rojo) 0 20px,
+    var(--blanco) 20px 40px,
+    var(--azul) 40px 60px,
+    var(--blanco) 60px 80px
+  );
+  background-size: 200% 200%;
+  animation: barberPole 6s linear infinite;
+  font-family: 'Roboto', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+@keyframes barberPole {
+  0% { background-position: 0 0; }
+  100% { background-position: 200% 200%; }
+}
+
+/* Tarjeta central */
+.tarjeta {
+  text-align: center;
+  padding: 3rem 4rem;
+  border: 2px solid var(--oro);
+  border-radius: 25px;
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 30px var(--oro);
+  position: relative;
+  z-index: 1;
+}
+
+/* Letras doradas animadas una por una */
+.titulo {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.8rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+  color: transparent;
+}
+
+.titulo span {
+  display: inline-block;
+  background: linear-gradient(90deg, #f9d976, #f39c12, #f9d976);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px var(--oro);
+  opacity: 0;
+  transform: scale(0.8);
+  animation: letraBrillo 0.5s forwards;
+}
+
+@keyframes letraBrillo {
+  0% { opacity: 0; transform: scale(0.8) rotate(-10deg); }
+  50% { opacity: 1; transform: scale(1.1) rotate(5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+.texto {
+  font-size: 1.3rem;
+  line-height: 1.6;
+  color: var(--oro);
+  margin-bottom: 2rem;
+}
+
+/* Iconos */
+.iconos {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Botón dorado */
+.boton {
+  background: var(--oro);
+  color: #000;
+  padding: 0.8rem 2rem;
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px var(--oro);
+  position: relative;
+  overflow: hidden;
+}
+
+.boton::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  opacity: 0.5;
+  animation: brilloBoton 3s infinite;
+}
+
+@keyframes brilloBoton {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+.boton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 40px #f9d976, 0 0 60px #f9d976;
+}
