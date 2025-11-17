@@ -1,0 +1,139 @@
+/* ----------------------------------------------
+   RESETEAR ESPACIADOS FEOS DE STREAMLIT
+------------------------------------------------*/
+.css-18e3th9, .block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 4rem !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
+}
+
+/* ----------------------------------------------
+   MENÚ SUPERIOR
+------------------------------------------------*/
+ul.nav-pills {
+    justify-content: center !important;
+    gap: 25px !important;
+}
+
+.nav-link {
+    font-size: 16px !important;
+    padding: 10px 22px !important;
+    border-radius: 10px !important;
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+    font-weight: 500 !important;
+}
+
+.nav-link.active {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+/* ----------------------------------------------
+   AVATAR PERFIL PORTAFOLIO
+------------------------------------------------*/
+.perfil-barbero {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.perfil-avatar {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 100%;
+    border: 4px solid #facc15; /* dorado barber */
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    margin-bottom: 10px;
+}
+
+.perfil-barbero h3 {
+    font-size: 22px;
+    margin-top: 10px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.perfil-barbero p {
+    color: #4b5563;
+    font-size: 15px;
+    margin-top: -5px;
+}
+
+/* ----------------------------------------------
+   GALERÍA 3x3 - PORTAFOLIO
+------------------------------------------------*/
+div[data-testid="column"] img {
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10) !important;
+}
+
+/* ----------------------------------------------
+   QR BOX
+------------------------------------------------*/
+.qr-box {
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.qr-box h4 {
+    margin-bottom: 8px;
+    color: #1f2937;
+    font-weight: 700;
+}
+
+.qr-box p {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+/* ----------------------------------------------
+   BOTÓN “DEJAR RESEÑA”
+------------------------------------------------*/
+.review-btn {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 12px 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
+.review-btn:hover {
+    background-color: #dc2626;
+}
+
+/* ----------------------------------------------
+   BOTONES STREAMLIT
+------------------------------------------------*/
+button[kind="secondary"] {
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    background: #facc15 !important;
+    color: #111 !important;
+}
+
+button[kind="secondary"]:hover {
+    background: #eab308 !important;
+}
+
+/* ----------------------------------------------
+   FORMULARIOS (inputs)
+------------------------------------------------*/
+input, textarea, select {
+    border-radius: 8px !important;
+}
+
