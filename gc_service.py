@@ -2,38 +2,53 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-import os, json, base64
+import os, json
 
 TZ = ZoneInfo("America/Guayaquil")
 
 class GoogleService:
-    def __init__(self, creds_file="credentials.json"):
+    def __init__(self, creds_file: str = "credentials.json"):
 
-        creds_b64 = os.getenv("GOOGLE_CREDENTIALS_JSON_B64")
+        creds_env = os.getenv("GOOGLE_CREDENTIALS_JSON")
 
-        if creds_b64:
-            # 🔥 Render: convertir Base64 → JSON
-            decoded = base64.b64decode(creds_b64).decode()
-            info = json.loads(decoded)
-            creds = service_account.Credentials.from_service_account_info(
-                info,
-                scopes=["https://www.googleapis.com/auth/calendar"]
-            )
+        if creds_env and creds_env.strip():
+            try:
+                # Render mantiene todo en una sola línea, no necesita replace
+                info = json.loads(creds_env)
+
+                creds = service_account.Credentials.from_service_account_info(
+                    info,
+                    scopes=["https://www.googleapis.com/auth/calendar"]
+                )
+                print("🔐 Usando credenciales desde GOOGLE_CREDENTIALS_JSON")
+
+            except Exception as e:
+                print("❌ Error usando GOOGLE_CREDENTIALS_JSON:", e)
+                raise e
+
         else:
-            # 🔥 Local: usar credentials.json
-            creds = service_account.Credentials.from_service_account_file(
-                creds_file,
-                scopes=["https://www.googleapis.com/auth/calendar"]
-            )
+            # MODO LOCAL
+            try:
+                creds = service_account.Credentials.from_service_account_file(
+                    creds_file,
+                    scopes=["https://www.googleapis.com/auth/calendar"]
+                )
+                print("📄 Usando credentials.json local")
+
+            except Exception as e:
+                raise Exception(
+                    f"❌ No se pudo cargar credentials.json.\nError: {e}"
+                )
 
         self.service = build("calendar", "v3", credentials=creds)
 
-    def crear_evento(self, calendar_id, resumen, descripcion, inicio, fin):
+    def crear_evento(self, calendar_id, resumen, descripcion, inicio, fin, timezone="America/Guayaquil"):
         evento = {
             "summary": resumen,
             "description": descripcion,
-            "start": {"dateTime": inicio.isoformat(), "timeZone": "America/Guayaquil"},
-            "end": {"dateTime": fin.isoformat(), "timeZone": "America/Guayaquil"},
-            "reminders": {"useDefault": True},
+            "start": {"dateTime": inicio.isoformat(), "timeZone": timezone},
+            "end": {"dateTime": fin.isoformat(), "timeZone": timezone},
         }
+
         self.service.events().insert(calendarId=calendar_id, body=evento).execute()
+        print("✅ Evento creado")
