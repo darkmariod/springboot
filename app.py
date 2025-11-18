@@ -2,29 +2,27 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 from datetime import datetime, timedelta
 from gc_service import GoogleService
-import base64
-import os
+import base64, os
 
 # --------------------------------------------
-# CALENDAR
+# CONFIGURACIÓN GOOGLE CALENDAR
 # --------------------------------------------
-CREDENTIALS = "credentials.json"
-CALENDAR_ID = "TU_CALENDAR_ID_AQUI"    # ejemplo: abc123@group.calendar.google.com
-
+CREDENTIALS = "credentials.json"   # Para local
+CALENDAR_ID = "b77c487c4370c521a73e8d4eff10e17167349e7afe7d49c8a5309c0ccd7863e2@group.calendar.google.com"
 gc = GoogleService(CREDENTIALS)
 
 # --------------------------------------------
-# BASE64 FUNCTION
+# BASE64 PARA IMÁGENES
 # --------------------------------------------
 def img_to_b64(path):
     with open(path, "rb") as img:
         return base64.b64encode(img.read()).decode()
 
 # --------------------------------------------
-# CSS
+# CARGAR CSS
 # --------------------------------------------
-def load_css(path):
-    with open(path) as f:
+def load_css(file_name: str):
+    with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 st.set_page_config(page_title="Seven Barber Club", page_icon="✂️", layout="centered")
@@ -38,7 +36,7 @@ st.title("Seven Barber Club")
 st.text("📍 Av. Unidad Nacional entre Juan Montalvo y Carabobo")
 
 # --------------------------------------------
-# MENU
+# MENÚ
 # --------------------------------------------
 selected = option_menu(
     menu_title=None,
@@ -48,22 +46,24 @@ selected = option_menu(
 )
 
 # ============================================================
-# RESERVAR
+# 🗓️ RESERVAS
 # ============================================================
 if selected == "Reservar":
 
     st.subheader("✂️ Reserva tu cita (pago obligatorio)")
 
     col1, col2 = st.columns(2)
+
     nombre = col1.text_input("Tu Nombre *")
-    whatsapp = col2.text_input("WhatsApp *")
-    email = col1.text_input("Email (opcional)")
+    whatsapp = col2.text_input("Tu WhatsApp * (Ej: 0987654321)")
+    email = col1.text_input("Tu Email (opcional)")
     fecha = col2.date_input("Fecha *")
 
-    # generar horas libres reales
-    horas_libres = gc.obtener_horas_disponibles(CALENDAR_ID, fecha)
-
-    hora = col2.selectbox("Hora disponible *", horas_libres)
+    hora = col2.selectbox("Hora *", [
+        "09:00","10:00","11:00","12:00",
+        "14:00","15:00","16:00","17:00",
+        "18:00","19:00","20:00"
+    ])
 
     servicios = {
         "Perfil de cejas": 1,
@@ -71,7 +71,7 @@ if selected == "Reservar":
         "Corte Clásico máquina": 5,
         "Corte Clásico tijera": 5,
         "Freestyle": 7,
-        "Semi Ondulado": 20,
+        "Semi Ondulado (ondas)": 20,
         "VIP": 8,
         "Aprendiz (Mario)": 2
     }
@@ -83,95 +83,115 @@ if selected == "Reservar":
 
     if "mostrar_qr" not in st.session_state:
         st.session_state["mostrar_qr"] = False
-    if "pagado" not in st.session_state:
-        st.session_state["pagado"] = False
+    if "pago_ok" not in st.session_state:
+        st.session_state["pago_ok"] = False
 
+    # Botón reservar
     if st.button("Reservar"):
-        if not nombre or not whatsapp or servicio == "" or barbero == "":
-            st.warning("⚠ Llena todos los campos obligatorios.")
+        if not nombre or not whatsapp or not fecha or servicio == "" or barbero == "":
+            st.warning("⚠ Debes llenar todos los campos obligatorios.")
         else:
             if barbero == "🧪 Aprendiz":
-                st.session_state["pagado"] = True
+                st.session_state["pago_ok"] = True
             else:
                 st.session_state["mostrar_qr"] = True
 
-    # QR
-    if st.session_state["mostrar_qr"] and not st.session_state["pagado"]:
+    # Mostrar QR
+    if st.session_state["mostrar_qr"] and not st.session_state["pago_ok"]:
+
         precio = servicios[servicio]
+
         st.markdown(f"""
-        ### 💳 Pagar ahora
+        ### 🏦 Confirmar pago
         <div class="qr-box">
-            <h4>Total a pagar: {precio}.00 USD</h4>
-            <p>Escanea el QR para confirmar la cita.</p>
+            <h4>💰 Total a pagar: {precio}.00 USD</h4>
+            <p>Escanea este QR para pagar y confirmar tu cita.<br>
+            Presenta tu comprobante al llegar.</p>
         </div>
         """, unsafe_allow_html=True)
+
         st.image("assets/qr_pago.png", width=260)
 
         if st.button("✔ Ya pagué"):
-            st.session_state["pagado"] = True
+            st.session_state["pago_ok"] = True
 
-    # CREAR EVENTO
-    if st.session_state["pagado"]:
-        inicio = datetime.combine(fecha, datetime.strptime(hora, "%H:%M").time())
-        fin = inicio + timedelta(hours=1)
+    # Crear evento final
+    if st.session_state["pago_ok"]:
+        try:
+            start = datetime.combine(fecha, datetime.strptime(hora, "%H:%M").time())
+            end = start + timedelta(hours=1)
 
-        descripcion = (
-            f"Cliente: {nombre}\n"
-            f"WhatsApp: {whatsapp}\n"
-            f"Email: {email}\n"
-            f"Servicio: {servicio}\n"
-            f"Barbero: {barbero}\n"
-            f"Nota: {nota}"
-        )
+            descripcion = (
+                f"Cliente: {nombre}\n"
+                f"WhatsApp: {whatsapp}\n"
+                f"Email: {email}\n"
+                f"Servicio: {servicio}\n"
+                f"Barbero: {barbero}\n"
+                f"Nota: {nota}\n"
+                f"Pago: {'✔ PAGADO' if barbero != '🧪 Aprendiz' else 'No aplica'}"
+            )
 
-        gc.crear_evento(
-            calendar_id=CALENDAR_ID,
-            resumen=f"Reserva {servicio} - {nombre}",
-            descripcion=descripcion,
-            inicio=inicio,
-            fin=fin
-        )
+            gc.crear_evento(
+                calendar_id=CALENDAR_ID,
+                resumen=f"Reserva {servicio} - {nombre}",
+                descripcion=descripcion,
+                inicio=start,
+                fin=end
+            )
 
-        st.success("✅ Reserva creada con éxito.")
-        st.balloons()
+            st.success("✅ Reserva creada con éxito. ¡Gracias!")
+            st.balloons()
 
-        st.session_state["mostrar_qr"] = False
-        st.session_state["pagado"] = False
+            st.session_state["mostrar_qr"] = False
+            st.session_state["pago_ok"] = False
 
+        except Exception as e:
+            st.error(f"❌ Error creando evento: {e}")
 
 # ============================================================
 # PORTAFOLIO
 # ============================================================
 if selected == "Portafolio":
-
     st.subheader("📸 Portafolio — Trabajos reales")
 
-    perfil_j = img_to_b64("assets/josue-perfil.jpg")
+    perfil_josue = img_to_b64("assets/josue-perfil.jpg")
+    perfil_ariel = img_to_b64("assets/ariel-perfil.jpg")
+
+    # Josue
     st.markdown(f"""
     <div class="perfil-barbero">
-        <img class="perfil-avatar" src="data:image/jpeg;base64,{perfil_j}">
+        <img class="perfil-avatar" src="data:image/jpeg;base64,{perfil_josue}">
         <h3>👑 Josué</h3>
+        <p>Estilo moderno y precisión profesional.</p>
     </div>
     """, unsafe_allow_html=True)
 
     cols = st.columns(3)
-    for c, i in zip(cols, ["assets/corte-1.jpg","assets/corte-2.jpg","assets/corte-3.jpg"]):
-        c.image(i, use_container_width=True)
+    for c, img in zip(cols, [
+        "assets/corte-1.jpg",
+        "assets/corte-2.jpg",
+        "assets/corte-3.jpg"
+    ]):
+        c.image(img, use_container_width=True)
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.write("---")
 
-    perfil_a = img_to_b64("assets/ariel-perfil.jpg")
+    # Ariel
     st.markdown(f"""
     <div class="perfil-barbero">
-        <img class="perfil-avatar" src="data:image/jpeg;base64,{perfil_a}">
+        <img class="perfil-avatar" src="data:image/jpeg;base64,{perfil_ariel}">
         <h3>💈 Ariel</h3>
+        <p>Detalles limpios y acabados profesionales.</p>
     </div>
     """, unsafe_allow_html=True)
 
     cols = st.columns(3)
-    for c, i in zip(cols, ["assets/corte-4.jpg","assets/corte-5.jpg","assets/corte-6.jpg"]):
-        c.image(i, use_container_width=True)
-
+    for c, img in zip(cols, [
+        "assets/corte-4.jpg",
+        "assets/corte-5.jpg",
+        "assets/corte-6.jpg"
+    ]):
+        c.image(img, use_container_width=True)
 
 # ============================================================
 # APRENDIZ
@@ -179,19 +199,21 @@ if selected == "Portafolio":
 if selected == "Aprendiz":
     st.subheader("💈 Aprendiz — Mario")
     st.markdown("""
-    Cortes de práctica profesional<br>
-    Precio: 2 USD<br>
-    Horario: 16:00 a 20:00
+    ✂️ <b>Corte profesional en práctica.</b><br><br>
+    💸 <b>Precio:</b> 2 USD — NO requiere pago adelantado.<br>
+    ⏰ <b>Horario:</b> 16:00 a 20:00.
     """, unsafe_allow_html=True)
-
 
 # ============================================================
 # DETALLES
 # ============================================================
 if selected == "Detalles":
+    st.subheader("📍 Ubicación y Horarios")
     st.image("assets/map.jpg", use_container_width=True)
-    st.markdown("📌 Av. Unidad Nacional — Riobamba")
-
+    st.markdown("""
+    📌 Dirección: Av. Unidad Nacional — Riobamba  
+    🕒 Horario: 09:00 - 21:00 todos los días
+    """)
 
 # ============================================================
 # RESEÑAS
@@ -200,3 +222,10 @@ if selected == "Reseñas":
     st.subheader("💬 Opiniones reales")
     st.image("assets/review-1.png")
     st.image("assets/review-2.png")
+
+    st.markdown("### ⭐ Déjanos tu reseña")
+    st.markdown("""
+    <a href="https://g.page/r/CWV9JygXfEa_EBM/review" target="_blank">
+        <button class="review-btn">📢 Dejar Reseña</button>
+    </a>
+    """, unsafe_allow_html=True)
