@@ -1,8 +1,0 @@
-streamlit
-streamlit-option-menu
-google-auth
-google-auth-oauthlib
-google-api-python-client
-pandas
-python-dateutil
-tzdata
