@@ -9,7 +9,7 @@ class Supplier extends Model
 {
     protected $fillable = ['name', 'email', 'phone', 'adress'];
 
-    public functio()
+    public function products()
     {
         return $this->hasMany(Prodcut::class);
     }
