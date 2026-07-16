@@ -46,19 +46,36 @@ class InvoiceEmitter {
         ];
         $this->emitir->execute($invoice, 'factura', $company, $payload);
         $company->increment('secuencial');
-
-        // Asiento contable automático (Fase 6)
         $this->asiento->handle($invoice);
 
-        // Inventario: cada item bien baja stock (Fase 4)
+        // Inventario: cada item baja stock (soporta combos)
         foreach ($items as $item) {
             $codigo = trim((string)($item['codigo_principal'] ?? ''));
             $cant = (float)($item['cantidad'] ?? 0);
             if ($codigo==='' || $cant<=0) continue;
             $product = Product::where('company_id',$company->id)->where('codigo',$codigo)->first();
-            if ($product && $product->tipo !== 'servicio')
+            if (! $product) continue;
+            if ($product->es_combo) {
+                foreach ($product->components as $c) {
+                    $parte = $c->component;
+                    if ($parte && $parte->tipo !== 'servicio')
+                        $this->inventario->handle($parte, 'egreso', $cant * (float)$c->cantidad,
+                            (float)$parte->costo_promedio, 'Venta combo '.$invoice->numero, $invoice->fecha_emision->toDateString());
+                }
+            } elseif ($product->tipo !== 'servicio') {
                 $this->inventario->handle($product,'egreso',$cant,(float)$product->costo_promedio,'Venta '.$invoice->numero,$invoice->fecha_emision->toDateString());
+            }
         }
+
+        // Series: marcarlas vendidas y ligarlas a esta factura
+        foreach ($items as $item) {
+            foreach (($item['series'] ?? []) as $serie) {
+                \App\Models\ProductSerie::where('company_id', $company->id)
+                    ->where('serie', trim($serie))->where('estado', 'disponible')
+                    ->update(['estado' => 'vendida', 'invoice_id' => $invoice->id]);
+            }
+        }
+
         return $invoice->load('sriDocument');
     }
 }

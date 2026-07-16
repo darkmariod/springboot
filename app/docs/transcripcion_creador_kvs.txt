@@ -1,0 +1,287 @@
+ - Sí, sí, sí, le veo muy claro, gracias. - Ya. Listo, entonces este es nuestro software. Nuestro software es un software web. En este momento está como una prueba en mi computadora. Ya, pero este software está en la nube, ¿no? Si es lo que usted necesita. O sea, de esta forma usted puede ingresar al software desde cualquier parte donde usted esté. Solamente con un link que yo le enviaré y con las credenciales que nos pongamos de acuerdo con lo que nos del usuario, ¿de acuerdo? - Bien.
+ - Entonces este sistema está disponible 24/7 todos los días del año. Nuestros servidores son de gustos. De hecho están en el extranjero, bien alojados. Entonces eso nos da la seguridad de que si es que hay algún corte de luz o algo aquí en el ecuador, el sistema no se caiga, ¿no?
+ - Sí.
+ - Bien.
+ - Entonces, vamos a ver dónde está. Nosotros tenemos todos los módulos desarrollados, sin embargo es un tema de saber si usted es obligado a llevar contabilidad o no, qué obligaciones tiene para poderle decir después cuáles son los módulos que usted necesitaría adquirir.
+ Pero llenarnos a lo básico, o digamos mejor dicho lo que sí necesita sí o sí, es esto, ¿no? Voy a entrar al módulo de inventario y aquí nosotros hacemos la creación de los artículos.
+ ¿Qué serían los artículos que usted tiene para la venta, no? En este caso tengo unos ejemplos de unos productos que son de una tienda. Estos productos los escogí porque manejan series como estuvimos hablando, ¿no?
+ - Sí.
+ - Entonces yo creo que pronto para los componentes de computadoras necesitamos saber qué series y cómo pedir las garantías, ¿ya?
+ Entonces yo creo que un producto, y yo le digo a este producto que este producto va a manejar series porque hay algunas formas de manejar el producto, ¿no?
+ Pues uno es como normalmente se lo puede manejar individual. Esto es para un manejo un poco especial de telas y las series que es para los artículos que son de lia blanca, de todo, muesticos y todo esa parte, ¿ya?
+ Entonces un producto puede tener varias listas de precios, ¿no? Puede tener un precio de varios precios los que usted necesita acá y cuáles puede poner. Este mismo producto tiene acá unos componentes de...
+ Puede hacer el máximo y el mínimo para que el propio sistema le diga a usted cuáles necesita de poner algo. También puede poner acá códigos alternos de producto si necesitaría, ¿no? Porque a veces...
+ Se puede hacer una verificación en otro sistema, pero el sistema tiene aquí códigos alternos para poder encontrar. O sea, los códigos son común en el producto de usted. Aquí se puede escribir uno, hacer una descripción de productos.
+ O sea, para que usted pueda mirar, responder. Ya, esta ubicación física es donde está el producto, pero más cerrados supermercados para saber en qué fila y en qué columna está.
+ Promoción de productos sin poder ocupar los canastas, ¿no? Porque usted puede comprar los componentes y tenerlos aquí. Y cuando usted tiene un computador, usted arma aquí un componento. Y dice, este computador va a tener estos componentes y el sistema...
+ Usted abre un computador y trabaja con el sistema y le va a descargar todos los componentes que tiene ese producto. Y acá imagines que son más o menos las imágenes del producto que uno tiene en un modelo de artículo o de la pieza o la parte que uno tiene en el sistema para poder mirar.
+ Este es como que le doy a verdad lo que es la creación del producto y puede ser un componente, como le digo, o un producto determinado si es que ya es un solvidor que viene ya ensalada. No sé si es que hasta aquí tiene la cosa...
+ No sé si me queda bien la parte del inventario, los datos, cómo se ingresa y lo que se va a ocupar.
+ ¿Cómo dices que el producto tiene series que puede ser acogida o no? Voy a hacer ahora de esta forma. Después le voy a dar una rantura de contras. ¿Es usted que quería ver cómo trae los datos de la SRI?
+ Sí. Y una pregunta de esos los datos de la SRI. Yo estaba viendo que como han cambiado hace años, que han ocupado yo esto, que están usando los archivos de XML y la firma digital del P12.
+ Y eso cuando, es aquí en este sistema, yo subo el XML y se me registran los datos del SRI, de la facturación de esa página, no me acuerdo bien el nombre, del facturador o algo así.
+ A ver, el facturador que tiene la SRI es un programa que tiene la SRI para nosotros facturar. Entonces nosotros acá configuramos lo indicado.
+ Igual a la facturación electrónica, ¿verdad?
+ En vez de ocupar el programa del SRI, nosotros aquí ingresamos la configuración de su firma electrónica.
+ Entonces aquí ponemos su firma, aquí ponemos la clave de la firma, ponemos un correo con el que queremos que se envíen las facturas.
+ Y lo de acá son los websites del SRI, donde nosotros apuntamos para conectarnos y poder autorizar los documentos.
+ Entonces usted en el sistema mismo tendría aquel inventario y tendría el facturador para que se vaya al SRI.
+ Entonces eso es automático, ¿no? Porque nosotros enviamos al SRI la factura y el SRI nos dice si está bien o no está bien o vuelve a procesar.
+ Y la respuesta nos envía a nuestro sistema y nuestro sistema intenta volver a procesar de nuevo o empezamos a dar el trámite porque no se autorizó, pero eso casi no pasa.
+ Sin embargo, ustedes tienen como que una conexión para que el SRI nos vaya validando eso y nos envía a nosotros una respuesta, ¿no?
+ Bien.
+ Bien. Ahora...
+ Hablamos de una compra, ¿ya? No, vamos a ver, perdón. Pero cuando yo quiero hacer un ingreso, yo tengo aquí cómo subir un archivo que yo pueda sacar de mi página del SRI con mi clave contra SRI, ¿ya?
+ Ese archivo es lo que yo voy a hacer por aquí. Este, por ejemplo, ¿ya?
+ El SRI me manda, yo puedo bajar esta información, ¿no? Que, por ejemplo, me dice aquí, yo comparé con este número de duga, el señor, ahora señorano, Gavilar Nezaro Paula, este número de factura con esa autorización en esta fecha, ¿ya?
+ Esto es de un mes, todas estas facturas. Entonces, para ahorrar mi trabajo de estar digitando todas estas facturas de compra en mi sistema, entonces yo puedo coger y subirles a SORWA, ¿ya?
+ Entonces, por aquí obtené todo nuevo, cojo el archivo tequista que estaba buscando, que es aquello que yo acabé de enseñar, está, vamos a ver si es que puedo subir este o no, ¿ya?
+ Y me dice, todas estas facturas yo voy a ocupar ahorita para subir. Me digo, bueno, no.
+ Y dice que se me han incertado nueve facturas, que me den esa autorización, ¿ya?
+ En esas facturas yo le digo que voy a obtener los archivos de XML desde el SRI.
+ Entonces ahí el sistema como ya cogió ese archivo del FOD y le dijo al SRI que me den trayendo los archivos de XML, ¿ya?
+ Aquí dice que no puedo traer porque ya pasó la fecha que solamente me dan un mes para poder traer los archivos.
+ Y ya está muy contigo. Pero aquí tengo algunos que sí traje, ¿no?
+ Pero anteriormente, por ejemplo, este de Abil, este de Mayen, como es una base de pruebas yo tenía aquí cargados.
+ Listo, entonces una vez que yo ya tengo los archivos aquí en el sistema, yo ya me ahorro un poco de paso del rato que voy a pasar la foto del comba.
+ Entonces ahorro las compras y digo, vamos a ver qué tengo, ¿no? Desde el XML del SRI.
+ Y acá me empieza a decir yo mismo, tienen todas estas facturas que están pendientes de pasar.
+ Entonces vemos esto, por ejemplo, yo. Es lo mismo que usted y prima este, ¿no? Quien sabe que usted ve ahí en el SRI, para poder bajar información para darles esa factura.
+ Pero ahorita nosotros ya tenemos este nuestro sistema. Entonces usted puede ir viendo acá, ah, sí, yo compré esta factura de nueve de oficina, ¿no?
+ O yo compré esta factura de algunas partes, unas piezas de computador.
+ Entonces le ponemos aquí a aceptar y ahorita me empezó a buscar en los websites, ¿no?
+ Ah, yo no tengo, perdón, en mi computadora no tengo yo al entrar en los websites, me olvidé de subir.
+ Nosotros tenemos acá una conexión con unos servidores que tenemos y con unos servidores públicos en los que nos va a traer la respuesta del SRI.
+ Nos va a decir, nos va a traer la persona que pertenece a este número de números para que usted no tenga que quedar en proveedores a la mano.
+ Yo solo le voy a poner proveedores para poder guardar porque no me olvidé de subir en la consulta.
+ Ya, ahí le va a traer a proveedores automáticos y nosotros acabamos viendo qué productos queremos ingresar.
+ Tenemos aquí un iPhone. Ya vamos a ingresar a un iPhone 17 Pro Max.
+ Ya. Entonces, digamos, ya, y como usted vio, aquí la primera parte se llenó todo, ¿no?
+ Sí, ya se trajo todo.
+ Estos datos que me muestra son traídos ya directos del SRI, ¿no es cierto?
+ Claro.
+ Así que este producto yo le tengo marcado para que sí maneje SRIs.
+ Y digo que voy a comprar cinco iPhones ya. Y pongo aquí. Y aquí me dice ingresar las series de producto.
+ Y le decimos, aquí usted puede ya digitar con un lector de barro, de códigos.
+ Puede seguir leyendo las series que le viene marcado en el mismo producto.
+ A veces viene una serie ya. A veces vienen dos series. En los teléfonos vienen dos emails, ¿no?
+ A veces ellos ocupan serie 1 y serie 2. Nosotros podríamos ocupar solamente una ya.
+ Entonces, ahí el sistema me dijo que me entra cinco series porque son cinco productos los que traje.
+ Y les voy a aceptar, guardar y digamos que esto es el crédito, ¿ya?
+ Y ya. Eso es todo lo que yo hago para guardar la factura.
+ Yo le puedo guardar la factura de igual manera con cualquier forma de pago. Ni te le puse el crédito, ¿no?
+ Puede ser efectivo, con cheque, con transferencia, como se haya hecho la negociación.
+ Y si no, le dejo igual el crédito como estaba ya.
+ Listo. Sí puede ver, ¿verdad?
+ Sí, sí lo estoy viendo en toda la pantalla.
+ Ahora le voy a irme acá, ¿no? Este es la parte de la...
+ Esta es la parte del sistema que yo puse en explicar y puedo abrir varias pestañas, ¿no?
+ Porque usted pueda seguir haciendo cosas cuando necesite, ¿no? Y no necesariamente cerrar este pasalot.
+ ¿Ya?
+ Ahora, aquí voy a ver el modelo de inventario.
+ Voy a empezar con...
+ Este aquí, miremos.
+ A ver, miremos así en general primero, ¿ya?
+ Aquí en el inventario yo puedo ver un resumen de existencias.
+ Le voy a sacar todo lo que está aquí, ¿ya?
+ Y dice que esto es lo que a mí me caería después de ver en alimentar el inventario, ¿ya?
+ Aquí me dice qué bodegas tengo en el caso de que tenga uno o dos bodegas, ¿no?
+ Me va diciendo todo lo que yo tengo acá, ¿ya?
+ Si, por ejemplo, yo quisiera mirar más detallado, ¿no?
+ Y diría cómo está esto del iPhone 16.
+ Puedo ver una tarjeta Carbis.
+ Voy acá.
+ Aquí está toda la historia que tiene el producto desde 2024, ¿no?
+ He hecho un ingreso, he vendido, he hecho otro ingreso, he vendido.
+ Aquí están los números de faturas con qué serie he vendido.
+ Para todo recontar.
+ Y cómo flotó el producto en el tiempo.
+ Entonces, hasta aquí ya puedes saber a quién le vendió.
+ Cuál fue su último precio de compra que está aquí, ¿no?
+ En 700, acá en 600, acá en 600.
+ Y usted va revisando cómo el producto ha flotado en el tiempo.
+ También podríamos revisar uno de esos de acá.
+ Vamos a ver este.
+ Este es el cojín de bromas.
+ Ya, aquí se dice que tengo en este teléfono 21.
+ Quiero decir que tengo uno detallado.
+ Entonces, de los 21 teléfonos que tengo,
+ yo puedo sacar cuál es la serie de los productos que tengo.
+ Entonces, estas son las que empezamos a decir, ¿no?
+ Sí.
+ Tengo 21 bromas, pero aquí se maneja como que fueran únicos por las series.
+ Porque usted tiene que saber a quién le compró.
+ Y también tiene que saber a quién le vendió.
+ De pronto tiene una garantía.
+ Entonces, si usted tiene mezclado, no va a saber algún rato.
+ Si tiene dos proveedores, ¿no?
+ Que son los que le venden el mismo producto.
+ De pronto usted no va a saber a cuál de los dos devolver para dificultar la garantía.
+ Y también a veces los clientes le vienen teniendo algo que no es.
+ De pronto una memoria.
+ Yo tengo la misma memoria de mañana,
+ pero usted si es que ya perdió el control de la serie y le va a tocar cogerlo.
+ Porque no va a saber si es que es su producto que mandó o es otro.
+ Sí.
+ Pero aquí tengo el cobre.
+ Yo esto mismo yo puedo vender, ¿no?
+ Bien.
+ Listo.
+ Entonces, aquí ya puedo pistoliarlo.
+ La tarjeta esta de general.
+ Bueno.
+ Hay algunas formas. Vamos a ver aquí.
+ Ahí fue un 17.
+ Bien.
+ Aquí está.
+ Y aquí.
+ Yo puedo decirle.
+ ¿Cuál sería lo que yo voy a vender?
+ Esto leo acá.
+ Le digo, ¿cuál sería esto?
+ Voy a vender esta ABC.
+ Ya.
+ No le puse el precio de venta.
+ Porque aquí creo que según la negociación ellos siguen escribiendo los precios.
+ Entonces, le voy a vender en mil dólares.
+ Le pongo cómo me va a pagar.
+ Entonces, le puedo poner que me paga con una transferencia.
+ Y que ese dinero entró a mi banco.
+ Entró a mi banco del Pichincha con un número tala.
+ Y le pongo guardar.
+ Y ya está.
+ Entonces, ahí está mi producto.
+ Yo también podría haber pistoleado aquí, ¿no?
+ Con la pistola.
+ Me iba a coger un CD.
+ Lo que vio.
+ Y me trajo el iPhone Pro Max.
+ Sí.
+ Entonces, esa es la forma.
+ Es igual cuando compro en un supermercado.
+ Y así, ¿no?
+ Usted solamente con el lector puede marcar la serie.
+ O el código del producto.
+ Y puede vender.
+ Entonces, eso hasta ahí.
+ Entonces, ¿necesita que le explique algo más de detalle?
+ No sé.
+ Ahí está bien.
+ Ya lo entendí.
+ Las compras.
+ Y cómo ha sido la manera que se lleva los datos.
+ Y se importa.
+ Eso era lo que más me confundía.
+ A veces vendiéndole otro sistema.
+ Es igual.
+ Pero se ha estado más fácil.
+ Porque no sale las pestañas ahí mismo.
+ Claro.
+ Sí.
+ Justo es de otra forma, ¿no?
+ Lo que tenemos nosotros es como que un sistema con ventanas que sean más adaptables, ¿no?
+ Como ve acá.
+ Sí.
+ Porque las otras ventanas se te abren.
+ Abres una ventana, se te cierra.
+ Otra ventana, se te cierra.
+ Ah, claro.
+ Sí.
+ Tiene que estar...
+ Ah, me cierra, ¿no?
+ Acá puede dejar que abriven pestañas para usted poder seguir abriendo.
+ Y dentro de aquí también, ¿no?
+ Pueden minimizarles.
+ Hacerla más grande.
+ Aquí están las faturas de venta.
+ Por ejemplo, abono.
+ ¿No?
+ Sí.
+ Y ya se ve que aquí va a estar la pestaña aquí mismo, abono y fatura.
+ Eso sí está bien.
+ Eso la firma solo con los datos que yo les diera a los míos.
+ Se configura una sola vez y ya queda ya para toda la vida ya.
+ Importar durante yo que haga el contrato del tiempo que dura, ¿no es cierto?
+ Claro.
+ Lo que se necesita es renovar la firma cada cierto tiempo, ¿no?
+ Usted sabe que la...
+ Su firma electrónica saca para un tiempo, ¿no?
+ Puede sacar como para lo mínimo porque son un mes y lo máximo es cinco años.
+ Entonces, eso es lo único que hay que estar precavido de renovar.
+ Pero, sin embargo, nosotros aquí en los planes tenemos los primeros planes que incluyen
+ la firma, ¿no?
+ Sí.
+ Esta es nuestra página, yo ya le voy a pasar este link ya.
+ Gracias.
+ Entonces, verán, estos de aquí son los planes que son para servicios, esto no es para usted
+ que usted maneje inventario y aquí empieza, ¿no?
+ Entonces, esto va a depender de lo que usted necesite.
+ Si usted es algo...
+ Aquí está, con esta pestaña usted se les enseña los precios anuales o puede pasar
+ acá y ver semestrales, ¿ya?
+ Veamos el contrato por un año, ¿ya?
+ Este es el plan más básico del inventario, cuesta $289 más y va al año, ¿ya?
+ Este tiene esto, lo que acabamos de ver, ¿no?
+ El inventario, cómo hacer ventas, cómo hacer compras, los reportes que están básicos,
+ reportes para los formularios de las declaraciones de impuesto y maturación electrónica, ¿ya?
+ Sí.
+ Y de aquí esto sigue subiendo dependiendo de lo que usted...
+ Si es que es obligado a llevar contabilidad acá, si es que hace nómina, si es que hace
+ conciliaciones bancarias, ¿no?
+ Entonces, si usted tiene, o sea, si usted no es obligado a llevar contabilidad ahí bajo
+ lo más básico, puede ser este plan, ¿no?
+ Pero este plan no incluye la firma electrónica.
+ Este plan ya casi incluye la firma electrónica por un año.
+ Y en este caso usted si ya se olvida de la firma electrónica, nosotros le ponemos la
+ firma por un año y cuando ya se le vaya a terminar, por el próximo año le volvemos
+ a renovar por el mismo valor.
+ Entonces, ahí sí usted ya tendría que hacerlo nada más.
+ Mientras el sistema está activo, usted tendría todo activo, ¿ya?
+ Y hay una pregunta, en estos dos plan, en el plan otro que está aquí de conciliación
+ bancaria, ¿y eso qué es esa cuestión?
+ Eso nunca he visto.
+ La conciliación bancaria y la conciliación de tarjetas, eso nunca he oído.
+ Ya, pero la conciliación bancaria es un método en el que va comparando usted el estado
+ de cuenta del banco, eso es lo que usted tiene en el sistema.
+ Vemos aquí si es que hay datos para poder olvidar.
+ Ya, por ejemplo, yo digo, del Banco del Pichincha mío, hasta esta fecha me han hecho todas
+ estas acciones, ¿ya?
+ Esto hace usted y hace su contador.
+ Quien era el de acá de la derecha, podemos tener un archivo o subir un archivo que les
+ manda el banco en donde dice en cambio, yo como banco tengo todo lo que está aquí.
+ Considere significa que yo vea diciendo, esto de aquí tengo o eso de la derecha tengo o
+ no tengo, ¿no?
+ En primera instancia el sistema le va a comparar todo lo que fue y le va a marcar la azul.
+ Y le va a decir todas estas coincidencias ya las tenemos a la derecha.
+ Entonces nosotros vamos a chequear, no es como chequear en el papel, ¿no?
+ Cuando usted le paga a una persona una transferencia, no, usted va a sacar el estado de cuenta
+ o imprime y va viendo, ah, sí, me he pagado esto y me he pagado esto.
+ Y vamos verificando que lo que tengamos en el sistema sea igual a lo que esté en el
+ estado de cuenta del banco.
+ Y de pronto alguna cosa que pasa, entonces ahí sí ya podemos llamar al banco y decirle
+ que por qué no tenemos un valor o por qué nos acordaron un valor que no tenemos nosotros
+ acá, ¿no?
+ Que nos han analizado.
+ Entonces en teoría eso es, no, poder comparar con el tacto de cuenta barcadío que tenemos
+ en el sistema, ¿no es así?
+ No sé si tiene alguna pregunta aquí de los planes, de lo que les explico.
+ No, no, este de acá, el primero era el PRO, es un poco más lo que necesito porque el
+ otro veo inventario corporativo, son cosas que no voy a ocupar mucho.
+ Ya, entonces usted vería este plan que está con morado.
+ Sí, ese ya le estaría viendo, ese del morado porque me da la firma y tengo lo que me explica
+ de llevar la conciliación, de que si tengo acá este me evita tanto problema de llevar
+ los datos manuales.
+ Ah sí, y este plan tiene las series.
+ Por eso también lo vi, ese tiene series y lots, lo que me estaba explicando.
+ Sí, de este plan le quedaría perfecto usted.
+ Y también con eso usted ya se debilita de la gestión de la firma electrónica y nosotros
+ le ayudamos con eso.
+ Eso ha sido la dos, para que por favor me mande ahí un poquito más detallada de la
+ página para ver ahí bien los planes y ahí se confirmará si le reconoce este plan de
+ Capa cuando ya le comenté el inicio de la SRA y mío para ya proceder a hacerle la compra.
+ Ya, no hay ningún problema entonces, yo ya le, en un momento ya le paso este link para
+ que usted le pueda revisar acá y hay que no pelear que cuando usted le dice nosotros
+ nos demoramos unas dos a tres horas de pronto y ya tendríamos instalado todo el sistema
+ para capacitarlo y que pueda empezar a funcionar ya.
+ Ya entonces, ya muchísimas gracias.
+ Muchísimas gracias.

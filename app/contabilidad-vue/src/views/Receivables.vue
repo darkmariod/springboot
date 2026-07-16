@@ -6,6 +6,7 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
+import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
@@ -31,6 +32,22 @@ async function cobrar() {
     { monto: cobro.value.monto, forma_pago: cobro.value.forma_pago })
   cobro.value = null; load()
 }
+const saldos = ref<any>({ saldos: [], total: 0 })
+const usarDialog = ref<any>(null)
+
+async function abrirUsarSaldo(r: any) {
+  const res = await api.get('/credits/available?company_id=' + company.activeId +
+    '&contact_id=' + r.contact_id)
+  saldos.value = res.data
+  usarDialog.value = { invoice: r, seleccion: null, monto: 0 }
+}
+async function aplicarSaldo() {
+  const s = usarDialog.value.seleccion
+  await api.post('/credits/apply/' + usarDialog.value.invoice.id, {
+    tipo: s.tipo, id: s.id, monto: usarDialog.value.monto,
+  })
+  usarDialog.value = null; load()
+}
 onMounted(load)
 </script>
 
@@ -51,7 +68,8 @@ onMounted(load)
       <Column header="Antigüedad"><template #body="{ data: r }"><Tag :value="r.dias + ' días'" :severity="r.dias<=30?'success':'warn'" /></template></Column>
       <Column header="Total"><template #body="{ data: r }">{{ money(r.total) }}</template></Column>
       <Column header="Saldo"><template #body="{ data: r }"><b>{{ money(r.saldo) }}</b></template></Column>
-      <Column header=""><template #body="{ data: r }"><Button label="Registrar cobro" size="small" @click="abrirCobro(r)" /></template></Column>
+      <Column header=""><template #body="{ data: r }">        <Button label="Registrar cobro" size="small" @click="abrirCobro(r)" />
+        <Button label="Usar saldo" size="small" outlined @click="abrirUsarSaldo(r)" /></template></Column>
     </DataTable>
 
     <Dialog :visible="!!cobro" modal header="Registrar cobro" style="width:400px" @update:visible="cobro=null">
@@ -64,6 +82,28 @@ onMounted(load)
       <template #footer>
         <Button label="Cancelar" text @click="cobro=null" />
         <Button label="Cobrar" @click="cobrar" />
+      </template>
+    </Dialog>
+
+    <Dialog :visible="!!usarDialog" modal header="Usar saldo a favor" style="width:460px" @update:visible="usarDialog=null">
+      <div v-if="usarDialog" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="background:#f8fafc; padding:10px; border-radius:8px;">
+          Factura <b>{{ usarDialog.invoice.numero }}</b> — saldo {{ money(usarDialog.invoice.saldo) }}
+        </div>
+        <p v-if="!saldos.saldos.length" style="color:#94a3b8;">Este cliente no tiene saldos a favor.</p>
+        <DataTable v-else :value="saldos.saldos" size="small" selectionMode="single"
+                   v-model:selection="usarDialog.seleccion" dataKey="id">
+          <Column field="tipo" header="Tipo" />
+          <Column field="fecha" header="Fecha" />
+          <Column field="detalle" header="Detalle" />
+          <Column header="Disponible"><template #body="{ data: s }">{{ money(s.disponible) }}</template></Column>
+        </DataTable>
+        <label v-if="usarDialog.seleccion" style="display:flex; flex-direction:column; gap:4px;">
+          Monto a cruzar<InputNumber v-model="usarDialog.monto" mode="currency" currency="USD" fluid /></label>
+      </div>
+      <template #footer>
+        <Button label="Cancelar" text @click="usarDialog=null" />
+        <Button label="Aplicar" :disabled="!usarDialog?.seleccion || !usarDialog?.monto" @click="aplicarSaldo" />
       </template>
     </Dialog>
   </div>

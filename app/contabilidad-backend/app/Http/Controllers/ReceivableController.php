@@ -17,6 +17,7 @@ class ReceivableController extends Controller {
             ->map(function($i) use ($hoy) {
                 $dias = $i->fecha_emision ? (int)$hoy->diffInDays(Carbon::parse($i->fecha_emision)->startOfDay()) : 0;
                 return ['id'=>$i->id,'numero'=>$i->numero,'cliente'=>$i->contact?->razon_social,
+                    'contact_id'=>$i->contact_id,
                     'fecha'=>optional($i->fecha_emision)->format('Y-m-d'),'total'=>(float)$i->importe_total,
                     'saldo'=>(float)$i->saldo_pendiente,'dias'=>$dias,
                     'tramo'=>match(true){ $dias<=30=>'0-30', $dias<=60=>'31-60', $dias<=90=>'61-90', default=>'90+' }];
@@ -35,7 +36,6 @@ class ReceivableController extends Controller {
         return DB::transaction(function() use ($invoice,$d) {
             InvoicePayment::create($d + ['invoice_id'=>$invoice->id,'fecha'=>now()->toDateString()]);
             $invoice->decrement('saldo_pendiente', $d['monto']);
-            // Asiento del cobro: entra el dinero, baja lo que te deben
             $destino = match($d['forma_pago']) {
                 'efectivo' => ['codigo'=>'1.1.01','nombre'=>'Caja','tipo'=>'activo'],
                 'cruce'    => ['codigo'=>'2.1.01','nombre'=>'Cuentas por pagar proveedores','tipo'=>'pasivo'],

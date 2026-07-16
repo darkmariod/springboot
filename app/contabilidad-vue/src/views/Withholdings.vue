@@ -47,8 +47,8 @@ onMounted(load)
       <Button label="Subir retención (XML)" icon="pi pi-upload" :loading="importing" @click="fileRef?.click()" />
     </div>
     <Message severity="info" :closable="false" style="margin-bottom:14px;">
-      Subí el XML de la retención que te emitió tu cliente. El sistema la empata automáticamente
-      con tu factura leyendo el número del documento sustento — sin digitar nada.
+      Suba el XML de la retención que le emitió su cliente. El sistema la empata automáticamente
+      con su factura leyendo el número del documento sustento — sin digitar nada.
     </Message>
     <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom:14px;">{{ msg.text }}</Message>
     <DataTable :value="rows" :loading="loading" size="small" stripedRows>

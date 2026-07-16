@@ -16,4 +16,14 @@ class InventoryController extends Controller {
         return ['producto'=>['codigo'=>$product->codigo,'descripcion'=>$product->descripcion,'stock'=>(float)$product->stock],
             'movimientos'=>InventoryMovement::where('product_id',$product->id)->orderBy('fecha')->orderBy('id')->get()];
     }
+    public function reorder(Request $r) {
+        return Product::where('company_id', $r->company_id)
+            ->where('tipo', '!=', 'servicio')
+            ->whereColumn('stock', '<', 'stock_minimo')
+            ->orderBy('descripcion')->get()
+            ->map(fn($p) => ['id'=>$p->id, 'codigo'=>$p->codigo, 'descripcion'=>$p->descripcion,
+                'stock'=>(float)$p->stock, 'minimo'=>(float)$p->stock_minimo,
+                'maximo'=>(float)$p->stock_maximo,
+                'sugerido'=>max(0, (float)$p->stock_maximo - (float)$p->stock)]);
+    }
 }

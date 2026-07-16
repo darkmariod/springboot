@@ -26,17 +26,53 @@ class PayableController extends Controller {
         return DB::transaction(function() use ($purchase,$d) {
             PurchasePayment::create($d + ['purchase_id'=>$purchase->id,'fecha'=>now()->toDateString()]);
             $purchase->decrement('saldo_pendiente', $d['monto']);
-            // Asiento del pago: baja lo que debés, sale el dinero
             $origen = match($d['forma_pago']) {
                 'efectivo' => ['codigo'=>'1.1.01','nombre'=>'Caja','tipo'=>'activo'],
                 'cruce'    => ['codigo'=>'1.1.03','nombre'=>'Cuentas por cobrar clientes','tipo'=>'activo'],
-                default    => ['codigo'=>'1.1.02','nombre'=>'Bancos','tipo'=>'activo'], // transferencia y cheque salen del banco
+                default    => ['codigo'=>'1.1.02','nombre'=>'Bancos','tipo'=>'activo'],
             };
             SimpleEntry::make($purchase->company_id, 'Pago compra '.$purchase->numero, [
                 ['codigo'=>'2.1.01','nombre'=>'Cuentas por pagar proveedores','tipo'=>'pasivo','debe'=>$d['monto'],'haber'=>0,'ref'=>$purchase->numero],
                 $origen + ['debe'=>0,'haber'=>$d['monto'],'ref'=>$purchase->numero],
             ], $purchase);
             return ['ok'=>true,'saldo'=>(float)$purchase->fresh()->saldo_pendiente];
+        });
+    }
+    public function payMultiple(\Illuminate\Http\Request $r) {
+        $d = $r->validate([
+            'company_id'=>['required','exists:companies,id'],
+            'forma_pago'=>['required','in:efectivo,transferencia,cheque,cruce'],
+            'bank_id'=>['nullable','exists:banks,id'],
+            'pagos'=>['required','array','min:1'],
+            'pagos.*.purchase_id'=>['required','exists:purchases,id'],
+            'pagos.*.monto'=>['required','numeric','min:0.01'],
+        ]);
+        return \Illuminate\Support\Facades\DB::transaction(function() use ($d) {
+            $total = 0;
+            foreach ($d['pagos'] as $p) {
+                $purchase = \App\Models\Purchase::findOrFail($p['purchase_id']);
+                if ($p['monto'] > (float)$purchase->saldo_pendiente + 0.001)
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'pagos'=>["El pago a {$purchase->numero} supera su saldo."]]);
+                \App\Models\PurchasePayment::create([
+                    'purchase_id'=>$purchase->id,'fecha'=>now()->toDateString(),
+                    'monto'=>$p['monto'],'forma_pago'=>$d['forma_pago'],'bank_id'=>$d['bank_id'] ?? null,
+                ]);
+                $purchase->decrement('saldo_pendiente', $p['monto']);
+                $total += $p['monto'];
+            }
+            $origen = match($d['forma_pago']) {
+                'efectivo' => ['codigo'=>'1.1.01','nombre'=>'Caja','tipo'=>'activo'],
+                'cruce'    => ['codigo'=>'1.1.03','nombre'=>'Cuentas por cobrar clientes','tipo'=>'activo'],
+                default    => ['codigo'=>'1.1.02','nombre'=>'Bancos','tipo'=>'activo'],
+            };
+            \App\Services\SimpleEntry::make($d['company_id'],
+                'Pago múltiple a proveedores ('.count($d['pagos']).' facturas)', [
+                ['codigo'=>'2.1.01','nombre'=>'Cuentas por pagar proveedores','tipo'=>'pasivo',
+                 'debe'=>round($total,2),'haber'=>0,'ref'=>'PAGO-MULT'],
+                $origen + ['debe'=>0,'haber'=>round($total,2),'ref'=>'PAGO-MULT'],
+            ]);
+            return ['ok'=>true,'pagado'=>round($total,2),'facturas'=>count($d['pagos'])];
         });
     }
 }

@@ -30,6 +30,10 @@ async function mayorizar() {
   await api.post('/journal/mayorizar', { company_id: company.activeId })
   load()
 }
+async function desmayorizar(e: any) {
+  await api.post('/journal/' + e.id + '/desmayorizar')
+  load()
+}
 onMounted(load)
 </script>
 
@@ -56,6 +60,9 @@ onMounted(load)
       <Column field="concepto" header="Concepto" />
       <Column header="Debe"><template #body="{ data }">{{ money(data.total_debe) }}</template></Column>
       <Column header="Estado"><template #body="{ data }"><Tag :value="data.estado" :severity="data.estado==='mayorizado'?'success':'warn'" /></template></Column>
+      <Column header=""><template #body="{ data }">
+        <Button v-if="data.estado==='mayorizado'" label="Desmayorizar" size="small" text @click="desmayorizar(data)" />
+      </template></Column>
     </DataTable>
   </div>
 </template>

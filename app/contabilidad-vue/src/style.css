@@ -21,3 +21,21 @@ body { background: #eef1f5; }
 .p-datatable-tbody > tr > td {
   padding: 6px 10px;
 }
+
+/* Impresión: solo el contenido del reporte, sin menú ni pestañas */
+@media print {
+  .sidebar, .topbar, .tabbar, .no-print { display: none !important; }
+  .layout, .main, .workspace, .tabcontent { height: auto !important; overflow: visible !important; }
+  .report-doc { box-shadow: none !important; max-width: 100% !important; padding: 0 !important; }
+  body { background: #fff !important; }
+}
+
+/* Fieldsets estilo KVS para los formularios de ingreso */
+.kvs-fieldset {
+  border: 1px solid #cfd6df; border-radius: 8px; padding: 12px 14px 14px; margin: 0;
+}
+.kvs-fieldset legend {
+  font-size: 12px; font-weight: 700; color: #2a6b6b; padding: 0 6px; text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.kvs-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }

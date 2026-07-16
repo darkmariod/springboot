@@ -38,7 +38,7 @@ onMounted(load)
     <h2 style="margin:0 0 16px;">Caja diaria</h2>
 
     <div v-if="!session" style="border:1px solid #e2e5ea; border-radius:10px; padding:20px; background:#fff;">
-      <p style="margin:0 0 12px; color:#64748b;">No hay caja abierta. Abrí la caja con el saldo inicial (fondo).</p>
+      <p style="margin:0 0 12px; color:#64748b;">No hay caja abierta. Abra la caja con el saldo inicial (fondo).</p>
       <div style="display:flex; gap:10px; align-items:flex-end;">
         <label style="display:flex; flex-direction:column; gap:4px;">Saldo inicial
           <InputNumber v-model="saldoInicial" mode="currency" currency="USD" /></label>

@@ -23,6 +23,9 @@ api.interceptors.response.use(
       localStorage.removeItem('token')
       if (location.pathname !== '/login') location.href = '/login'
     }
+    if (error.response?.status === 402) {
+      alert(error.response.data.message ?? 'Su plan no incluye este módulo.')
+    }
     return Promise.reject(error)
   },
 )

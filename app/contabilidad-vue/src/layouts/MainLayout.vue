@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed } from 'vue'
-import Menu from 'primevue/menu'
+import { onMounted, onUnmounted, ref } from 'vue'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
+import Tag from 'primevue/tag'
 import { useAuthStore } from '../stores/auth'
 import { useCompanyStore } from '../stores/company'
-import { useTabsStore, type WorkTab } from '../stores/tabs'
+import { useTabsStore } from '../stores/tabs'
+import { usePlanStore } from '../stores/plan'
+import Home from '../views/Home.vue'
+import SignatureConfig from '../views/SignatureConfig.vue'
 import Dashboard from '../views/Dashboard.vue'
 import Accounts from '../views/Accounts.vue'
 import Placeholder from '../views/Placeholder.vue'
@@ -18,113 +21,52 @@ import Purchases from '../views/Purchases.vue'
 import Inventory from '../views/Inventory.vue'
 import Accounting from '../views/Accounting.vue'
 import Cash from '../views/Cash.vue'
+import Receivables from '../views/Receivables.vue'
+import Payables from '../views/Payables.vue'
+import Withholdings from '../views/Withholdings.vue'
+import SriDocuments from '../views/SriDocuments.vue'
+import Quotes from '../views/Quotes.vue'
+import Reconciliation from '../views/Reconciliation.vue'
+import Ledger from '../views/Ledger.vue'
+import Companies from '../views/Companies.vue'
+import EmissionPoints from '../views/EmissionPoints.vue'
+import Suppliers from '../views/Suppliers.vue'
+import InventoryReports from '../views/InventoryReports.vue'
+import Series from '../views/Series.vue'
+import Users from '../views/Users.vue'
+import Audit from '../views/Audit.vue'
+import Advances from '../views/Advances.vue'
+import CreditNotes from '../views/CreditNotes.vue'
+import BatchImport from '../views/BatchImport.vue'
+import Employees from '../views/Employees.vue'
+import Payroll from '../views/Payroll.vue'
 
 const auth = useAuthStore()
 const company = useCompanyStore()
 const tabs = useTabsStore()
+const plan = usePlanStore()
 
-// Mapa nombre → componente para renderizar cada pestaña.
+const maximized = ref(false)
+
 const componentMap: Record<string, any> = {
-  Dashboard, Accounts, Placeholder, Contacts, Products, Banks, Pos, Invoices, Purchases,
-  Inventory, Accounting, Cash,
+  Home, SignatureConfig, Dashboard, Accounts, Placeholder, Contacts, Products, Banks, Pos,
+  Invoices, Purchases, Inventory, Accounting, Cash, Receivables, Payables, Withholdings,
+  SriDocuments, Quotes, Reconciliation, Ledger, Companies, EmissionPoints, Suppliers, InventoryReports,
+  Series, Users, Audit, Advances, CreditNotes, BatchImport, Employees, Payroll,
 }
-
-// Módulos del menú lateral, alineados con lo que pidió la contadora (videos KVS/MicroPlus).
-// Cada uno abre una pestaña de trabajo. Los que dicen 'Placeholder' se construyen por fase.
-const modules: { label: string; items: WorkTab[] }[] = [
-  {
-    label: 'Principal',
-    items: [{ key: 'dashboard', label: 'Dashboard', icon: 'pi pi-home', component: 'Dashboard' }],
-  },
-  {
-    label: 'Catálogo',
-    items: [
-      { key: 'contacts', label: 'Contactos', icon: 'pi pi-users', component: 'Contacts' },
-      { key: 'products', label: 'Productos y servicios', icon: 'pi pi-box', component: 'Products' },
-      { key: 'accounts', label: 'Plan de cuentas', icon: 'pi pi-sitemap', component: 'Accounts' },
-    ],
-  },
-  {
-    label: 'Ventas',
-    items: [
-      { key: 'pos', label: 'Punto de Venta', icon: 'pi pi-shopping-cart', component: 'Pos' },
-      { key: 'invoices', label: 'Facturas', icon: 'pi pi-file', component: 'Invoices' },
-      { key: 'quotes', label: 'Cotizaciones', icon: 'pi pi-file-edit', component: 'Placeholder' },
-      { key: 'receivables', label: 'Cuentas por cobrar', icon: 'pi pi-wallet', component: 'Placeholder' },
-      { key: 'sales-ret', label: 'Retenciones recibidas', icon: 'pi pi-percentage', component: 'Placeholder' },
-      { key: 'documents', label: 'Documentos SRI', icon: 'pi pi-check-square', component: 'Placeholder' },
-    ],
-  },
-  {
-    label: 'Compras',
-    items: [
-      { key: 'purchases', label: 'Compras', icon: 'pi pi-shopping-bag', component: 'Purchases' },
-      { key: 'suppliers', label: 'Proveedores', icon: 'pi pi-truck', component: 'Placeholder' },
-      { key: 'payables', label: 'Cuentas por pagar', icon: 'pi pi-credit-card', component: 'Placeholder' },
-    ],
-  },
-  {
-    label: 'Inventario',
-    items: [{ key: 'inventory', label: 'Inventario y kardex', icon: 'pi pi-database', component: 'Inventory' }],
-  },
-  {
-    label: 'Caja y Bancos',
-    items: [
-      { key: 'cash', label: 'Caja', icon: 'pi pi-money-bill', component: 'Cash' },
-      { key: 'banks', label: 'Bancos', icon: 'pi pi-building-columns', component: 'Banks' },
-      { key: 'reconciliation', label: 'Conciliación bancaria', icon: 'pi pi-sync', component: 'Placeholder' },
-    ],
-  },
-  {
-    label: 'Contabilidad',
-    items: [
-      { key: 'journal', label: 'Libro diario', icon: 'pi pi-book', component: 'Accounting' },
-      { key: 'ledger', label: 'Libro mayor', icon: 'pi pi-list', component: 'Placeholder' },
-      { key: 'statements', label: 'Estados financieros', icon: 'pi pi-chart-line', component: 'Placeholder' },
-    ],
-  },
-  {
-    label: 'Nómina',
-    items: [{ key: 'payroll', label: 'Roles de pago', icon: 'pi pi-id-card', component: 'Placeholder' }],
-  },
-  {
-    label: 'Reportes',
-    items: [{ key: 'reports', label: 'Reportes', icon: 'pi pi-chart-bar', component: 'Placeholder' }],
-  },
-  {
-    label: 'Administración',
-    items: [
-      { key: 'companies', label: 'Empresas', icon: 'pi pi-building', component: 'Placeholder' },
-      { key: 'emission', label: 'Puntos de emisión', icon: 'pi pi-hashtag', component: 'Placeholder' },
-      { key: 'users', label: 'Usuarios y roles', icon: 'pi pi-shield', component: 'Placeholder' },
-      { key: 'audit', label: 'Auditoría', icon: 'pi pi-history', component: 'Placeholder' },
-    ],
-  },
-]
-
-// Formato para el PanelMenu de PrimeVue.
-const menuModel = computed(() =>
-  modules.map((group) => ({
-    label: group.label,
-    items: group.items.map((it) => ({
-      label: it.label,
-      icon: it.icon,
-      command: () => tabs.open(it),
-    })),
-  })),
-)
 
 onMounted(async () => {
   await auth.fetchUser()
   await company.load()
-  tabs.open(modules[0].items[0]) // Abre el Dashboard por defecto.
+  if (company.activeId) await plan.load(company.activeId)
+  // Al entrar se abre el lanzador de módulos (tiles, como KVS)
+  tabs.open({ key: 'home', label: 'Módulos', icon: 'pi pi-th-large', component: 'Home' })
   window.addEventListener('keydown', onKeydown)
 })
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
-// Atajos de teclado tipo escritorio. Ctrl+W solo se captura confiable como PWA instalada;
-// en pestaña normal del navegador, Ctrl+W lo reserva el navegador. Ctrl+P y Ctrl+F sí funcionan.
 function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && maximized.value) { maximized.value = false; return }
   if (!(e.ctrlKey || e.metaKey)) return
   const k = e.key.toLowerCase()
   if (k === 'w' && tabs.activeKey) { e.preventDefault(); tabs.close(tabs.activeKey) }
@@ -134,20 +76,15 @@ function onKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="brand">
-        <i class="pi pi-calculator" />
-        <span>Sistema Contable</span>
-      </div>
-      <Menu :model="menuModel" class="sidebar-menu" />
-    </aside>
-
-    <!-- Columna principal -->
+  <div class="layout" :class="{ maximized }">
     <div class="main">
-      <!-- Topbar -->
       <header class="topbar">
+        <div class="brand">
+          <i class="pi pi-calculator" />
+          <span>Sistema Contable</span>
+        </div>
+        <Button label="Módulos" icon="pi pi-th-large" text size="small"
+                @click="tabs.open({ key: 'home', label: 'Módulos', icon: 'pi pi-th-large', component: 'Home' })" />
         <Select
           v-model="company.activeId"
           :options="company.companies"
@@ -158,12 +95,12 @@ function onKeydown(e: KeyboardEvent) {
           @change="(e) => company.setActive(e.value)"
         />
         <div class="topbar-right">
+          <Tag v-if="plan.vencido" value="Plan vencido" severity="danger" />
           <span class="user">{{ auth.user?.name ?? 'Usuario' }}</span>
           <Button icon="pi pi-sign-out" text rounded severity="secondary" @click="auth.logout()" />
         </div>
       </header>
 
-      <!-- Pestañas de trabajo (multi-ventana) -->
       <div class="workspace">
         <div v-if="tabs.tabs.length" class="tabbar">
           <button
@@ -177,6 +114,13 @@ function onKeydown(e: KeyboardEvent) {
             <span>{{ t.label }}</span>
             <i class="pi pi-times close" @click.stop="tabs.close(t.key)" />
           </button>
+          <button
+            class="maximizar"
+            :title="maximized ? 'Restaurar (Esc)' : 'Maximizar la ventana de trabajo'"
+            @click="maximized = !maximized"
+          >
+            <i :class="maximized ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" />
+          </button>
         </div>
 
         <div class="tabcontent">
@@ -186,7 +130,7 @@ function onKeydown(e: KeyboardEvent) {
             </KeepAlive>
           </template>
           <div v-if="!tabs.tabs.length" class="empty">
-            Abrí un módulo del menú para empezar.
+            Abrá un módulo del menú para empezar.
           </div>
         </div>
       </div>
@@ -196,36 +140,57 @@ function onKeydown(e: KeyboardEvent) {
 
 <style scoped>
 .layout { display: flex; height: 100vh; overflow: hidden; }
-.sidebar {
-  width: 232px; background: #1f2733; color: #cdd5e0; display: flex; flex-direction: column;
-  flex-shrink: 0;
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+/* Sin menú lateral (como KVS): la marca vive en la barra superior */
+.topbar {
+  height: 52px; background: #1f2733; border-bottom: 1px solid #2c3644; display: flex;
+  align-items: center; gap: 14px; padding: 0 16px; flex-shrink: 0;
 }
 .brand {
-  display: flex; align-items: center; gap: 10px; padding: 16px 18px; font-weight: 600;
-  color: #fff; border-bottom: 1px solid #2c3644;
+  display: flex; align-items: center; gap: 10px; font-weight: 600; color: #fff;
+  white-space: nowrap;
 }
-.sidebar-menu { flex: 1; overflow-y: auto; border: 0; background: transparent; width: 100%; }
-.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.topbar {
-  height: 52px; background: #fff; border-bottom: 1px solid #e2e5ea; display: flex;
-  align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0;
-}
-.company-select { min-width: 260px; }
-.topbar-right { display: flex; align-items: center; gap: 8px; }
+.company-select { min-width: 260px; margin-left: 8px; }
+.topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.topbar .user { color: #cdd5e0; }
 .user { font-size: 13px; color: #475569; }
 .workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #eef1f5; }
 .tabbar {
-  display: flex; gap: 2px; background: #dde2ea; padding: 6px 8px 0; overflow-x: auto;
-  flex-shrink: 0;
+  display: flex; gap: 2px; background: #dde2ea; padding: 6px 8px 0;
+  flex-shrink: 0; align-items: stretch; min-height: 40px;
+  /* overflow-y hidden: sin esto, la barra de scroll corta las pestañas por la mitad */
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: thin; scrollbar-color: #b8c0cc transparent;
 }
+.tabbar::-webkit-scrollbar { height: 4px; }
+.tabbar::-webkit-scrollbar-thumb { background: #b8c0cc; border-radius: 2px; }
+.tabbar::-webkit-scrollbar-track { background: transparent; }
 .worktab {
   display: flex; align-items: center; gap: 7px; padding: 7px 12px; border: 0;
   background: #eef1f5; color: #64748b; border-radius: 6px 6px 0 0; cursor: pointer;
   font-size: 13px; white-space: nowrap;
+  /* Se achican en vez de desbordarse, pero nunca por debajo de lo legible:
+     al llegar al mínimo, la barra scrollea. */
+  flex: 0 1 auto; min-width: 128px; max-width: 190px;
 }
+.worktab > span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.worktab > i { flex-shrink: 0; }
 .worktab.active { background: #fff; color: #1f2733; font-weight: 600; }
 .worktab .close { font-size: 11px; opacity: 0.6; }
 .worktab .close:hover { opacity: 1; color: #d93025; }
 .tabcontent { flex: 1; overflow: auto; background: #fff; }
 .empty { padding: 60px; text-align: center; color: #94a3b8; }
+
+/* Sticky: con muchas pestañas abiertas sigue visible a la derecha */
+.maximizar {
+  margin-left: auto; align-self: center; border: 0; flex-shrink: 0;
+  color: #64748b; cursor: pointer; padding: 6px 8px; border-radius: 6px;
+  position: sticky; right: 0; background: #dde2ea;
+  box-shadow: -8px 0 8px -3px rgba(0, 0, 0, 0.1);
+}
+.maximizar:hover { background: #eef1f5; color: #1f2733; }
+
+.layout.maximized .topbar { display: none; }
 </style>

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -11,7 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'company_id'])]
+#[Fillable(['name', 'email', 'password', 'company_id', 'rol', 'emission_point_id', 'activo'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -23,11 +22,13 @@ class User extends Authenticatable
         return $this->belongsTo(Company::class);
     }
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    public function emissionPoint() { return $this->belongsTo(EmissionPoint::class); }
+    public function esAdmin(): bool { return $this->rol === 'admin'; }
+    public function puedeUsarPunto(?int $emissionPointId): bool {
+        if (! $this->emission_point_id) return true;
+        return $this->emission_point_id === $emissionPointId;
+    }
+
     protected function casts(): array
     {
         return [

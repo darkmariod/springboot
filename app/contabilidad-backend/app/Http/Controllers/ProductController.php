@@ -15,9 +15,22 @@ class ProductController extends Controller {
             'imagen'=>['nullable','string','max:1000'],
             'precio'=>['required','numeric','min:0'],
             'tarifa_iva'=>['sometimes','numeric','min:0'],
+            'maneja_series'=>['boolean'],
+            'es_combo'=>['boolean'],
+            'stock_minimo'=>['nullable','numeric','min:0'],
+            'stock_maximo'=>['nullable','numeric','min:0'],
+            'ubicacion'=>['nullable','string'],
         ]);
         return response()->json(Product::create($data), 201);
     }
     public function update(Request $r, Product $product) { $product->update($r->all()); return $product; }
     public function destroy(Product $product) { $product->delete(); return response()->noContent(); }
+    public function lookup(Request $r) {
+        $codigo = trim($r->codigo ?? '');
+        $p = Product::where('company_id', $r->company_id)
+            ->where(fn($q) => $q->where('codigo', $codigo)
+                ->orWhereHas('codes', fn($c) => $c->where('codigo', $codigo)))
+            ->first();
+        return $p ?: response()->json(['message' => 'Producto no encontrado'], 404);
+    }
 }

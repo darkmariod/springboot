@@ -23,4 +23,28 @@ class BankMovementController extends Controller {
         $movement->update(['conciliado'=>!$movement->conciliado]);
         return $movement;
     }
+    public function autoMatch(Request $r) {
+        $r->validate([
+            'company_id'=>['required','exists:companies,id'],
+            'bank_id'=>['required','exists:banks,id'],
+            'csv'=>['required','file','max:4096'],
+        ]);
+        $filas = array_map('str_getcsv', file($r->file('csv')->getRealPath(), FILE_SKIP_EMPTY_LINES));
+        $conciliados = 0; $sinMatch = [];
+        foreach ($filas as $i => $f) {
+            if ($i === 0 && ! is_numeric(trim($f[2] ?? ''))) continue;
+            $fecha = trim($f[0] ?? ''); $monto = abs((float) ($f[2] ?? 0));
+            if (! $monto) continue;
+            $mov = BankMovement::where('company_id', $r->company_id)
+                ->where('bank_id', $r->bank_id)->where('conciliado', false)
+                ->whereBetween('monto', [$monto - 0.01, $monto + 0.01])
+                ->whereBetween('fecha', [
+                    \Carbon\Carbon::parse($fecha)->subDays(2)->toDateString(),
+                    \Carbon\Carbon::parse($fecha)->addDays(2)->toDateString(),
+                ])->first();
+            if ($mov) { $mov->update(['conciliado' => true]); $conciliados++; }
+            else $sinMatch[] = ['fecha'=>$fecha, 'concepto'=>trim($f[1] ?? ''), 'monto'=>$monto];
+        }
+        return ['conciliados'=>$conciliados, 'sin_match'=>$sinMatch];
+    }
 }
