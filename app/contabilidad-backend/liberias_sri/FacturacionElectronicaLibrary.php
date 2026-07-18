@@ -20,9 +20,9 @@ class FacturacionElectronicaLibrary
     ];
 
     public function __construct(
-        FacturacionElectronica $facturacion = null,
-        FacturacionElectronicaService $sri = null,
-        Validadores $validadores = null
+        ?FacturacionElectronica $facturacion = null,
+        ?FacturacionElectronicaService $sri = null,
+        ?Validadores $validadores = null
     ) {
         $this->facturacion = $facturacion ?: new FacturacionElectronica();
         $this->sri = $sri ?: new FacturacionElectronicaService();
