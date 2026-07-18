@@ -19,10 +19,12 @@ const certDialog = ref<any>(null)
 const clave = ref('')
 const msg = ref<any>(null)
 const fileRef = ref<HTMLInputElement>()
+// Mismos niveles que KBS (kbs-erp.com)
 const planes = [
-  { label: 'Básico', value: 'basico' },
-  { label: 'PRO', value: 'pro' },
-  { label: 'Corporativo', value: 'corporativo' },
+  { label: 'Emprendedor — $289', value: 'emprendedor' },
+  { label: 'PRO — $389 (series + firma)', value: 'pro' },
+  { label: 'Business — $559 (contabilidad + nómina)', value: 'business' },
+  { label: 'Corporativo — $659', value: 'corporativo' },
 ]
 
 async function load() {

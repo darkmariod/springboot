@@ -63,21 +63,42 @@ onMounted(load)
     </DataTable>
 
     <Dialog v-model:visible="dialog" modal header="Empleado" style="width:460px">
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <label style="display:flex; flex-direction:column; gap:4px;">Cédula *<InputText v-model="form.cedula" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Nombres *<InputText v-model="form.nombres" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Cargo<InputText v-model="form.cargo" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Fecha de ingreso *
-          <DatePicker v-model="form.fecha_ingreso" dateFormat="yy-mm-dd" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Sueldo *
-          <InputNumber v-model="form.sueldo" mode="currency" currency="USD" fluid /></label>
-        <label style="display:flex; align-items:center; gap:8px;">
-          <Checkbox v-model="form.fondos_reserva" :binary="true" /> Recibe fondos de reserva (más de 1 año)
-        </label>
-      </div>
+      <fieldset class="kvs-fieldset" style="margin-top:14px;">
+        <legend>Datos personales</legend>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Cédula:</label>
+          <InputText v-model="form.cedula" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Nombres:</label>
+          <InputText v-model="form.nombres" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Cargo:</label>
+          <InputText v-model="form.cargo" class="kvs-in" />
+        </div>
+      </fieldset>
+      <fieldset class="kvs-fieldset" style="margin-top:14px;">
+        <legend>Datos laborales</legend>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Fecha de ingreso:</label>
+          <DatePicker v-model="form.fecha_ingreso" dateFormat="yy-mm-dd" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Sueldo:</label>
+          <InputNumber v-model="form.sueldo" mode="currency" currency="USD" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label style="display:flex; align-items:center; gap:8px;">
+            <Checkbox v-model="form.fondos_reserva" :binary="true" /> Recibe fondos de reserva (más de 1 año)
+          </label>
+        </div>
+      </fieldset>
       <template #footer>
-        <Button label="Cancelar" text @click="dialog=false" />
-        <Button label="Guardar" @click="guardar" />
+        <div class="kvs-footer">
+          <Button label="Cancelar" text @click="dialog=false" />
+          <Button label="Guardar" @click="guardar" />
+        </div>
       </template>
     </Dialog>
   </div>

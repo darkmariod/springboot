@@ -30,16 +30,16 @@ function abrir(item: any) {
 </script>
 
 <template>
-  <div style="padding:36px; height:100%; overflow:auto; background:#f4f6f8;">
+  <div class="launcher">
     <!-- Nivel 2: items del grupo elegido -->
     <template v-if="grupoActivo">
       <button class="volver" @click="grupoActivo = null">
         <i class="pi pi-arrow-left" /> Módulos
       </button>
-      <h2 style="margin:14px 0 24px; font-size:18px; color:#1f2733;">{{ grupoActivo.label }}</h2>
+      <h2 class="grupo-titulo">{{ grupoActivo.label }}</h2>
       <div class="tiles">
-        <div v-for="item in grupoActivo.items" :key="item.key" class="tile-wrap" @click="abrir(item)">
-          <div class="tile"><i :class="item.icon" /></div>
+        <div v-for="item in grupoActivo.items" :key="item.key" class="tile" @click="abrir(item)">
+          <i :class="item.icon" />
           <span class="tile-label">{{ item.label }}</span>
         </div>
       </div>
@@ -48,9 +48,9 @@ function abrir(item: any) {
     <!-- Nivel 1: los grupos, como el lanzador de KVS -->
     <template v-else>
       <div class="tiles">
-        <div v-for="g in grupos" :key="g.label" class="tile-wrap"
+        <div v-for="g in grupos" :key="g.label" class="tile"
              @click="g.items.length === 1 ? abrir(g.items[0]) : (grupoActivo = g)">
-          <div class="tile"><i :class="iconoGrupo[g.label] ?? 'pi pi-th-large'" /></div>
+          <i :class="iconoGrupo[g.label] ?? 'pi pi-th-large'" />
           <span class="tile-label">{{ g.label }}</span>
         </div>
       </div>
@@ -59,30 +59,51 @@ function abrir(item: any) {
 </template>
 
 <style scoped>
+/* Fondo tech pedido por el cliente. Si /fondo-tech.jpg no existe, queda el degradado solo. */
+.launcher {
+  padding: 36px;
+  height: 100%;
+  overflow: auto;
+  background:
+    linear-gradient(rgba(10, 25, 45, 0.82), rgba(10, 25, 45, 0.92)),
+    url('/fondo-tech.jpg') center / cover no-repeat fixed,
+    linear-gradient(135deg, #0a192d 0%, #123a5c 100%);
+}
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 116px);
-  gap: 26px 30px;
+  grid-template-columns: repeat(auto-fill, 132px);
+  gap: 24px;
   justify-content: start;
 }
-.tile-wrap {
-  display: flex; flex-direction: column; align-items: center; gap: 9px;
-  cursor: pointer; width: 116px;
-}
+/* El nombre va DENTRO del cuadrado (lo que pidió el cliente) */
 .tile {
-  width: 96px; height: 96px; border-radius: 16px;
-  background: #2a6b6b;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  width: 132px;
+  height: 118px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #2f7676, #245f5f);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
-.tile i { font-size: 2.5rem; color: #fff; }
-.tile-wrap:hover .tile { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22); }
+.tile i { font-size: 2.1rem; color: #fff; }
 .tile-label {
-  font-size: 12.5px; font-weight: 600; color: #37474f; text-align: center; line-height: 1.25;
+  font-size: 12px; font-weight: 600; color: #fff; text-align: center; line-height: 1.2;
 }
+.tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.grupo-titulo { margin: 14px 0 24px; font-size: 18px; color: #fff; }
 .volver {
-  border: 0; background: transparent; color: #2a6b6b; font-weight: 600; font-size: 13px;
+  border: 0; background: transparent; color: #7fd1d1; font-weight: 600; font-size: 13px;
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0;
 }
 </style>

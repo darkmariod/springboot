@@ -50,14 +50,26 @@ onMounted(load)
     </DataTable>
 
     <Dialog v-model:visible="dialog" modal header="Nuevo punto de emisión" style="width:380px">
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <label style="display:flex; flex-direction:column; gap:4px;">Establecimiento<InputText v-model="form.estab" maxlength="3" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Punto (ej. 901)<InputText v-model="form.punto" maxlength="3" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Nombre (ej. Caja)<InputText v-model="form.nombre" fluid /></label>
-      </div>
+      <fieldset class="kvs-fieldset" style="margin-top:14px;">
+        <legend>Nuevo punto de emisión</legend>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Establecimiento:</label>
+          <InputText v-model="form.estab" maxlength="3" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Punto (ej. 901):</label>
+          <InputText v-model="form.punto" maxlength="3" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Nombre (ej. Caja):</label>
+          <InputText v-model="form.nombre" class="kvs-in" />
+        </div>
+      </fieldset>
       <template #footer>
-        <Button label="Cancelar" text @click="dialog=false" />
-        <Button label="Guardar" @click="guardar" />
+        <div class="kvs-footer">
+          <Button label="Cancelar" text @click="dialog=false" />
+          <Button label="Guardar" @click="guardar" />
+        </div>
       </template>
     </Dialog>
   </div>

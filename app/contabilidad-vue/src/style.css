@@ -39,3 +39,82 @@ body { background: #eef1f5; }
   letter-spacing: 0.4px;
 }
 .kvs-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   ESTILO KVS GLOBAL PARA TODOS LOS DIÁLOGOS
+   Pinta cada Dialog de PrimeVue con la cabecera verde-azulada de KVS,
+   sin tocar el código de cada formulario. (imagen 1 del cliente)
+   ═══════════════════════════════════════════════════════════════ */
+.p-dialog {
+  border: 1px solid #b9c2cc !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.25) !important;
+}
+.p-dialog .p-dialog-header {
+  background: linear-gradient(#3d8b8b, #2a6b6b) !important;
+  color: #fff !important;
+  padding: 8px 14px !important;
+  border-bottom: 1px solid #245f5f !important;
+}
+.p-dialog .p-dialog-title {
+  color: #fff !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+}
+.p-dialog .p-dialog-header .p-dialog-header-actions .p-button,
+.p-dialog .p-dialog-header-icon {
+  color: #fff !important;
+}
+.p-dialog .p-dialog-content {
+  background: #fff !important;
+  padding: 16px 18px !important;
+}
+.p-dialog .p-dialog-footer {
+  background: #f7f9fb !important;
+  border-top: 1px solid #e2e5ea !important;
+  padding: 10px 14px !important;
+}
+
+/* Labels con asterisco rojo — usá class="req" en el label */
+.req::after { content: " *"; color: #d93025; font-weight: 700; }
+label .req-star { color: #d93025; font-weight: 700; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOLDE DE FORMULARIO KVS (el de EDocuments, imagen de Javier)
+   Estas clases son globales: cualquier .vue las usa sin repetir CSS.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Ventana con cabecera verde (para formularios de página completa) */
+.kvs-window {
+  background: #fff; border: 1px solid #b9c2cc; border-radius: 6px; max-width: 1080px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+.kvs-window-title {
+  background: linear-gradient(#3d8b8b, #2a6b6b); color: #fff; font-weight: 600; font-size: 13px;
+  padding: 8px 14px; border-radius: 5px 5px 0 0;
+}
+.kvs-window-sub { margin: 10px 14px; font-size: 12px; color: #64748b; }
+
+/* Fila: label a la derecha + campo a la derecha del label */
+.kvs-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.kvs-lbl {
+  font-size: 13px; color: #37474f; white-space: nowrap; min-width: 132px; text-align: right;
+}
+.kvs-lbl .req { color: #d93025; font-weight: 700; }   /* asterisco rojo */
+/* min-width:0 = deja que el campo se encoja y NO se salga del recuadro (fix flexbox) */
+.kvs-in { flex: 1; min-width: 0; }
+/* el <input> interno de PrimeVue llena su contenedor y respeta el ancho (no desborda) */
+.kvs-in input,
+.kvs-in .p-inputnumber,
+.kvs-in .p-password,
+.kvs-in .p-inputtext,
+.kvs-in .p-select { width: 100%; box-sizing: border-box; }
+/* la fila puede bajar a otra línea en pantallas angostas en vez de romper el borde */
+.kvs-row { flex-wrap: wrap; }
+
+/* Botonera al pie */
+.kvs-footer {
+  display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px;
+  border-top: 1px solid #e2e5ea; background: #f7f9fb; border-radius: 0 0 5px 5px;
+}

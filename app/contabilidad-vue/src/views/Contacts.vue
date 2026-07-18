@@ -66,21 +66,43 @@ onMounted(load)
     </DataTable>
 
     <Dialog v-model:visible="dialog" modal header="Contacto" style="width: 460px;">
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <div style="display:flex; gap:16px;">
-          <label><Checkbox v-model="form.es_cliente" :binary="true" /> Cliente</label>
-          <label><Checkbox v-model="form.es_proveedor" :binary="true" /> Proveedor</label>
+      <fieldset class="kvs-fieldset" style="margin-top:14px;">
+        <legend>Tipo de contacto</legend>
+        <div class="kvs-row">
+          <div style="display:flex; gap:16px; padding-left:4px;">
+            <label><Checkbox v-model="form.es_cliente" :binary="true" /> Cliente</label>
+            <label><Checkbox v-model="form.es_proveedor" :binary="true" /> Proveedor</label>
+          </div>
         </div>
-        <label style="display:flex; flex-direction:column; gap:4px;">Tipo de identificación *
-          <Select v-model="form.tipo_identificacion" :options="tipos" optionLabel="label" optionValue="value" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Identificación *<InputText v-model="form.identificacion" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Razón social *<InputText v-model="form.razon_social" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Teléfono<InputText v-model="form.telefono" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Email<InputText v-model="form.email" fluid /></label>
-      </div>
+      </fieldset>
+      <fieldset class="kvs-fieldset" style="margin-top:14px;">
+        <legend>Datos del contacto</legend>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Tipo de identificación:</label>
+          <Select v-model="form.tipo_identificacion" :options="tipos" optionLabel="label" optionValue="value" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Identificación:</label>
+          <InputText v-model="form.identificacion" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Razón social:</label>
+          <InputText v-model="form.razon_social" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Teléfono:</label>
+          <InputText v-model="form.telefono" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Email:</label>
+          <InputText v-model="form.email" class="kvs-in" />
+        </div>
+      </fieldset>
       <template #footer>
-        <Button label="Cancelar" text @click="dialog=false" />
-        <Button label="Guardar" @click="guardar" />
+        <div class="kvs-footer">
+          <Button label="Cancelar" text @click="dialog=false" />
+          <Button label="Guardar" @click="guardar" />
+        </div>
       </template>
     </Dialog>
   </div>

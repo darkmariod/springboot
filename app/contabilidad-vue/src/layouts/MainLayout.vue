@@ -40,6 +40,10 @@ import CreditNotes from '../views/CreditNotes.vue'
 import BatchImport from '../views/BatchImport.vue'
 import Employees from '../views/Employees.vue'
 import Payroll from '../views/Payroll.vue'
+import Warehouses from '../views/Warehouses.vue'
+import Taxes from '../views/Taxes.vue'
+import InventoryAdjustment from '../views/InventoryAdjustment.vue'
+import InventoryTransfer from '../views/InventoryTransfer.vue'
 
 const auth = useAuthStore()
 const company = useCompanyStore()
@@ -52,7 +56,8 @@ const componentMap: Record<string, any> = {
   Home, SignatureConfig, Dashboard, Accounts, Placeholder, Contacts, Products, Banks, Pos,
   Invoices, Purchases, Inventory, Accounting, Cash, Receivables, Payables, Withholdings,
   SriDocuments, Quotes, Reconciliation, Ledger, Companies, EmissionPoints, Suppliers, InventoryReports,
-  Series, Users, Audit, Advances, CreditNotes, BatchImport, Employees, Payroll,
+  Series, Users, Audit, Advances, CreditNotes, BatchImport, Employees, Payroll, Warehouses,
+  Taxes, InventoryAdjustment, InventoryTransfer,
 }
 
 onMounted(async () => {

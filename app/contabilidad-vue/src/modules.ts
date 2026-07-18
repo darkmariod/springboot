@@ -36,8 +36,11 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
     label: 'Inventario',
     items: [
       { key: 'inventory', label: 'Inventario y kardex', icon: 'pi pi-database', component: 'Inventory', feature: 'inventario' },
+      { key: 'warehouses', label: 'Bodegas', icon: 'pi pi-building', component: 'Warehouses', feature: 'inventario' },
       { key: 'series', label: 'Garantías por serie', icon: 'pi pi-qrcode', component: 'Series', feature: 'series' },
       { key: 'inventory-reports', label: 'Reportes de inventario', icon: 'pi pi-print', component: 'InventoryReports', feature: 'reportes' },
+      { key: 'inventory-adjustment', label: 'Ajuste Inventario', icon: 'pi pi-sliders-h', component: 'InventoryAdjustment', feature: 'inventario' },
+      { key: 'inventory-transfer', label: 'Transferencia', icon: 'pi pi-arrow-right-arrow-left', component: 'InventoryTransfer', feature: 'inventario' },
     ],
   },
   {
@@ -54,6 +57,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'journal', label: 'Libro diario', icon: 'pi pi-book', component: 'Accounting', feature: 'contabilidad' },
       { key: 'ledger', label: 'Libro mayor', icon: 'pi pi-list', component: 'Ledger', feature: 'contabilidad' },
       { key: 'statements', label: 'Estados financieros', icon: 'pi pi-chart-line', component: 'Accounting', feature: 'contabilidad' },
+      { key: 'taxes', label: 'Impuestos', icon: 'pi pi-percentage', component: 'Taxes', feature: 'contabilidad' },
     ],
   },
   {

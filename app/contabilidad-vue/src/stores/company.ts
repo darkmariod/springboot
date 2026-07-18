@@ -7,6 +7,8 @@ export interface Company {
   ruc: string
   razon_social: string
   nombre_comercial?: string
+  dir_matriz?: string
+  ambiente?: number
 }
 
 export const useCompanyStore = defineStore('company', () => {

@@ -69,24 +69,43 @@ onMounted(load)
     </DataTable>
 
     <Dialog v-model:visible="dialog" modal header="Usuario" style="width:460px">
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <label style="display:flex; flex-direction:column; gap:4px;">Nombre *<InputText v-model="form.name" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Email *<InputText v-model="form.email" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">
-          {{ form.id ? 'Contraseña (vacía = no cambiar)' : 'Contraseña *' }}
-          <Password v-model="form.password" :feedback="false" toggleMask fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Rol *
-          <Select v-model="form.rol" :options="roles" optionLabel="label" optionValue="value" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Punto de emisión (vacío = todos)
+      <fieldset class="kvs-fieldset" style="margin-top:14px;">
+        <legend>Datos del usuario</legend>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Nombre:</label>
+          <InputText v-model="form.name" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Email:</label>
+          <InputText v-model="form.email" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span v-if="!form.id" class="req">*</span> {{ form.id ? 'Contraseña:' : 'Contraseña:' }}</label>
+          <Password v-model="form.password" :feedback="false" toggleMask class="kvs-in" />
+        </div>
+      </fieldset>
+      <fieldset class="kvs-fieldset" style="margin-top:14px;">
+        <legend>Permisos</legend>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Rol:</label>
+          <Select v-model="form.rol" :options="roles" optionLabel="label" optionValue="value" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Punto de emisión:</label>
           <Select v-model="form.emission_point_id" :options="puntos" optionValue="id" showClear
-                  :optionLabel="(p) => p.estab + '-' + p.punto + ' (' + p.nombre + ')'" fluid /></label>
-        <label style="display:flex; align-items:center; gap:8px;">
-          <Checkbox v-model="form.activo" :binary="true" /> Usuario activo
-        </label>
-      </div>
+                  :optionLabel="(p) => p.estab + '-' + p.punto + ' (' + p.nombre + ')'" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label style="display:flex; align-items:center; gap:8px;">
+            <Checkbox v-model="form.activo" :binary="true" /> Usuario activo
+          </label>
+        </div>
+      </fieldset>
       <template #footer>
-        <Button label="Cancelar" text @click="dialog=false" />
-        <Button label="Guardar" @click="guardar" />
+        <div class="kvs-footer">
+          <Button label="Cancelar" text @click="dialog=false" />
+          <Button label="Guardar" @click="guardar" />
+        </div>
       </template>
     </Dialog>
   </div>

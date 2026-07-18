@@ -58,19 +58,30 @@ onMounted(load)
     </DataTable>
 
     <Dialog v-model:visible="dialog" modal header="Nueva nota de crédito" style="width:440px">
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <label style="display:flex; flex-direction:column; gap:4px;">Tipo
-          <Select v-model="form.tipo" :options="tipos" optionLabel="label" optionValue="value" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Cliente
-          <Select v-model="form.contact_id" :options="contacts" optionLabel="razon_social" optionValue="id" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Motivo
-          <InputText v-model="form.motivo" placeholder="Devolución de mercadería / cruce" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Importe total
-          <InputNumber v-model="form.importe_total" mode="currency" currency="USD" fluid /></label>
-      </div>
+      <fieldset class="kvs-fieldset" style="margin-top:14px;">
+        <legend>Datos de la nota</legend>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Tipo:</label>
+          <Select v-model="form.tipo" :options="tipos" optionLabel="label" optionValue="value" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Cliente:</label>
+          <Select v-model="form.contact_id" :options="contacts" optionLabel="razon_social" optionValue="id" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Motivo:</label>
+          <InputText v-model="form.motivo" placeholder="Devolución de mercadería / cruce" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Importe total:</label>
+          <InputNumber v-model="form.importe_total" mode="currency" currency="USD" class="kvs-in" />
+        </div>
+      </fieldset>
       <template #footer>
-        <Button label="Cancelar" text @click="dialog=false" />
-        <Button label="Guardar" @click="guardar" />
+        <div class="kvs-footer">
+          <Button label="Cancelar" text @click="dialog=false" />
+          <Button label="Guardar" @click="guardar" />
+        </div>
       </template>
     </Dialog>
   </div>

@@ -52,14 +52,26 @@ onMounted(load)
     </DataTable>
 
     <Dialog v-model:visible="dialog" modal header="Banco" style="width: 420px;">
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <label style="display:flex; flex-direction:column; gap:4px;">Nombre *<InputText v-model="form.nombre" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Número de cuenta<InputText v-model="form.numero_cuenta" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Cuenta contable<InputText v-model="form.cuenta_contable" placeholder="1.1.02" fluid /></label>
-      </div>
+      <fieldset class="kvs-fieldset" style="margin-top:14px;">
+        <legend>Datos del banco</legend>
+        <div class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Nombre:</label>
+          <InputText v-model="form.nombre" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Número de cuenta:</label>
+          <InputText v-model="form.numero_cuenta" class="kvs-in" />
+        </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Cuenta contable:</label>
+          <InputText v-model="form.cuenta_contable" placeholder="1.1.02" class="kvs-in" />
+        </div>
+      </fieldset>
       <template #footer>
-        <Button label="Cancelar" text @click="dialog=false" />
-        <Button label="Guardar" @click="guardar" />
+        <div class="kvs-footer">
+          <Button label="Cancelar" text @click="dialog=false" />
+          <Button label="Guardar" @click="guardar" />
+        </div>
       </template>
     </Dialog>
   </div>

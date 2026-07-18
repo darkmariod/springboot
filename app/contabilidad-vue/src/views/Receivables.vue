@@ -5,31 +5,36 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
-import Select from 'primevue/select'
-import InputText from 'primevue/inputtext'
+// Select and InputText available if needed for payment form
 import Tag from 'primevue/tag'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import FormasPago from '../components/FormasPago.vue'
 
 const company = useCompanyStore()
 const data = ref<any>({ cartera: [], total: 0, antiguedad: {} })
 const loading = ref(true)
 const cobro = ref<any>(null)
-const formas = [
-  { label: 'Efectivo', value: 'efectivo' }, { label: 'Transferencia', value: 'transferencia' },
-  { label: 'Cheque', value: 'cheque' }, { label: 'Cruce de cuenta', value: 'cruce' },
-]
+const banks = ref<any[]>([])
 const money = (n: any) => '$' + Number(n).toFixed(2)
 
 async function load() {
   loading.value = true
   data.value = (await api.get('/receivables?company_id=' + company.activeId)).data
+  banks.value = (await api.get('/banks?company_id=' + company.activeId)).data
   loading.value = false
 }
-function abrirCobro(r: any) { cobro.value = { invoice: r, monto: r.saldo, forma_pago: 'efectivo' } }
+function abrirCobro(r: any) {
+  cobro.value = {
+    invoice: r,
+    pagos: [{ id: 1, tipo: 'efectivo', fecha: '', valor: r.saldo, bank_id: null, documento: null, cuenta: null }],
+  }
+}
 async function cobrar() {
   await api.post('/receivables/' + cobro.value.invoice.id + '/pay',
-    { monto: cobro.value.monto, forma_pago: cobro.value.forma_pago })
+    { pagos: cobro.value.pagos.map((p: any) => ({
+      tipo: p.tipo, valor: p.valor, bank_id: p.bank_id, documento: p.documento,
+    })) })
   cobro.value = null; load()
 }
 const saldos = ref<any>({ saldos: [], total: 0 })
@@ -72,12 +77,11 @@ onMounted(load)
         <Button label="Usar saldo" size="small" outlined @click="abrirUsarSaldo(r)" /></template></Column>
     </DataTable>
 
-    <Dialog :visible="!!cobro" modal header="Registrar cobro" style="width:400px" @update:visible="cobro=null">
+    <Dialog :visible="!!cobro" modal header="Registrar cobro" style="width:760px" @update:visible="cobro=null">
       <div v-if="cobro" style="display:flex; flex-direction:column; gap:12px;">
         <div style="background:#f8fafc; padding:10px; border-radius:8px;">
           Factura <b>{{ cobro.invoice.numero }}</b> — saldo {{ money(cobro.invoice.saldo) }}</div>
-        <label style="display:flex; flex-direction:column; gap:4px;">Monto<InputNumber v-model="cobro.monto" mode="currency" currency="USD" fluid /></label>
-        <label style="display:flex; flex-direction:column; gap:4px;">Forma de pago<Select v-model="cobro.forma_pago" :options="formas" optionLabel="label" optionValue="value" fluid /></label>
+        <FormasPago v-model="cobro.pagos" :total="cobro.invoice.saldo" :banks="banks" />
       </div>
       <template #footer>
         <Button label="Cancelar" text @click="cobro=null" />
@@ -98,8 +102,10 @@ onMounted(load)
           <Column field="detalle" header="Detalle" />
           <Column header="Disponible"><template #body="{ data: s }">{{ money(s.disponible) }}</template></Column>
         </DataTable>
-        <label v-if="usarDialog.seleccion" style="display:flex; flex-direction:column; gap:4px;">
-          Monto a cruzar<InputNumber v-model="usarDialog.monto" mode="currency" currency="USD" fluid /></label>
+        <div v-if="usarDialog.seleccion" class="kvs-row">
+          <label class="kvs-lbl"><span class="req">*</span> Monto a cruzar:</label>
+          <InputNumber v-model="usarDialog.monto" mode="currency" currency="USD" class="kvs-in" />
+        </div>
       </div>
       <template #footer>
         <Button label="Cancelar" text @click="usarDialog=null" />
