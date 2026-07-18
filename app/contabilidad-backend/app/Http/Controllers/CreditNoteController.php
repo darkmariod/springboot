@@ -1,44 +1,129 @@
 <?php
+
 namespace App\Http\Controllers;
+
+use App\Models\Company;
 use App\Models\CreditNote;
+use App\Models\Invoice;
+use App\Models\Product;
+use App\Models\SriDocument;
 use App\Services\DocumentCalculator;
+use App\Services\RegisterInventoryMovement;
 use App\Services\SimpleEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class CreditNoteController extends Controller {
-    public function index(Request $r) {
-        return CreditNote::with('contact:id,razon_social','invoice:id,numero')
-            ->when($r->company_id, fn($q,$id)=>$q->where('company_id',$id))->latest('fecha')->get();
+class CreditNoteController extends Controller
+{
+    public function index(Request $r)
+    {
+        return CreditNote::with('contact:id,razon_social', 'invoice:id,numero')
+            ->when($r->company_id, fn($q, $id) => $q->where('company_id', $id))
+            ->latest('fecha')->get();
     }
-    public function store(Request $r, DocumentCalculator $calc) {
+
+    public function store(Request $r, DocumentCalculator $calc)
+    {
         $d = $r->validate([
-            'company_id'=>['required','exists:companies,id'],
-            'contact_id'=>['required','exists:contacts,id'],
-            'invoice_id'=>['nullable','exists:invoices,id'],
-            'tipo'=>['required','in:sri,interna'],
-            'motivo'=>['required','string'],
-            'items'=>['sometimes','array'],
-            'importe_total'=>['required_without:items','numeric','min:0.01'],
+            'company_id' => ['required', 'exists:companies,id'],
+            'contact_id' => ['required', 'exists:contacts,id'],
+            'invoice_id' => ['nullable', 'exists:invoices,id'],
+            'tipo' => ['required', 'in:sri,interna'],
+            'motivo' => ['required', 'string'],
+            'items' => ['sometimes', 'array'],
+            'importe_total' => ['required_without:items', 'numeric', 'min:0.01'],
         ]);
-        return DB::transaction(function() use ($d, $calc) {
+
+        return DB::transaction(function () use ($d, $calc) {
             if (!empty($d['items'])) {
                 $t = $calc->fromItems($d['items']);
                 $d['total_sin_impuestos'] = $t['total_sin_impuestos'];
                 $d['total_impuesto'] = $t['total_impuesto'];
                 $d['importe_total'] = $t['importe_total'];
             }
+
             $n = CreditNote::create($d + [
-                'fecha'=>now()->toDateString(),
-                'saldo_disponible'=>$d['importe_total'],
+                'fecha' => now()->toDateString(),
+                'saldo_disponible' => $d['importe_total'],
             ]);
-            SimpleEntry::make($d['company_id'], 'Nota de crédito '.$d['tipo'].' — '.$d['motivo'], [
-                ['codigo'=>'4.1.02','nombre'=>'Devoluciones y descuentos en ventas','tipo'=>'gasto',
-                 'debe'=>$d['importe_total'],'haber'=>0,'ref'=>'NC-'.$n->id],
-                ['codigo'=>'1.1.03','nombre'=>'Cuentas por cobrar clientes','tipo'=>'activo',
-                 'debe'=>0,'haber'=>$d['importe_total'],'ref'=>'NC-'.$n->id],
+
+            SimpleEntry::make($d['company_id'], 'Nota de crédito ' . $d['tipo'] . ' — ' . $d['motivo'], [
+                ['codigo' => '4.1.02', 'nombre' => 'Devoluciones y descuentos en ventas', 'tipo' => 'gasto',
+                    'debe' => $d['importe_total'], 'haber' => 0, 'ref' => 'NC-' . $n->id],
+                ['codigo' => '1.1.03', 'nombre' => 'Cuentas por cobrar clientes', 'tipo' => 'activo',
+                    'debe' => 0, 'haber' => $d['importe_total'], 'ref' => 'NC-' . $n->id],
             ], $n);
+
+            // Devolver stock y series si hay invoice_id y items con códigos
+            if (!empty($d['invoice_id']) && !empty($d['items'])) {
+                $invoice = Invoice::find($d['invoice_id']);
+                if ($invoice) {
+                    foreach ($d['items'] as $item) {
+                        $codigo = trim((string)($item['codigo_principal'] ?? ''));
+                        $cant = (float)($item['cantidad'] ?? 0);
+                        if ($codigo === '' || $cant <= 0) continue;
+
+                        $product = Product::where('company_id', $d['company_id'])->where('codigo', $codigo)->first();
+                        if ($product && $product->tipo !== 'servicio') {
+                            app(RegisterInventoryMovement::class)->handle(
+                                $product, 'ingreso', $cant, (float)$product->costo_promedio,
+                                'Devolución NC ' . $n->id, $n->fecha->toDateString()
+                            );
+                        }
+                    }
+                }
+            }
+
             return response()->json($n->load('contact'), 201);
         });
+    }
+
+    /**
+     * Emitir nota de crédito electrónica al SRI (codDoc 04)
+     */
+    public function emit(Request $r, CreditNote $creditNote)
+    {
+        if ($creditNote->tipo !== 'sri') {
+            return response()->json(['error' => 'Solo se pueden emitir notas de crédito tipo SRI.'], 422);
+        }
+
+        $company = Company::find($creditNote->company_id);
+        $invoice = $creditNote->invoice;
+
+        $payload = [
+            'infoTributaria' => ['codDoc' => '04'],
+            'infoNotaCredito' => [
+                'fechaEmision' => now()->format('Y-m-d'),
+                'dirEstablecimiento' => $company->dir_matriz,
+                'obligadoContabilidad' => $company->obligado_contabilidad ? 'SI' : 'NO',
+                'tipoIdentificacionComprador' => $creditNote->contact->tipo_identificacion ?? '05',
+                'razonSocialComprador' => $creditNote->contact->razon_social ?? '',
+                'identificacionComprador' => $creditNote->contact->identificacion ?? '',
+                'codDocModificado' => '01',
+                'numDocModificado' => $invoice->numero ?? '',
+                'motivoModificacion' => $creditNote->motivo,
+                'totalSinImpuestos' => number_format($creditNote->total_sin_impuestos ?? $creditNote->importe_total, 2, '.', ''),
+                'totalDescuento' => '0.00',
+                'totalImpuesto' => number_format($creditNote->total_impuesto ?? 0, 2, '.', ''),
+                'importeTotal' => number_format($creditNote->importe_total, 2, '.', ''),
+                'moneda' => 'DOLAR',
+            ],
+            'detalle' => $creditNote->items ?? [],
+            'infoAdicional' => [
+                'email' => $creditNote->contact->email ?? null,
+                'telefono' => $creditNote->contact->telefono ?? null,
+            ],
+        ];
+
+        $emitir = app(\App\Actions\EmitirSriDocument::class);
+        $sriDoc = $emitir->execute($creditNote, 'notaCredito', $company, $payload);
+
+        $company->increment('secuencial');
+
+        return response()->json([
+            'ok' => true,
+            'sri_document' => $sriDoc,
+            'mensaje' => 'Nota de crédito emitida al SRI. Clave de acceso: ' . $sriDoc->clave_acceso,
+        ]);
     }
 }

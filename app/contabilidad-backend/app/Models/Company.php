@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Company extends Model
 {
     protected $fillable = [
+        'sri_usuario', 'sri_clave', 'sri_url_produccion', 'sri_url_pruebas', 'cert_emitido_desde', 'tipo_token', 'tiempo_generar', 'tiempo_firmar', 'tiempo_enviar', 'tiempo_autorizar', 'smtp_ssl', 'edoc_estado', 'modo_online',
         'ruc', 'razon_social', 'nombre_comercial', 'dir_matriz',
         'estab', 'pto_emi', 'secuencial', 'regimen', 'obligado_contabilidad',
         'ambiente', 'certificado_p12', 'certificado_clave', 'email_envio', 'cert_sujeto', 'cert_valido_hasta',
@@ -20,7 +21,12 @@ class Company extends Model
         return [
             'obligado_contabilidad' => 'boolean',
             'certificado_clave' => 'encrypted',
+            'sri_clave' => 'encrypted',
+            'smtp_password' => 'encrypted',
+            'smtp_ssl' => 'boolean',
+            'modo_online' => 'boolean',
             'plan_vence' => 'date',
+            'cert_valido_hasta' => 'date',
         ];
     }
 

@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 use App\Models\Purchase;
 use App\Models\PurchasePayment;
 use App\Services\SimpleEntry;
+use App\Services\RegistrarPagos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,6 +19,31 @@ class PayableController extends Controller {
         return ['cartera'=>$rows,'total'=>round($rows->sum('saldo'),2)];
     }
     public function pay(Request $r, Purchase $purchase) {
+        // Soporta formato antiguo (monto + forma_pago) y nuevo (pagos array)
+        if ($r->has('pagos') && is_array($r->pagos)) {
+            $r->validate(['pagos'=>['required','array','min:1'],
+                'pagos.*.tipo'=>['required','string'],
+                'pagos.*.valor'=>['required','numeric','min:0.01']]);
+            $total = array_sum(array_column($r->pagos, 'valor'));
+            if ($total > (float)$purchase->saldo_pendiente + 0.001)
+                throw ValidationException::withMessages(['pagos'=>['El pago supera el saldo pendiente.']]);
+            return DB::transaction(function() use ($purchase, $r) {
+                $service = app(RegistrarPagos::class);
+                $service->handle($purchase, $r->pagos, '2.1.01', 'Pago compra '.$purchase->numero);
+                $purchase->decrement('saldo_pendiente', array_sum(array_column($r->pagos, 'valor')));
+                // Registrar en purchase_payments para compatibilidad
+                foreach ($r->pagos as $p) {
+                    PurchasePayment::create([
+                        'purchase_id'=>$purchase->id, 'fecha'=>now()->toDateString(),
+                        'monto'=>$p['valor'], 'forma_pago'=>$p['tipo'],
+                        'bank_id'=>$p['bank_id'] ?? null,
+                        'cheque_numero'=>$p['documento'] ?? null,
+                    ]);
+                }
+                return ['ok'=>true,'saldo'=>(float)$purchase->fresh()->saldo_pendiente];
+            });
+        }
+        // Formato antiguo: monto + forma_pago
         $d = $r->validate(['monto'=>['required','numeric','min:0.01'],
             'forma_pago'=>['required','in:efectivo,transferencia,cheque,cruce'],
             'bank_id'=>['nullable','exists:banks,id'],'cheque_numero'=>['nullable','string']]);

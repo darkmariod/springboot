@@ -31,4 +31,14 @@ class QuoteController extends Controller {
         $quote->update(['estado'=>'facturada']);
         return ['invoice'=>$invoice];
     }
+
+    /** Solo se puede borrar una cotizacion que todavia no se facturo. */
+    public function destroy(Quote $quote)
+    {
+        if ($quote->estado === "facturada") {
+            abort(422, "No se puede eliminar: esta cotizacion ya se convirtio en factura.");
+        }
+        $quote->delete();
+        return response()->noContent();
+    }
 }

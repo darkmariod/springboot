@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Services\SimpleEntry;
+use App\Services\RegistrarPagos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,30 @@ class ReceivableController extends Controller {
             'antiguedad'=>array_map(fn($v)=>round($v,2), $tramos)];
     }
     public function pay(Request $r, Invoice $invoice) {
+        // Soporta formato antiguo (monto + forma_pago) y nuevo (pagos array)
+        if ($r->has('pagos') && is_array($r->pagos)) {
+            $r->validate(['pagos'=>['required','array','min:1'],
+                'pagos.*.tipo'=>['required','string'],
+                'pagos.*.valor'=>['required','numeric','min:0.01']]);
+            $total = array_sum(array_column($r->pagos, 'valor'));
+            if ($total > (float)$invoice->saldo_pendiente + 0.001)
+                throw ValidationException::withMessages(['pagos'=>['El cobro supera el saldo pendiente.']]);
+            return DB::transaction(function() use ($invoice, $r) {
+                $service = app(RegistrarPagos::class);
+                $service->handle($invoice, $r->pagos, '1.1.03', 'Cobro factura '.$invoice->numero);
+                $invoice->decrement('saldo_pendiente', array_sum(array_column($r->pagos, 'valor')));
+                // Registrar en invoice_payments para compatibilidad
+                foreach ($r->pagos as $p) {
+                    InvoicePayment::create([
+                        'invoice_id'=>$invoice->id, 'fecha'=>now()->toDateString(),
+                        'monto'=>$p['valor'], 'forma_pago'=>$p['tipo'],
+                        'bank_id'=>$p['bank_id'] ?? null,
+                    ]);
+                }
+                return ['ok'=>true,'saldo'=>(float)$invoice->fresh()->saldo_pendiente];
+            });
+        }
+        // Formato antiguo: monto + forma_pago
         $d = $r->validate(['monto'=>['required','numeric','min:0.01'],
             'forma_pago'=>['required','in:efectivo,transferencia,cheque,cruce'],
             'bank_id'=>['nullable','exists:banks,id']]);
