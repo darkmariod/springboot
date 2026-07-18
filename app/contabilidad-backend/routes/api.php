@@ -19,10 +19,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/companies/{company}/plan', [CompanyController::class, 'cambiarPlan']);
 
     Route::get('/accounts', [AccountController::class, 'index']);
+    Route::post('/accounts', [AccountController::class, 'store']);
+    Route::put('/accounts/{account}', [AccountController::class, 'update']);
+    Route::delete('/accounts/{account}', [AccountController::class, 'destroy']);
 
     // Catálogos
     Route::apiResource('contacts', \App\Http\Controllers\ContactController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('products', \App\Http\Controllers\ProductController::class)->only(['index', 'store', 'update', 'destroy']);
+    // Ficha de artículo estilo KVS: precios, componentes, códigos alternos
+    Route::get("products/{product}/prices", [\App\Http\Controllers\ProductExtrasController::class, "prices"]);
+    Route::post("products/{product}/prices", [\App\Http\Controllers\ProductExtrasController::class, "storePrice"]);
+    Route::delete("product-prices/{price}", [\App\Http\Controllers\ProductExtrasController::class, "destroyPrice"]);
+    Route::get("products/{product}/components", [\App\Http\Controllers\ProductExtrasController::class, "components"]);
+    Route::post("products/{product}/components", [\App\Http\Controllers\ProductExtrasController::class, "storeComponent"]);
+    Route::delete("product-components/{component}", [\App\Http\Controllers\ProductExtrasController::class, "destroyComponent"]);
+    Route::get("products/{product}/codes", [\App\Http\Controllers\ProductExtrasController::class, "codes"]);
+    Route::post("products/{product}/codes", [\App\Http\Controllers\ProductExtrasController::class, "storeCode"]);
+    Route::delete("product-codes/{code}", [\App\Http\Controllers\ProductExtrasController::class, "destroyCode"]);
     Route::apiResource('banks', \App\Http\Controllers\BankController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('products/lookup', [\App\Http\Controllers\ProductController::class, 'lookup']);
 
@@ -71,6 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("quotes", [\App\Http\Controllers\QuoteController::class, "index"]);
     Route::post("quotes", [\App\Http\Controllers\QuoteController::class, "store"]);
     Route::post("quotes/{quote}/convert", [\App\Http\Controllers\QuoteController::class, "convert"]);
+    Route::delete("quotes/{quote}", [\App\Http\Controllers\QuoteController::class, "destroy"]);
 
     // Bancos y conciliación
     Route::get("bank-movements", [\App\Http\Controllers\BankMovementController::class, "index"]);
@@ -83,6 +97,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post("emission-points", [\App\Http\Controllers\EmissionPointController::class, "store"]);
     Route::delete("emission-points/{point}", [\App\Http\Controllers\EmissionPointController::class, "destroy"]);
     Route::post("companies/{company}/certificate", [\App\Http\Controllers\CompanyController::class, "uploadCertificate"]);
+    // EDocuments — configuración completa (firma + SRI + correo), como KVS
+    Route::get("companies/{company}/edoc-config", [\App\Http\Controllers\EdocConfigController::class, "show"]);
+    Route::post("companies/{company}/edoc-config", [\App\Http\Controllers\EdocConfigController::class, "update"]);
+    Route::post("companies/{company}/smtp/test", [\App\Http\Controllers\SmtpTestController::class, "send"]);
 
     // Fase 2 — Series (garantías)
     Route::get("series", [\App\Http\Controllers\SerieController::class, "index"]);
@@ -118,4 +136,25 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post("payrolls/generate", [\App\Http\Controllers\PayrollController::class, "generate"]);
     Route::post("payrolls/{payroll}/close", [\App\Http\Controllers\PayrollController::class, "close"]);
     Route::post("employees/{employee}/liquidacion", [\App\Http\Controllers\PayrollController::class, "liquidacion"]);
+
+    // Fase A — Catálogos (formas de pago, sustentos tributarios)
+    Route::get("catalogos/formas-pago", [\App\Http\Controllers\CatalogosController::class, "formasPago"]);
+    Route::get("catalogos/sustentos", [\App\Http\Controllers\CatalogosController::class, "sustentos"]);
+
+    // Fase B — Bodegas
+    Route::apiResource('warehouses', \App\Http\Controllers\WarehouseController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    // Fase D — Notas de crédito electrónicas + retenciones emitidas
+    Route::post("credit-notes/{creditNote}/emit", [\App\Http\Controllers\CreditNoteController::class, "emit"]);
+    Route::get("withholdings-emitted", [\App\Http\Controllers\WithholdingEmitController::class, "index"]);
+    Route::post("withholdings-emitted", [\App\Http\Controllers\WithholdingEmitController::class, "store"]);
+
+    // Fase E — Módulo Impuestos
+    Route::get("taxes/formulario104", [\App\Http\Controllers\TaxController::class, "formulario104"]);
+    Route::get("taxes/ats", [\App\Http\Controllers\TaxController::class, "ats"]);
+
+    // Fase F — Transacciones de inventario
+    Route::post("inventory/ajuste", [\App\Http\Controllers\InventoryTransactionController::class, "ajuste"]);
+    Route::post("inventory/transferencia", [\App\Http\Controllers\InventoryTransactionController::class, "transferencia"]);
+    Route::get("inventory/kardex/{product}/bodega", [\App\Http\Controllers\InventoryTransactionController::class, "kardexBodega"]);
 });
