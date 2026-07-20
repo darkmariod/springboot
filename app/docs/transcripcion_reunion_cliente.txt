@@ -1,0 +1,180 @@
+ a tu profesión. Por ejemplo, ¿qué puede ser ahí? Podría ser tal vez la ropa o podría ser, por
+ ejemplo, te tomaste una cerveza. Eso tú no puedes devengar a tu servicio profesional porque es alcohol,
+ por ejemplo, cachas. Y también, este, la ropa. Igual eso es ya como que no tiene nada que ver con
+ tu, con tu profesión. Entonces, eso tú pones como gasto. Al momento que tú llegas a algún lugar,
+ digamos, vas a un lugar nuevo que vende zapatillas y tú llegas ahí y tienen el sistema y tú nunca
+ has comprado ahí nada, nada, nada. No te tienen registrado ni con cédula ni con root. Y tú ahí
+ justo en ese local que venden zapatillas, qué sé yo, también venden electro, en el un lado es deportivo
+ y en el otro lado vuelta es de electrodomésticos. Y tú como en tu root, tú eres, tú eres ingeniero
+ informático, ¿no es cierto? Entonces, en este caso tú eres ingeniero informático y justo te solicitan
+ un televisor. Y ese televisor que te solicitan a ti tú no tienes en stock, pero da la casualidad de que
+ él está en promoción y te sale el mismo precio que comprar a tu proveedor. Entonces, tú le pides las
+ zapatillas y le pides el televisor. Le dices, por favor, esto factúreme con root y esto factúreme
+ con cédula. Y te va a decir, ok, dicteme, por favor, su número de root. Tú le dictas tu root y
+ automáticamente jala los datos del SDI como tú estés ahí registrado. Automáticamente ya aparecen
+ los datos hasta el correo todo y contigo la cajera solamente verifica. Disculpe, este correo es el
+ que sigue ocupando o va a cambiar el correo o ya tiene otro, porque hay personas que están
+ registradas en el root y tienen otro correo y ese ya ni siquiera ocupa. Entonces, por eso el que
+ siempre se verifica es el root, también se consultan los nombres y apellidos que estén bien para ver
+ que si se anotó bien el número de cédula. Te dice, sí, está correcto, ok. Entonces, está con root,
+ doy guardar y automáticamente se guardó con cédula y con root. Entonces, le facturo el televisor
+ con root, vuelvo a lo que es la factura y ahora solamente pongo la cédula, doy enter y me aparecen
+ los datos. Eso es lo que hacen los sistemas modernos. Al momento de tu guardarle de la una
+ manera te aparece ya las dos. Incluso por eso en el video que te envié donde que nos ayudó Chris,
+ el formulario del cliente donde que es para llenar es un poco más grande y en la parte izquierda
+ te aparece cédula y en la parte derecha estaba el root para que automáticamente se guarden de las
+ dos maneras. Y ahí le voy a hacer, le voy a hacer más o menos como el formulario grande como este
+ de aquí, así, con los datos, todo, para que lo pueda facturar y tener ya todo ya listo para realizar.
+ Y ahora lo otro, compártelo otra vez porfa, cuando voy a ingresar un producto, por ejemplo,
+ ¿Cómo ingresa el producto? Aquí lo que ingresa el producto, vamos a ir a los módulos, ventas,
+ punto de venta y aquí ponemos acá, aquí tenemos punto de venta, aquí están inventario, inventario
+ cardex. Eso yo le voy a ver, no me acostumbro porque como recién cambié la interfaz, no me acostumbro
+ del todo. Esto si le digo, yo le voy a hacer ya la, ya voy a darle bien porque como cambié todos los
+ módulos, porque antes tenía aquí a la derecha y aquí no me acostumbro a manejar. Eso le digo, yo le voy a
+ hacer bien y ahí le muestro ahí cuando ya está el sistema y le explico yo una vez y ahí para que ya
+ quede todo resuelto. Ya, porque eso quiero ver también que no más estás poniendo porque ahí
+ en el ingreso de productos debería estar, que se pueda registrar la cantidad de productos, los
+ números de serie de los productos, el nombre de producto con el que se está guardando, el código
+ de producto y el proveedor a quien se está comprando. Ya, eso yo le voy a hacer, también yo le voy a
+ revisar eso y hacer esas mejoras ya tengo listo, ya montado en el servidor. Ya está montado ahí en el
+ servidor, hacen pruebas, hay que ver que se corrige, que se gasta y que es en la necesitaria para tu
+ colminar. Ya, porque verás, tú crees que necesitas ver cómo se abren todos los cuadros del KBS?
+ Del último, del palán corporativo, del final, si me ha de hacer falta. O sea, te iba a decir
+ de todos, verás, porque ahorita yo ya hablé con otra persona que dije que tiene acceso acá todo.
+ Entonces, si es posible. Que grabe pantalla, me dijo. Entonces, ahorita ella me va a abrir y yo
+ voy a entrar, por ejemplo, al primero y de ahí te voy indicando todo lo que se abre. Si es posible
+ que, pues si es posible eso para que esto realice, porque ahorita ya con el que estamos de aquí,
+ para poder validar primero y de ahí, acuérdelo, que me manden el video de todas las panteras que
+ estén grabadas, de ahí yo ocupo la corrección y listo, y ya no hay ningún problema. Ya para que se
+ empiece a hacer las pruebas de esto, para ver si ya está funcionando bien la librería y la librería
+ que ya está integrada aquí, de la que construí para el SRI, que facturen y ya quede todo ya previsto
+ de una sola vez, para que ya puedan solo trabajar después de los otros módulos que me hagan falta.
+ Porque recuerda, en el KBS, por ejemplo, al principio, estamos bien, ahorita estamos ya
+ replicando la parte del ingreso, está así, se aparece en el centro todo. Está de ver que ponemos
+ de fondo y debe bloquear este logo y tal vez los colores, como todavía no tenemos el logo ni el nombre,
+ entonces aún no sabemos muy bien qué es lo que vaya sentado ahí, pero una vez que se ingresa, ya me
+ aparecen aquí ya los cuadros donde que ya dividiste todo y en cuadros, pero una vez seleccionando uno
+ de los cuadros, ya no me aparecen otros cuadros, ahí sí ya se ve normalmente el sistema como el
+ cuantífico. Entonces, esa parte también está en los vídeos que hicimos con Chris, pero con todo,
+ yo voy a abrir en orden, porque como te digo acá en este otro sistema, se abren y son como 12 módulos,
+ en cambio no se indicó Chris, creo que estaban solamente 4 o 6, son como 6 módulos, entonces yo
+ voy a ingresar a toditos, te voy a hacer un vídeo completo de recorrido, para que tú veas cómo se
+ abre, cómo va cada cosa y cómo aparece para poder buscar y con eso para tener un poco la idea un
+ poquito más clara, y ahí no sé, le cambiamos un poquito el orden todo, porque no podemos hacer
+ tan idéntico como es el KBS. Sí, con eso que ustedes me cuentan de los mejores del cuantífico
+ del UX, eso también se le puede aplicar y no va a quedar igual, para que con todos los 12 módulos
+ me vaya a tener los vídeos listos y la visión, para yo solo de ahí ya comenzar a implementar lo
+ que se vaya a necesitar, cambios y todo, para ahorita lo que a mí me faltaría, los dos primeros
+ pasos, desde mañana ya ser el servidor de la computadora con el sistema ya montado para que
+ puedan ocupar, lo segundo que voy a esperar a cuando que día me diga, este día que me manda el
+ vídeo para hacer los cambios, y la tercera que ya haga la validación del SRI, ya una vez hecha esa
+ validación del sistema, tal como está ahorita, ya para desplegarle, con eso ya estamos del otro
+ lado ya hechos, de ahí solo faltaría ya pulir las otras panteras que me den los vídeos, pulir todo
+ la otra cuestión y ya estaríamos ya listos ya para, para que pueda vender a un cierto grupo de
+ personas, de ahí seguir validando, validando, hasta que quede súper bien y de ahí seguir aumentando
+ módulos, haciendo cambios de acuerdo a lo que ahí estaban las revisiones para realizar. Claro, eso hay que
+ conversar con Chris para ver qué es lo que nos dice, porque ella sí estaba comentando que por
+ ejemplo el micro plus y el KBS tenían ciertas falencias al igual que el contifico, entonces por
+ ejemplo hay empresas que no solamente tienen el un solo sistema, por ejemplo acá este Rio Hospital,
+ viste ellos se manejan, Brasil tienen un sistema antiguo que todavía le tienen guardado, le sacaron
+ una imagen y está virtualizada, y de vez en cuando entran cuando tienen que revisar alguna factura,
+ porque se supone que todo lo que tienen ellos en registro no pueden ellos este eliminar porque
+ cuando es clínica deben tener de por vida. Bienvenidos, tienen el KBS que es el que ocupan
+ actualmente y también tienen el programa de el micro plus y en el programa del micro plus mira,
+ cuando quieren hacer esta cosa de las auditorías saben descargar todo lo que sale bajan del KBS para
+ mandar el micro y en el micro vuelta le hacen la auditoría para poder ver las ganancias netas de lo
+ que tienen, lo que tienen que pagar en abrir a todos los que están trabajando ahí, tantos enfermeros,
+ secretaría, presicción, los laboratoristas, todos, entonces eso por ejemplo no le logra hacer en el
+ KBS, le hacen en el micro, pero igual ella sabe cómo se maneja, entonces ahí le podemos consultar
+ para que ella nos explique y poder aumentar también ese módulo para hacerle aquí mismo,
+ porque hasta le tengo entendido el de acá sí funciona, pero no funciona al 100%, no le da este
+ tan detallado como le da vuelta en el micro, por eso siguen ocupando los dos sistemas. Sí,
+ eso le comento para decirles de una sola vez, todo eso da igual, ya he revisado y he visto videos y
+ todo, ya los como me dicen los 12 por detalle viendo cómo se abre el módulo, cómo se cierra,
+ todo eso, todos esos 12 módulos de igual y de ahí yo ya me encargo de la cuestión de la cuerda ya
+ las validaciones que se hagan ya esta semana para que usted también me diga qué día ya está el video
+ y yo con eso ya empezar ya a cronome y hacer el cronograma de cuánto tiempo me voy a demorar
+ sacando las nuevas versiones y corrigiendo lo que haga falta. Ya verás, antes de vernos en el poli
+ déjame ver si es que mañana voy primero a río, entonces ahí voy a ver si es que ya puedo sacarme
+ este vídeo y hacerle toda esta parte y de ahí si es que ya me logras acá, te pasaría eso también
+ el día de mañana mismo para seguir avanzando con los módulos porque en los módulos por ejemplo que
+ ahorita tenemos están bien, pero lo que veo es que en algunas en algunos módulos cuando vamos a
+ llenar hay ciertas cositas que por ejemplo si hay que adicionar como el del ingreso de los clientes
+ pero muy aparte de eso también hacen falta otros parámetros porque solamente con asterisco deberían
+ estar los que son obligatorios que en este caso tienes un asterisco solamente los que nos aparecen
+ pero si se ponen este más cosas adicionales como por ejemplo cuando son correos sí se suele
+ solicitar uno más por emergencia en caso de que el uno le deje de funcionar porque a veces los
+ correos tienen ellos un solo correo y no tienen separado para facturas también tienen ligado a
+ los vídeos a las imágenes del teléfono claro que eso no es problema nuestro no pero cuando se
+ les envía y como tienen la bandeja llena los correos no les llega y los correos rebotan entonces ahí es
+ bueno este tener tal vez este dos y no te olvidarás también lo que te decía de que hay que activarle
+ esta cosa también del correo para acá poner por ejemplo un gmail o un correo corporativo para que
+ al final del día poder enviar todas las facturas directamente al correo o que sea de manera inmediata
+ eso sí está eso sí está implementado en el módulo de documentos que le comenté que hay que sacar
+ ahí el smtp y de ahí hay que configurar y de ahí se pone como ese módulo de le documentos que tenía
+ ahí visto todo puede hacerle porque de que otras módulos como que me falta del vida para el cómo
+ que de cómo está bien hecho todas las formularias para de ahí ya me dice ahí está todo el formulario
+ que me dice con nuestro disco de números y todo eso perfecto que sería ya corrección ahorita que le
+ entiendan más de formularios para ya seguir haciendo el resto y de ahí que ya validar y
+ una de momento que ya esté ahí está listo ya para que este día le venda y lo haga todo eso le iba a
+ decir igual a las partes de instalación igual ahí yo para ayudarle que sea un poco más fácil como
+ le ve ahí en dinos y todo eso y los módulos que se necesiten ahí acuerda eso yo quitarle
+ ponerle permiso y demuestrarle cómo sale y ahora lo otro que te decía por lo general verás la gente
+ este ocupa este lector que es para las huellas digitales este que saben comprar en taiwán
+ un biométrico no eso le digo lo biométrico control de barras todas esas cosas esas cuestiones de
+ las cosas que hay que ver eso que hacerle ya casi al último porque ahorita lo que a mí me está
+ interesando más desde el cerebro del sistema que ya se puede emitir facturas se pueden traer los
+ datos del sri ya se puede acargar la firma del p12 ya no salga todo ese primer esqueleto gigante y
+ los formularios nuevos cambiados de ahí perfectamente aumentamos ya los lo que sean detalles por ejemplo
+ de biométrico de otras cosas acuerda lo que está estipulada que se iba a hacer y de ahí ya quedamos
+ ya ha acabado ya el sistema la primera versión esta serie y la segunda versión que es ahí con
+ las mejoras que me dice el biométrico las otras cosas para seguir avanzando porque lo primordial
+ ahorita es de sacales del que vuelvo insistir del cerebro de la aplicación que ya está todavía
+ perfecto y calculado y listo y otra consulta por ejemplo si es que a mí me dictan el número de
+ cédula y yo le pongo un número de cédula y me sale que no está registrado el cliente y yo ya
+ estaba en la factura ahí yo si puedo abrir el recuerdo de cliente para agregarle a mí mismo si
+ todo esta cuestión para se le comentó todas las validaciones todo eso hacemos primero nosotros para
+ de una vez ya está validado súper bien esto con vídeos de imágenes de su amiga contadora de ahí
+ ya sacamos las validaciones que sean necesarias y de ahí yo ya currículo digo aquí ya están las
+ validaciones de los nuevos sistemas del nuevo valor del nuevo sistema de cómo se va a ingresar un
+ nuevo dato cómo se va a cambiar un formulario eso le comento para estas se van a hacer todas
+ las validaciones con la que tenemos hasta ahorita y de ahí aumentar con el vídeo que me dice que me
+ puede ayudar y la computadora lista y con eso seguir aumentando lo que se va a realizar y no hay
+ problema ahorita en la base de datos o algo por ejemplo si es que ya empezamos a llenar datos y
+ por ejemplo tenemos ya las plantillas como están pero es que luego las plantillas aumentamos por
+ ejemplo la plantilla que se yo de para ingreso de productos en el inventario si es que ahí ingresamos
+ un producto y ahorita sólo tenemos el código el nombre y el precio nada más y luego vamos a agregar
+ el nombre de eso le comento yo normalmente en lenguajes de programación ahorita modernos como
+ la php que ocupa el árabe la spring boot que ocupa javasco para spring boot python de django
+ fazap y ruby rubin race se ocupan las migraciones una migración nosotros hacemos de los datos que
+ está así ya no salió mal hacemos migración rollback y retrocedemos de la migración inicial
+ lo que construimos por eso le comento hay que tener súper bien el esqueleto y de ahí cuando
+ ya estén todas las ya estén ya aprobadas todas las migraciones todas las versiones ahí yo le
+ anexo todo en una sola nueva en una nueva sola imagen de docker borrado toda la base de datos
+ y se hace las migraciones cero por eso le digo ahorita ahorita la base de datos trabaja sólo
+ con migraciones yo hago una migración agrego un nuevo campo hago y la cuestión cuando ya está
+ acabado el sistema la primera versión como en todo lo que se va a necesitar una sola migración y
+ quedó la base de datos en lo que usted vaya a ocupar si necesita postgres msql sqlite lo
+ que se vaya a necesitar ahí yo le configuro igual ahorita yo estoy trabajando con msql que
+ no hay ningún problema en mi computadora pero ya subiéndole ya mañana en devian y todo y
+ le voy a tener todo ya prevista y a que sólo ustedes validen y tengan las informaciones listas que se va a realizar esta semana de trabajo entonces entiendo que si es que se aumenta algún módulo o algo más adicional no habría ningún problema porque tú siempre sacas un respaldo de la base sacas lo que es el respaldo y luego le vuelves a sentar y si es que hay datos en blanco eso se aumentaría uno por uno en la migración la migración nosotros le ponemos todos los datos que necesite para la base de datos ponemos
+ php artisan migrate pagnes migró con el controlador con el modelo con todas las cosas y quedó perfecto en cambio en cishar y punto aspen de net y después bus como yo no programa de esos lenguajes yo no sé cómo es ahí pero normalmente las migraciones son para nosotros seguir agrandando un campo
+ validar lo que salga mal y si sale algo mal regresamos de ahí al momento que nosotros desarrollamos pero al momento que ya está en producción ahí si hay que tener todo listo porque es un poquito más difícil volver a alterar un dato y hacer todo desde cero
+ ajá por eso yo creo eso te decía pero bueno no sería desde cero no pero porque ya está avanzado pero antes de hacer las pruebas ya con las facturas y con todo yo creo que mejor primero te paso el vídeo de cómo están todos los módulos para que los módulos que tal vez nos falten ítems
+ por llenar mejor les completes una vez y una vez ya completado de todos ahí si hacemos pruebas para ver si es que si funciona si es que ya están actualizando lo que son las facturas todos porque ya sí funcionan en cierto y así se van las facturas todo ya digamos corremos con suerte no hay que corregir nada está todo chévere pero vemos los módulos de cómo está el kbs y en casi todos los módulos nos hacen falta muchos ítems no crees que tal vez ahí podría llegar a dañarse si empezamos a aumentar todos los ítems o crees que
+ por eso le comento esta semana con lo que tenemos ahorita yo ya he hecho con su amiga valido y yo cuando ya acabe de hacer la nueva versión automáticamente ya sale le digo voy a ese día voy a decirle ahorita la voy a subirle la nueva versión con todos los campos nuevas validaciones con la cuerda del vídeo
+ tag ahí usted ya le recibe porque no no no es para mí no hay ningún problema yo ahorita he llegado que está aquí construido valido usted me da los vídeos todo yo sigo construyendo en manera local en mi mac y al momento que ya le diga aquí ya está listo voy a subir los cambios a su servidor me conecto y quedó todo perfecto y listo y seguimos avanzando en lo que sea por eso les comento esta semana si es ya de probar la lógica del sistema que ya funcione todo perfecto como está
+ y de ahí es que seguimos avanzando con el con el resto de los vídeos cambiando de esta semana son dos cosas de trabajar mío está con las variaciones que me den y con los vídeos que ya vaya a tener para seguir trabajando los módulos cambiando los campos el primer trabajo siempre como lo muestra en manera local estamos y al momento que ya ya estemos ya la próxima reunión ya vamos a ver el sistema ya montado en un servidor ya listo como como que fuera para un cliente sin dominio y sin nada sólo con ciento punto ocho que se conecta pero ya les explico todo eso
+ y para que sigan validando la lógica y tener ya todo eso listo
+ y entonces con todo esto que estamos haciendo yo pienso que tal vez para finales de este mes que viene ya tal vez culminamos si por eso lo dije yo le dije yo más o menos si tuviera un poquito más de tiempo y usted igual gana mi vídeo es todo yo si me demoraba un mes a un mes y medio si le dije ahorita vamos ya los quince días del mes que me falta a mí ya lo último que ya está listo
+ y ya listo entonces voy a ver si es que mañana te vamos a llevar el video lo que si te llevas la máquina porque ya está ya con como el sistema operativo para que ya le puedas insertar acá el sistema todo ahí si ahí le dejo todo listito perfecto ya queda esa computadora como con su sistema listo y de ahí a cuando se vaya a vender ahí lo que necesitan le explico cómo saca las cosas como hacen las instalaciones migraciones módulos que se va a ocupar y ahí quedamos ya todo ya listo y estipulado a lo que hablamos de él le dije ya los otros módulos de ahí como
+ está encontrado módulos un poco más que me vaya a demorar o más complejos de ahí de comentar porque se que se ve más validaciones o más cosas de estos que estamos diciendo de los dos de los de los dos planes del plan básico y del pro eso ya está cubierto pero ahí sí del corporativo ahí si me demoraba un poco más ya deseo porque me toca aprender más y hacer más las cuestiones y eso de comentar con tiempo no hay inconveniente ahí lo que sí con quien deberíamos conversar es con Cristina porque Cristina es lo que la que nos va a dar las implementaciones necesarias
+ que bueno los requerimientos que adicionales que debe tener lo que es el sistema yo le voy a consultar también a ella para ver en esta semana que día puede para que la explicación por ejemplo del funcionamiento cuando ya vayamos a probar y ya subimos también ya mi firma todo y la comunicación con el sri decirle a ella que nos ayuda haciendo este lo que son las pruebas porque ella va a entender más y va a poder probar y verificar si está funcionando o que errores tiene para poder corregir
+ si eso si lo digo ya con eso es de validarle con su amiga y quedamos todo ya perfecto porque son un módulo de ahorita finales que ya ahorita le digo esta versión ya sale a producción ya es la primera que estamos la primera revisión como en el contrato la primera revisión ya cabe yo en 10 de 15 días que está de ahí yo me demoro otros 10 días de 15 días de acuerdo a su tiempo desde el subo de nuevo validamos ya estamos en el mes y de ahí la tercera revisión con lo nuevo acuerdo el contrato de lo que está ahí si se necesita otra versión nueva ahí hacemos otra vez estipulamos vemos que falte y ya
+ por eso le digo ya estamos con le vuelvo a recargar el plan básico del pro que ya está casi hecho y de ahí nos faltaría lo final
+ el corporativo que se está un poquito largo por lo del biométrico por el control de barras todo ese que es otra vez hacerle acuerdo que ya abarca el esquema desde el inicio
+ sí y eso te consultaba también el albimétrico yo sé que ahorita son no es tan importante le podemos hacer luego pero más o menos para tener la idea que necesitas ahí para poder migrar los datos porque como te digo son diferentes
+ algunos ocupan en agua otros ocupan en hay vision otros ocupan en high look y otros ocupan en
+ y creo que se llama esta otra marca que está acá de tokyo pero este no perdón de taiwan pero no sé no sé qué necesitarías ahí en ese caso el formato de cómo sale en este la hoja de excel para poder ver
+ eso es lo que es el documento para hacer eso de los biométricos y todo no se va no vamos a ocupar el php ni nada tengo que yo construir desde cero resumiendo la ahorita la idea es resumiendo yo primero que los biométricos funcionen como un script de python que ese script de python nosotros lo validamos que nos funcione y al momento que nosotros hacemos que funcione en el script de python más o menos la idea ya sale ahí espéreme un minutito y le demuestro más o menos como es la idea
+ con un sistema que tengo...
