@@ -44,6 +44,11 @@ import Warehouses from '../views/Warehouses.vue'
 import Taxes from '../views/Taxes.vue'
 import InventoryAdjustment from '../views/InventoryAdjustment.vue'
 import InventoryTransfer from '../views/InventoryTransfer.vue'
+import PurchaseEntry from '../views/PurchaseEntry.vue'
+import ReportViewer from '../views/ReportViewer.vue'
+import ArticleConversion from '../views/ArticleConversion.vue'
+import CardReconciliation from '../views/CardReconciliation.vue'
+import MassInvoicing from '../views/MassInvoicing.vue'
 
 const auth = useAuthStore()
 const company = useCompanyStore()
@@ -54,10 +59,11 @@ const maximized = ref(false)
 
 const componentMap: Record<string, any> = {
   Home, SignatureConfig, Dashboard, Accounts, Placeholder, Contacts, Products, Banks, Pos,
-  Invoices, Purchases, Inventory, Accounting, Cash, Receivables, Payables, Withholdings,
+  Invoices, Purchases, PurchaseEntry, Inventory, Accounting, Cash, Receivables, Payables, Withholdings,
   SriDocuments, Quotes, Reconciliation, Ledger, Companies, EmissionPoints, Suppliers, InventoryReports,
   Series, Users, Audit, Advances, CreditNotes, BatchImport, Employees, Payroll, Warehouses,
-  Taxes, InventoryAdjustment, InventoryTransfer,
+  Taxes, InventoryAdjustment, InventoryTransfer, ReportViewer, ArticleConversion,
+  CardReconciliation, MassInvoicing,
 }
 
 onMounted(async () => {

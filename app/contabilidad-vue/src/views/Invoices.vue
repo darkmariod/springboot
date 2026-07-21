@@ -1,7 +1,11 @@
 <script setup lang="ts">
+/**
+ * Invoices.vue — Listado de Facturas estilo KBS.
+ * Grilla densa con filtros + toolbar + preview RIDE.
+ */
 import { computed, onMounted, ref } from 'vue'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
+import InputText from 'primevue/inputtext'
+import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Tag from 'primevue/tag'
@@ -14,18 +18,37 @@ const loading = ref(true)
 const preview = ref<any>(null)
 const docRef = ref<HTMLElement>()
 
+// Filtros
+const filtro = ref({ anio: '', numero: '', cliente: '', identificacion: '' })
+
 const estadoSev: Record<string, string> = {
   generado: 'warn', firmado: 'info', enviado: 'info', AUTORIZADO: 'success', autorizado: 'success',
 }
-const money = (n: any) => '$' + Number(n).toFixed(2)
+const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 const empresa = computed(() => company.companies.find((c: any) => c.id === company.activeId))
+
+const anios = computed(() => {
+  const set = new Set(rows.value.map((r: any) => String(r.fecha_emision).slice(0, 4)))
+  return [...set].sort().reverse().map((a) => ({ label: a, value: a }))
+})
+
+const filtrados = computed(() => rows.value.filter((r: any) => {
+  const a = filtro.value.anio
+  const n = filtro.value.numero.toLowerCase()
+  const c = filtro.value.cliente.toLowerCase()
+  const id = filtro.value.identificacion.toLowerCase()
+  return (!a || String(r.fecha_emision).startsWith(a))
+    && (!n || (r.numero ?? '').toLowerCase().includes(n))
+    && (!c || (r.contact?.razon_social ?? '').toLowerCase().includes(c))
+    && (!id || (r.contact?.identificacion ?? '').toLowerCase().includes(id))
+}))
 
 async function load() {
   loading.value = true
   rows.value = (await api.get('/invoices?company_id=' + company.activeId)).data
   loading.value = false
 }
-// Print the RIDE document alone, in its own window (like the PDF of the video)
+
 function imprimir() {
   if (!docRef.value) return
   const w = window.open('', '_blank', 'width=820,height=900')
@@ -36,29 +59,78 @@ function imprimir() {
   w.focus()
   w.print()
 }
+
+function ver(r: any) { preview.value = r }
+function nuevo() { /* navegar a POS */ }
+
 onMounted(load)
 </script>
 
 <template>
-  <div style="padding:20px;">
-    <h2 style="margin:0 0 14px;">Facturas</h2>
-    <DataTable :value="rows" :loading="loading" size="small" paginator :rows="15" stripedRows>
-      <Column field="numero" header="Número" />
-      <Column header="Cliente"><template #body="{ data }">{{ data.contact?.razon_social }}</template></Column>
-      <Column header="Fecha"><template #body="{ data }">{{ String(data.fecha_emision).slice(0,10) }}</template></Column>
-      <Column header="Total"><template #body="{ data }">{{ money(data.importe_total) }}</template></Column>
-      <Column header="Pago"><template #body="{ data }">{{ data.forma_pago }}</template></Column>
-      <Column header="Estado SRI">
-        <template #body="{ data }">
-          <Tag :value="data.sri_document?.estado ?? '—'" :severity="estadoSev[data.sri_document?.estado] ?? 'secondary'" />
-        </template>
-      </Column>
-      <Column header=""><template #body="{ data }">
-        <Button label="Ver" icon="pi pi-eye" size="small" text @click="preview = data" />
-      </template></Column>
-    </DataTable>
+  <div class="invoices-layout">
+    <!-- ══ Cabecera de filtros ══ -->
+    <div class="invoices-toolbar">
+      <div class="invoices-filters">
+        <span class="invoices-title">Facturas de Venta</span>
+        <Select v-model="filtro.anio" :options="anios" optionLabel="label" optionValue="value"
+                placeholder="Año" size="small" showClear style="width:90px" />
+        <InputText v-model="filtro.numero" placeholder="Número" size="small" style="width:100px" />
+        <InputText v-model="filtro.cliente" placeholder="Cliente" size="small" style="width:160px" />
+        <InputText v-model="filtro.identificacion" placeholder="CI/RUC" size="small" style="width:120px" />
+        <Button label="Nuevo" icon="pi pi-plus" size="small" @click="nuevo" />
+      </div>
+    </div>
 
-    <!-- Preview RIDE (como el PDF del video) -->
+    <!-- ══ Grilla densa ══ -->
+    <div class="invoices-grid-wrap">
+      <table class="kvs-table invoices-table">
+        <thead>
+          <tr>
+            <th style="width:85px">Fecha</th>
+            <th style="width:70px">Secuencia</th>
+            <th style="width:100px">Serie</th>
+            <th style="width:110px">Número</th>
+            <th>Cliente</th>
+            <th style="width:110px">CI/RUC</th>
+            <th style="width:90px" class="der">Total</th>
+            <th style="width:80px">Pago</th>
+            <th style="width:100px">Estado SRI</th>
+            <th>Observación</th>
+            <th style="width:70px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in filtrados" :key="r.id" class="invoices-row">
+            <td>{{ String(r.fecha_emision).slice(0, 10) }}</td>
+            <td>{{ r.numero }}</td>
+            <td>{{ r.sri_document?.numero_autorizacion ? String(r.numero).replace(/\d{3}$/, '') : '—' }}</td>
+            <td><b>{{ r.numero }}</b></td>
+            <td>{{ r.contact?.razon_social }}</td>
+            <td style="font-family:monospace; font-size:11.5px;">{{ r.contact?.identificacion }}</td>
+            <td class="der"><b>{{ money(r.importe_total) }}</b></td>
+            <td>{{ r.forma_pago }}</td>
+            <td>
+              <Tag :value="r.sri_document?.estado ?? '—'"
+                   :severity="estadoSev[r.sri_document?.estado] ?? 'secondary'" size="small" />
+            </td>
+            <td style="font-size:11px; color:#64748b;">{{ r.sri_document?.numero_autorizacion ? 'Aut: ' + String(r.sri_document.numero_autorizacion).slice(0, 16) + '...' : '' }}</td>
+            <td>
+              <Button icon="pi pi-eye" size="small" text @click="ver(r)" title="Ver RIDE" />
+            </td>
+          </tr>
+          <tr v-if="!filtrados.length">
+            <td colspan="11" class="vacio">{{ loading ? 'Cargando...' : 'Sin facturas para este filtro' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══ Pie ══ -->
+    <div class="invoices-foot">
+      Mostrando {{ filtrados.length }} de {{ rows.length }} facturas
+    </div>
+
+    <!-- ══ Preview RIDE ══ -->
     <Dialog :visible="!!preview" modal :header="'Factura ' + (preview?.numero ?? '')"
             style="width:760px" @update:visible="preview = null">
       <div v-if="preview" style="display:flex; justify-content:flex-end; margin-bottom:10px;">
@@ -143,3 +215,32 @@ onMounted(load)
     </Dialog>
   </div>
 </template>
+
+<style scoped>
+.invoices-layout { display: flex; flex-direction: column; height: 100%; background: #eef1f5; }
+
+.invoices-toolbar {
+  background: linear-gradient(#3d8b8b, #2a6b6b); padding: 8px 12px; flex-shrink: 0;
+}
+.invoices-filters {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.invoices-title { color: #fff; font-weight: 600; font-size: 13px; margin-right: 12px; }
+
+.invoices-grid-wrap { flex: 1; overflow: auto; padding: 0; }
+.invoices-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.invoices-table th {
+  text-align: left; background: #f2f4f7; border-bottom: 1px solid #b9c2cc;
+  padding: 6px 8px; font-weight: 600; position: sticky; top: 0; z-index: 1;
+}
+.invoices-table td { padding: 5px 8px; border-bottom: 1px solid #eef1f5; }
+.invoices-table .der { text-align: right; }
+.invoices-table .vacio { color: #94a3b8; text-align: center; padding: 20px; }
+.invoices-row { cursor: pointer; }
+.invoices-row:hover { background: #eef6f6; }
+
+.invoices-foot {
+  font-size: 11.5px; color: #64748b; padding: 5px 12px;
+  border-top: 1px solid #e2e5ea; background: #f7f9fb; flex-shrink: 0;
+}
+</style>

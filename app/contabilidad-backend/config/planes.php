@@ -12,7 +12,7 @@ return [
         'precio_anual' => 289,
         'features' => [
             'catalogo', 'ventas', 'compras', 'inventario', 'facturacion_sri', 'reportes',
-            'import_lote',
+            'import_lote', 'fraccionamiento',
         ],
     ],
 
@@ -24,6 +24,7 @@ return [
             'catalogo', 'ventas', 'compras', 'inventario', 'facturacion_sri', 'reportes',
             'import_lote',
             'series', 'cartera', 'firma_incluida',
+            'fraccionamiento', 'conversion_articulos', 'conciliacion_tarjetas', 'facturacion_masiva', 'reservas_stock',
         ],
     ],
 
@@ -35,6 +36,7 @@ return [
             'catalogo', 'ventas', 'compras', 'inventario', 'facturacion_sri', 'reportes',
             'import_lote',
             'series', 'cartera', 'firma_incluida',
+            'fraccionamiento', 'conversion_articulos', 'conciliacion_tarjetas', 'facturacion_masiva', 'reservas_stock',
             'bancos', 'conciliacion', 'contabilidad', 'nomina', 'usuarios', 'auditoria',
         ],
     ],
@@ -47,6 +49,7 @@ return [
             'catalogo', 'ventas', 'compras', 'inventario', 'facturacion_sri', 'reportes',
             'import_lote',
             'series', 'cartera', 'firma_incluida',
+            'fraccionamiento', 'conversion_articulos', 'conciliacion_tarjetas', 'facturacion_masiva', 'reservas_stock',
             'bancos', 'conciliacion', 'contabilidad', 'nomina', 'usuarios', 'auditoria',
             'sucursales', 'activos_fijos',
         ],

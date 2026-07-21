@@ -23,12 +23,7 @@ const msg = ref<any>(null)
 const detalle = ref<any>(null)
 
 const form = ref<any>({ contact_id: null, items: [] })
-const _formasPago = [
-  { label: 'Efectivo', value: 'efectivo' },
-  { label: 'Transferencia', value: 'transferencia' },
-  { label: 'Tarjeta', value: 'tarjeta' },
-  { label: 'Crédito', value: 'credito' },
-]
+
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 
 const base = computed(() => form.value.items.reduce(

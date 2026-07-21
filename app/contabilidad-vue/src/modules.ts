@@ -21,12 +21,14 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'credit-notes', label: 'Notas de crédito', icon: 'pi pi-file-excel', component: 'CreditNotes', feature: 'cartera' },
       { key: 'receivables', label: 'Cuentas por cobrar', icon: 'pi pi-wallet', component: 'Receivables', feature: 'cartera' },
       { key: 'sales-ret', label: 'Retenciones recibidas', icon: 'pi pi-percentage', component: 'Withholdings', feature: 'ventas' },
+      { key: 'mass-invoicing', label: 'Facturación Masiva', icon: 'pi pi-copy', component: 'MassInvoicing', feature: 'facturacion_masiva' },
     ],
   },
   {
     label: 'Compras',
     items: [
       { key: 'purchases', label: 'Compras', icon: 'pi pi-shopping-bag', component: 'Purchases', feature: 'compras' },
+      { key: 'purchase-entry', label: 'Registro de Compras', icon: 'pi pi-file-edit', component: 'PurchaseEntry', feature: 'compras' },
       { key: 'batch-import', label: 'Importar del SRI (lote)', icon: 'pi pi-cloud-download', component: 'BatchImport', feature: 'import_lote' },
       { key: 'suppliers', label: 'Proveedores', icon: 'pi pi-truck', component: 'Suppliers', feature: 'compras' },
       { key: 'payables', label: 'Cuentas por pagar', icon: 'pi pi-credit-card', component: 'Payables', feature: 'cartera' },
@@ -41,6 +43,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'inventory-reports', label: 'Reportes de inventario', icon: 'pi pi-print', component: 'InventoryReports', feature: 'reportes' },
       { key: 'inventory-adjustment', label: 'Ajuste Inventario', icon: 'pi pi-sliders-h', component: 'InventoryAdjustment', feature: 'inventario' },
       { key: 'inventory-transfer', label: 'Transferencia', icon: 'pi pi-arrow-right-arrow-left', component: 'InventoryTransfer', feature: 'inventario' },
+      { key: 'article-conversion', label: 'Conversión Artículos', icon: 'pi pi-refresh', component: 'ArticleConversion', feature: 'conversion_articulos' },
     ],
   },
   {
@@ -49,6 +52,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'cash', label: 'Caja', icon: 'pi pi-money-bill', component: 'Cash', feature: 'bancos' },
       { key: 'banks', label: 'Bancos', icon: 'pi pi-building-columns', component: 'Banks', feature: 'bancos' },
       { key: 'reconciliation', label: 'Conciliación bancaria', icon: 'pi pi-sync', component: 'Reconciliation', feature: 'conciliacion' },
+      { key: 'card-reconciliation', label: 'Conciliación Tarjetas', icon: 'pi pi-credit-card', component: 'CardReconciliation', feature: 'conciliacion_tarjetas' },
     ],
   },
   {
@@ -83,7 +87,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'companies', label: 'Empresas', icon: 'pi pi-building', component: 'Companies' },
       { key: 'users', label: 'Usuarios y roles', icon: 'pi pi-shield', component: 'Users', feature: 'usuarios' },
       { key: 'audit', label: 'Auditoría', icon: 'pi pi-history', component: 'Audit', feature: 'auditoria' },
-      { key: 'reports', label: 'Reportes', icon: 'pi pi-chart-bar', component: 'Accounting', feature: 'reportes' },
+      { key: 'reports', label: 'Reportes', icon: 'pi pi-chart-bar', component: 'ReportViewer', feature: 'reportes' },
     ],
   },
 ]

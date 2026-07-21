@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Cliente HTTP hacia la API Laravel. /api se redirige al backend vía proxy de Vite.
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL ?? '/api',
   headers: { Accept: 'application/json' },
 })
 

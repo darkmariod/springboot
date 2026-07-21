@@ -20,6 +20,10 @@ class ProductController extends Controller {
             'stock_minimo'=>['nullable','numeric','min:0'],
             'stock_maximo'=>['nullable','numeric','min:0'],
             'ubicacion'=>['nullable','string'],
+            'unidad_base'=>['nullable','string','max:20'],
+            'unidad_fraccion'=>['nullable','string','max:20'],
+            'factor_conversion'=>['nullable','numeric','min:0'],
+            'reserva_stock'=>['nullable','numeric','min:0'],
         ]);
         return response()->json(Product::create($data), 201);
     }

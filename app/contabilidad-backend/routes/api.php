@@ -44,6 +44,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Compras
     Route::get("purchases", [\App\Http\Controllers\PurchaseController::class, "index"]);
+    Route::post("purchases", [\App\Http\Controllers\PurchaseController::class, "store"]);
+    Route::put("purchases/{purchase}", [\App\Http\Controllers\PurchaseController::class, "update"]);
+    Route::delete("purchases/{purchase}", [\App\Http\Controllers\PurchaseController::class, "destroy"]);
     Route::post("purchases/import", [\App\Http\Controllers\PurchaseController::class, "import"]);
 
     // Inventario
@@ -157,4 +160,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post("inventory/ajuste", [\App\Http\Controllers\InventoryTransactionController::class, "ajuste"]);
     Route::post("inventory/transferencia", [\App\Http\Controllers\InventoryTransactionController::class, "transferencia"]);
     Route::get("inventory/kardex/{product}/bodega", [\App\Http\Controllers\InventoryTransactionController::class, "kardexBodega"]);
+
+    // Fase 5 — Reportes
+    Route::get("reports/stock", [\App\Http\Controllers\ReportController::class, "stockReport"]);
+    Route::get("reports/kardex/{product}", [\App\Http\Controllers\ReportController::class, "kardexReport"]);
+    Route::post("reports/pdf", [\App\Http\Controllers\ReportController::class, "generatePdf"]);
+    Route::get("reports/csv", [\App\Http\Controllers\ReportController::class, "exportCsv"]);
+
+    // Fase 6 — Conversión de artículos
+    Route::post("conversions", [\App\Http\Controllers\ArticleConversionController::class, "store"]);
+
+    // Fase 6 — Facturación masiva
+    Route::post("invoices/masiva", [\App\Http\Controllers\MassInvoiceController::class, "store"]);
 });

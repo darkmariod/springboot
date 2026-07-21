@@ -32,7 +32,7 @@ class InvoiceController extends Controller {
             ]);
         }
         $contact = Contact::findOrFail($data['contact_id']);
-        $invoice = $emitter->emit($company, $contact, $data['items'], $data['forma_pago'] ?? 'efectivo');
+        $invoice = $emitter->emit($company, $contact, $data['items'], $data['forma_pago'] ?? 'efectivo', $data['emission_point_id'] ?? null);
         return response()->json(['invoice'=>$invoice, 'sri_document'=>$invoice->sriDocument], 201);
     }
 }

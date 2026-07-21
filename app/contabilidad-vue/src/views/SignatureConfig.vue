@@ -40,7 +40,6 @@ const estados = [
   { label: 'ACTIVO', value: 'ACTIVO' },
   { label: 'INACTIVO', value: 'INACTIVO' },
 ]
-const _empresaActual = computed(() => companies.value.find((c: any) => c.id === companyId.value))
 const firmaVencida = computed(() => {
   if (!cfg.value.cert_valido_hasta) return false
   return new Date(cfg.value.cert_valido_hasta) < new Date()

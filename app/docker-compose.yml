@@ -1,0 +1,49 @@
+services:
+  # ── Backend: Laravel PHP-FPM ──
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: contable-backend
+    restart: unless-stopped
+    env_file: .env.docker
+    volumes:
+      - db-data:/var/www/database
+      - storage-data:/var/www/storage
+    networks:
+      - contable
+
+  # ── Frontend: Nginx + Vue SPA ──
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - VITE_API_URL=/api
+    container_name: contable-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - contable
+
+  # ── Cloudflare Tunnel (sin dominio necesario) ──
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: contable-tunnel
+    restart: unless-stopped
+    command: tunnel --url http://frontend:80
+    depends_on:
+      - frontend
+    networks:
+      - contable
+
+volumes:
+  db-data:
+  storage-data:
+
+networks:
+  contable:
+    driver: bridge

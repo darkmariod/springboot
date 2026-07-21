@@ -57,19 +57,8 @@ function updateRow(id: number, field: string, value: any) {
   emit('update:modelValue', rows)
 }
 
-const _formaActual = computed(() => (id: number) => {
-  const row = props.modelValue.find(r => r.id === id)
-  if (!row?.tipo) return null
-  return formas.value.find(f => f.value === row.tipo) ?? null
-})
-
 const totalAbonado = computed(() => props.modelValue.reduce((s, r) => s + (Number(r.valor) || 0), 0))
 const saldoPendiente = computed(() => props.total - totalAbonado.value)
-
-function _todayString() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 onMounted(async () => {
   const res = await api.get('/catalogos/formas-pago')

@@ -13,12 +13,21 @@ class InvoiceEmitter {
         private RegisterInventoryMovement $inventario,
         private GenerateInvoiceJournalEntry $asiento,
     ) {}
-    public function emit(Company $company, Contact $contact, array $items, string $formaPago='efectivo'): Invoice {
+    public function emit(Company $company, Contact $contact, array $items, string $formaPago='efectivo', ?int $emissionPointId = null): Invoice {
         $formaPago = array_key_exists($formaPago, self::SRI_FORMA_PAGO) ? $formaPago : 'efectivo';
+        $estab = $company->estab;
+        $ptoEmi = $company->pto_emi;
+        if ($emissionPointId) {
+            $ep = \App\Models\EmissionPoint::find($emissionPointId);
+            if ($ep && $ep->company_id === $company->id) {
+                $estab = $ep->estab ?? $estab;
+                $ptoEmi = $ep->punto ?? $ptoEmi;
+            }
+        }
         $totals = $this->calculator->fromItems($items);
         $invoice = Invoice::create([
             'company_id'=>$company->id, 'contact_id'=>$contact->id,
-            'numero'=>sprintf('%s-%s-%09d', $company->estab, $company->pto_emi, $company->secuencial),
+            'numero'=>sprintf('%s-%s-%09d', $estab, $ptoEmi, $company->secuencial),
             'items'=>$items, 'total_sin_impuestos'=>$totals['total_sin_impuestos'],
             'total_impuesto'=>$totals['total_impuesto'], 'importe_total'=>$totals['importe_total'],
             'forma_pago'=>$formaPago, 'saldo_pendiente'=>$formaPago==='credito' ? $totals['importe_total'] : 0,

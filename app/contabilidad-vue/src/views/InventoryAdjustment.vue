@@ -10,8 +10,6 @@ import { useCompanyStore } from '../stores/company'
 
 const company = useCompanyStore()
 
-const _money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
-
 const products = ref<any[]>([])
 const warehouses = ref<any[]>([])
 const loading = ref(false)

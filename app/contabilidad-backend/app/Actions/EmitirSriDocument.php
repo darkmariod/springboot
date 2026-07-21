@@ -22,10 +22,18 @@ class EmitirSriDocument {
         if (!$company->certificado_p12 || !$company->certificado_clave) return $doc;
         $xmlFirmado = $this->facturacion->firmarXml($tipo, $xml, $company->certificado_p12, $company->certificado_clave);
         $doc->update(['xml_firmado'=>$xmlFirmado, 'estado'=>'firmado']);
-        $recepcion = $this->facturacion->enviarSri($xmlFirmado, (string)$company->ambiente);
-        $doc->update(['estado'=>'enviado', 'mensajes'=>$recepcion]);
-        $aut = $this->facturacion->autorizarSri($claveAcceso, (string)$company->ambiente);
-        $doc->update(['estado'=>$aut['estado'] ?? 'enviado', 'numero_autorizacion'=>$aut['numeroAutorizacion'] ?? null, 'mensajes'=>$aut]);
+        try {
+            $recepcion = $this->facturacion->enviarSri($xmlFirmado, (string)$company->ambiente);
+            $doc->update(['estado'=>'enviado', 'mensajes'=>$recepcion]);
+            try {
+                $aut = $this->facturacion->autorizarSri($claveAcceso, (string)$company->ambiente);
+                $doc->update(['estado'=>$aut['estado'] ?? 'enviado', 'numero_autorizacion'=>$aut['numeroAutorizacion'] ?? null, 'mensajes'=>$aut]);
+            } catch (\Throwable $e) {
+                $doc->update(['estado'=>'enviado', 'mensajes'=>['error_autorizar'=>$e->getMessage()]]);
+            }
+        } catch (\Throwable $e) {
+            $doc->update(['estado'=>'firmado', 'mensajes'=>['error_enviar'=>$e->getMessage()]]);
+        }
         return $doc;
     }
     private function construirPayload(Company $company, array $data): array {
