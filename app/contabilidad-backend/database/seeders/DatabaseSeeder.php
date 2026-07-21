@@ -27,7 +27,13 @@ class DatabaseSeeder extends Seeder
         // Usuario admin
         User::firstOrCreate(
             ['email' => 'admin@demo.com'],
-            ['name' => 'Administrador', 'password' => Hash::make('password123'), 'company_id' => $company->id],
+            ['name' => 'Administrador', 'password' => Hash::make('password123'), 'company_id' => $company->id, 'rol' => 'admin'],
+        );
+
+        // Usuario para la contadora (pedido del cliente) — rol contador
+        User::firstOrCreate(
+            ['email' => 'contador@demo.com'],
+            ['name' => 'Contadora', 'password' => Hash::make('password123'), 'company_id' => $company->id, 'rol' => 'contador'],
         );
 
         // Punto de emisión demo

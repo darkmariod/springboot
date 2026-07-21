@@ -53,7 +53,12 @@ async function onSriLookup() {
         nombre_comercial: res.data.nombre_comercial ?? local.value.nombre_comercial,
         tipo_identificacion: res.data.tipo_identificacion ?? local.value.tipo_identificacion,
       }
-      sriHint.value = 'Auto-completado del SRI'
+      // Mostrar los datos extra que trae el SRI (útiles para la contadora: régimen, etc.)
+      const extra = [res.data.tipo_contribuyente, res.data.regimen ? 'Régimen ' + res.data.regimen : null,
+        res.data.obligado_contabilidad ? 'Obligado contab.' : null,
+        res.data.contribuyente_especial ? 'Contrib. especial' : null,
+        res.data.estado].filter(Boolean).join(' · ')
+      sriHint.value = 'Auto-completado del SRI' + (extra ? ' — ' + extra : '')
       emit('sri-lookup', { found: true, data: res.data })
     } else if (res.data.requiere_carga_manual) {
       sriHint.value = res.data.mensaje || 'No está en el padrón SRI. Cargá los datos a mano.'

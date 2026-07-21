@@ -34,18 +34,32 @@ class SriLookupController extends Controller
         $ruc = strlen($id) === 13 ? $id : $id . '001';
 
         try {
-            $res = Http::acceptJson()->timeout(8)->get(self::SRI_RUC_URL, ['ruc' => $ruc]);
+            // El SRI BLOQUEA requests sin User-Agent de navegador (responde vacío/timeout).
+            // Sin este header, el autocompletar nunca llena y cae siempre en "cargá a mano".
+            $res = Http::acceptJson()
+                ->withHeaders(['User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'])
+                ->timeout(8)
+                ->get(self::SRI_RUC_URL, ['ruc' => $ruc]);
 
             if ($res->ok() && is_array($res->json()) && count($res->json()) > 0) {
                 $c = $res->json()[0];
+
+                // OJO: el catastro público del SRI NO devuelve dirección ni correo — solo estos
+                // campos. La dirección/correo se cargan a mano (o con una fuente paga aparte).
                 return response()->json([
                     'encontrado' => true,
                     'tipo_identificacion' => strlen($id) === 13 ? '04' : '05', // 04 RUC · 05 cédula
                     'identificacion' => $id,
                     'razon_social' => $c['razonSocial'] ?? null,
                     'nombre_comercial' => $c['nombreComercial'] ?? null,
-                    'estado' => $c['estadoContribuyenteRuc'] ?? null,
+                    'estado' => $c['estadoContribuyenteRuc'] ?? null,       // ACTIVO / SUSPENDIDO…
                     'obligado_contabilidad' => ($c['obligadoLlevarContabilidad'] ?? 'NO') === 'SI',
+                    // Datos extra útiles para la contadora (afectan retenciones e impuestos):
+                    'tipo_contribuyente' => $c['tipoContribuyente'] ?? null,      // SOCIEDAD / PERSONA NATURAL
+                    'regimen' => $c['regimen'] ?? null,                           // GENERAL / RIMPE
+                    'actividad_economica' => $c['actividadEconomicaPrincipal'] ?? null,
+                    'contribuyente_especial' => ($c['contribuyenteEspecial'] ?? 'NO') === 'SI',
+                    'agente_retencion' => ($c['agenteRetencion'] ?? 'NO') === 'SI',
                 ]);
             }
         } catch (Throwable $e) {
