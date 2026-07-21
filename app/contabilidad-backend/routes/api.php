@@ -25,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Catálogos
     Route::apiResource('contacts', \App\Http\Controllers\ContactController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('sri/consulta', [\App\Http\Controllers\SriLookupController::class, 'consulta']);
     Route::apiResource('products', \App\Http\Controllers\ProductController::class)->only(['index', 'store', 'update', 'destroy']);
     // Ficha de artículo estilo KVS: precios, componentes, códigos alternos
     Route::get("products/{product}/prices", [\App\Http\Controllers\ProductExtrasController::class, "prices"]);

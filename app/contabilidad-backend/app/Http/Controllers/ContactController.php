@@ -14,7 +14,8 @@ class ContactController extends Controller {
             'razon_social'=>['required','string','max:255'],
             'es_cliente'=>['boolean'],'es_proveedor'=>['boolean'],
             'nombre_comercial'=>['nullable','string'],'direccion'=>['nullable','string'],
-            'telefono'=>['nullable','string'],'email'=>['nullable','email'],'parte_relacionada'=>['boolean'],
+            'telefono'=>['nullable','string'],'email'=>['nullable','email'],
+            'email2'=>['nullable','email'],'parte_relacionada'=>['boolean'],
         ]);
         return response()->json(Contact::create($data), 201);
     }
