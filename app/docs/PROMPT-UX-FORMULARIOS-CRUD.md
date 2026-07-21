@@ -67,6 +67,13 @@ BLOQUE 2 — Migrar cada formulario de datos al patrón KBS con CRUD completo
     8. Categories / catálogos que falten
   (Products.vue YA está — no tocar, solo usar de molde.)
 
+BLOQUE 2b — VERIFICAR el ingreso de producto/compra (pedido explícito del cliente)
+  El cliente pidió textual que el ingreso capture: cantidad, números de serie, nombre, código y
+  EL PROVEEDOR a quien se compra. Confirmar que PurchaseEntry.vue (compra) captura proveedor +
+  series + cantidad + código, y que Products.vue maneja series. Si falta algo, completarlo.
+  Es el punto estrella del demo: "garantías por serie — a quién le compré y a quién le vendí ESTA
+  unidad". No asumir que está; verificarlo.
+
 BLOQUE 3 — Verificar CRUD real de cada formulario
   Para cada uno: crear un registro, editarlo, eliminarlo, y confirmar en la lista. Que el guardado
   llegue a la BD (no solo a la pantalla).
