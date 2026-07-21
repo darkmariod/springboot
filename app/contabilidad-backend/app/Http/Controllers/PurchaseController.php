@@ -78,6 +78,16 @@ class PurchaseController extends Controller {
                 if ($product->tipo !== 'servicio')
                     $inv->handle($product, 'ingreso', $cant, $item['precio_unitario'],
                         'Compra ' . $purchase->numero, $purchase->fecha_emision->toDateString());
+
+                // Series: registrar números de serie comprados (garantías)
+                foreach (($item['series'] ?? []) as $serieNum) {
+                    $serie = trim((string) $serieNum);
+                    if ($serie === '') continue;
+                    \App\Models\ProductSerie::firstOrCreate(
+                        ['company_id' => $companyId, 'serie' => $serie],
+                        ['product_id' => $product->id, 'purchase_id' => $purchase->id, 'estado' => 'disponible']
+                    );
+                }
             }
 
             // Asiento contable

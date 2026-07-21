@@ -8,10 +8,12 @@ import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import Dialog from 'primevue/dialog'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import KvsDocGrid from '../components/kvs/KvsDocGrid.vue'
 import KvsToolbar from '../components/kvs/KvsToolbar.vue'
+import ClienteForm from '../components/ClienteForm.vue'
 
 const company = useCompanyStore()
 const products = ref<any[]>([])
@@ -31,6 +33,12 @@ const referencia = ref('')
 
 // Grilla
 const items = ref<any[]>([])
+
+// Inline client creation
+const nuevoClienteDialog = ref(false)
+const nuevoClienteForm = ref<any>({ tipo_identificacion: '05', es_cliente: true, es_proveedor: false })
+const sriLoading = ref(false)
+const identificacionBusqueda = ref('')
 
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 
@@ -58,6 +66,32 @@ async function load() {
   if (contacts.value.length && !contactId.value) contactId.value = contacts.value[0]?.id ?? null
   if (emissionPoints.value.length) emissionPointId.value = emissionPoints.value[0]?.id ?? null
   loading.value = false
+}
+
+function buscarClientePorId() {
+  const id = identificacionBusqueda.value.trim()
+  if (!id) return
+  const match = contacts.value.find((c: any) => c.identificacion === id)
+  if (match) {
+    contactId.value = match.id
+    msg.value = { type: 'success', text: `Cliente encontrado: ${match.razon_social}` }
+  } else {
+    nuevoClienteForm.value = { tipo_identificacion: '05', identificacion: id, es_cliente: true, es_proveedor: false }
+    nuevoClienteDialog.value = true
+  }
+}
+
+async function guardarNuevoCliente() {
+  try {
+    const res = await api.post('/contacts', { ...nuevoClienteForm.value, company_id: company.activeId })
+    contacts.value.push(res.data)
+    contactId.value = res.data.id
+    nuevoClienteDialog.value = false
+    msg.value = { type: 'success', text: 'Cliente creado: ' + res.data.razon_social }
+  } catch (err: any) {
+    const e = err.response?.data?.errors
+    msg.value = { type: 'error', text: e ? Object.values(e).flat().join(' · ') : 'No se pudo guardar.' }
+  }
 }
 
 // Escaneo de código de barras / serie
@@ -216,6 +250,14 @@ onMounted(load)
       <!-- Cabecera -->
       <div class="pos-header">
         <div class="kvs-row">
+          <label class="kvs-lbl">Buscar por ID:</label>
+          <div style="display:flex; gap:6px; flex:1;">
+            <InputText v-model="identificacionBusqueda" placeholder="Cédula o RUC..." 
+                       @keydown.enter.prevent="buscarClientePorId" style="flex:1" />
+            <Button icon="pi pi-search" size="small" @click="buscarClientePorId" />
+          </div>
+        </div>
+        <div class="kvs-row">
           <label class="kvs-lbl"><span class="req">*</span> Cliente:</label>
           <Select v-model="contactId" :options="contactOptions" optionValue="id"
                   optionLabel="label" placeholder="Seleccionar cliente" filter
@@ -278,6 +320,16 @@ onMounted(load)
       </KvsToolbar>
     </section>
   </div>
+
+  <Dialog v-model:visible="nuevoClienteDialog" modal header="Nuevo Cliente" style="width:520px;">
+    <ClienteForm v-model="nuevoClienteForm" />
+    <template #footer>
+      <div class="kvs-footer">
+        <Button label="Cancelar" text @click="nuevoClienteDialog=false" />
+        <Button label="Guardar cliente" @click="guardarNuevoCliente" />
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>

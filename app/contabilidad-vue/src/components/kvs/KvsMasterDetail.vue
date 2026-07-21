@@ -109,6 +109,7 @@ const emit = defineEmits<{
           </Message>
           <slot name="tab-content" />
         </div>
+        <slot name="footer" />
       </template>
     </section>
   </div>
