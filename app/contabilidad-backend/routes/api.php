@@ -6,7 +6,7 @@ use App\Http\Controllers\CompanyController;
 use Illuminate\Support\Facades\Route;
 
 // Público
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login');
 
 // Protegido por token Sanctum
 Route::middleware('auth:sanctum')->group(function () {
