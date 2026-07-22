@@ -8,6 +8,7 @@ import Column from 'primevue/column'
 import Message from 'primevue/message'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 
 const company = useCompanyStore()
 
@@ -82,13 +83,21 @@ async function exportCsv() {
   a.click()
 }
 
-function exportPdf() {
-  const params_: any = new URLSearchParams({ company_id: String(company.activeId), hasta: params.value.hasta, orden: params.value.orden })
-  if (params.value.warehouse_id) params_.set('warehouse_id', String(params.value.warehouse_id))
-  if (params.value.category) params_.set('category', params.value.category)
-  if (params.value.producto) params_.set('producto', params.value.producto)
+async function exportPdf() {
+  try {
+    const params_: any = { company_id: company.activeId, hasta: params.value.hasta, orden: params.value.orden, tipo: 'existencias' }
+    if (params.value.warehouse_id) params_.warehouse_id = params.value.warehouse_id
+    if (params.value.category) params_.category = params.value.category
+    if (params.value.producto) params_.producto = params.value.producto
 
-  window.open('/api/reports/pdf?' + params_.toString(), '_blank')
+    const res = await api.post('/reports/pdf', params_, { responseType: 'blob' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    a.download = 'reporte-existencias.pdf'
+    a.click()
+  } catch (e: any) {
+    msg.value = { type: 'error', text: 'No se pudo generar el PDF.' }
+  }
 }
 
 function resetear() {
@@ -110,7 +119,9 @@ loadBodegas()
 </script>
 
 <template>
-  <div style="display: flex; height: 100%;">
+  <div style="display: flex; flex-direction: column; height: 100%;">
+    <KvsModuleHeader module-name="Reportes" :company="{ ruc: company.activeId, razon_social: 'Existencias' }" subtitle="Parámetros y Exportación" />
+    <div style="display: flex; flex: 1; min-height: 0;">
     <!-- Panel de parámetros -->
     <aside class="no-print" style="width: 290px; border-right: 1px solid #e2e5ea; background: #fff; padding: 16px; overflow: auto; flex-shrink: 0;">
       <div style="font-weight: 700; font-size: 13px; color: #4a3220; margin-bottom: 12px;">Parámetros del Reporte</div>
@@ -197,6 +208,7 @@ loadBodegas()
           </div>
         </template>
       </DataTable>
+    </div>
     </div>
   </div>
 </template>

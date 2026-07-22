@@ -13,6 +13,7 @@ import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import KvsDocGrid from '../components/kvs/KvsDocGrid.vue'
 import KvsToolbar from '../components/kvs/KvsToolbar.vue'
+import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 import ClienteForm from '../components/ClienteForm.vue'
 
 const company = useCompanyStore()
@@ -219,7 +220,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="pos-layout">
+  <div style="display:flex; flex-direction:column; height:100%;">
+    <KvsModuleHeader module-name="Ventas" :company="{ ruc: company.activeId, razon_social: 'Punto de Venta' }" subtitle="Facturación" />
+    <div class="pos-layout" style="flex:1; min-height:0;">
     <!-- ══ Panel izquierdo: productos ══ -->
     <section class="pos-products">
       <div class="pos-products-title">Productos</div>
@@ -274,6 +277,14 @@ onMounted(load)
           <label class="kvs-lbl">Referencia:</label>
           <InputText v-model="referencia" placeholder="Opcional" class="kvs-in" />
         </div>
+        <div class="kvs-row">
+          <label class="kvs-lbl">Vendedor:</label>
+          <InputText value="" placeholder="Nombre del vendedor" class="kvs-in" style="max-width:200px" disabled />
+          <label class="kvs-lbl" style="margin-left:8px;">Lista Precio:</label>
+          <InputText value="GENERAL" class="kvs-in" style="max-width:120px" disabled />
+          <label class="kvs-lbl" style="margin-left:8px;">Caja:</label>
+          <InputText value="Caja Principal" class="kvs-in" style="max-width:140px" disabled />
+        </div>
       </div>
 
       <!-- Grilla de ítems -->
@@ -319,6 +330,7 @@ onMounted(load)
                 :loading="emitiendo" :disabled="!items.length" @click="onAction('emitir')" />
       </KvsToolbar>
     </section>
+    </div>
   </div>
 
   <Dialog v-model:visible="nuevoClienteDialog" modal header="Nuevo Cliente" style="width:520px;">
@@ -341,7 +353,7 @@ onMounted(load)
   background: #fff; border-right: 1px solid #b9c2cc;
 }
 .pos-products-title {
-  background: linear-gradient(#3d8b8b, #2a6b6b); color: #fff; font-weight: 600;
+  background: var(--hr-gradient); color: #fff; font-weight: 600;
   font-size: 12.5px; padding: 5px 10px;
 }
 .pos-scan-input {
@@ -357,7 +369,7 @@ onMounted(load)
   border: 1px solid #e2e5ea; border-radius: 6px; background: #fff;
   padding: 6px; cursor: pointer; text-align: left; transition: border-color 0.15s;
 }
-.pos-product-card:hover { border-color: #3d8b8b; }
+.pos-product-card:hover { border-color: var(--hr-blue); }
 .pos-product-img { height: 60px; border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
 .pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
 .pos-product-img--empty {
@@ -372,7 +384,7 @@ onMounted(load)
   flex: 1; display: flex; flex-direction: column; overflow: hidden;
 }
 .pos-doc-title {
-  background: linear-gradient(#3d8b8b, #2a6b6b); color: #fff; font-weight: 600;
+  background: var(--hr-gradient); color: #fff; font-weight: 600;
   font-size: 12.5px; padding: 5px 10px;
 }
 .pos-header { padding: 10px 12px; border-bottom: 1px solid #e2e5ea; background: #f7f9fb; }
@@ -384,9 +396,5 @@ onMounted(load)
 .pos-pago-label { font-size: 12px; color: #546e7a; font-weight: 600; text-transform: uppercase; }
 .pos-pago-btns { display: flex; gap: 6px; }
 
-/* ── KVS rows dentro del POS ── */
-.kvs-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.kvs-lbl { font-size: 13px; color: #37474f; white-space: nowrap; min-width: 110px; text-align: right; }
-.kvs-lbl .req { color: #d93025; font-weight: 700; }
-.kvs-in { flex: 1; min-width: 0; }
+
 </style>

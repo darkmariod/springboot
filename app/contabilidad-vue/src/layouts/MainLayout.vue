@@ -91,8 +91,7 @@ function onKeydown(e: KeyboardEvent) {
     <div class="main">
       <header class="topbar">
         <div class="brand">
-          <i class="pi pi-calculator" />
-          <span>Sistema Contable</span>
+          <img src="/logo-has-reset.png" alt="HasReset" class="hr-logo" />
         </div>
         <Button label="Módulos" icon="pi pi-th-large" text size="small"
                 @click="tabs.open({ key: 'home', label: 'Módulos', icon: 'pi pi-th-large', component: 'Home' })" />
@@ -154,13 +153,14 @@ function onKeydown(e: KeyboardEvent) {
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 /* Sin menú lateral (como KVS): la marca vive en la barra superior */
 .topbar {
-  height: 52px; background: #1f2733; border-bottom: 1px solid #2c3644; display: flex;
+  height: 52px; background: var(--hr-navy); border-bottom: 1px solid var(--hr-blue-dark); display: flex;
   align-items: center; gap: 14px; padding: 0 16px; flex-shrink: 0;
 }
 .brand {
   display: flex; align-items: center; gap: 10px; font-weight: 600; color: #fff;
   white-space: nowrap;
 }
+.hr-logo { width: 40px; height: auto; object-fit: contain; }
 .company-select { min-width: 260px; margin-left: 8px; }
 .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .topbar .user { color: #cdd5e0; }

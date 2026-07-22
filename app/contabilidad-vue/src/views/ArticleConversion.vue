@@ -9,6 +9,7 @@ import Column from 'primevue/column'
 import Message from 'primevue/message'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 
 const company = useCompanyStore()
 const products = ref<any[]>([])
@@ -69,8 +70,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div style="padding: 20px;">
-    <h2 style="margin: 0 0 14px 0;">Conversión de Artículos</h2>
+  <div style="display: flex; flex-direction: column; height: 100%;">
+    <KvsModuleHeader module-name="Inventario" :company="{ ruc: company.activeId, razon_social: 'Conversión de Artículos' }" subtitle="Conversión / Reversión de Unidades" />
+    <div style="padding: 20px; flex: 1; overflow: auto;">
 
     <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom: 14px;">{{ msg.text }}</Message>
 
@@ -134,6 +136,7 @@ onMounted(load)
         <Column field="destino" header="Destino" />
         <Column header="Cant. Destino"><template #body="{ data }">{{ data.cant_destino }}</template></Column>
       </DataTable>
+    </div>
     </div>
   </div>
 </template>

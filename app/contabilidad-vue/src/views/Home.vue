@@ -47,6 +47,10 @@ function abrir(item: any) {
 
     <!-- Nivel 1: los grupos, como el lanzador de KVS -->
     <template v-else>
+      <div class="launcher-header">
+        <img src="/logo-has-reset.png" alt="HasReset" class="hr-logo" />
+        <span class="launcher-subtitle">Sistema Contable</span>
+      </div>
       <div class="tiles">
         <div v-for="g in grupos" :key="g.label" class="tile"
              @click="g.items.length === 1 ? abrir(g.items[0]) : (grupoActivo = g)">
@@ -59,28 +63,66 @@ function abrir(item: any) {
 </template>
 
 <style scoped>
-/* Fondo tech pedido por el cliente. Si /fondo-tech.jpg no existe, queda el degradado solo. */
 .launcher {
   padding: 36px;
   height: 100%;
   overflow: auto;
+  position: relative;
   background:
-    linear-gradient(rgba(10, 25, 45, 0.82), rgba(10, 25, 45, 0.92)),
+    linear-gradient(rgba(10, 25, 41, 0.82), rgba(10, 25, 41, 0.92)),
     url('/fondo-tech.jpg') center / cover no-repeat fixed,
-    linear-gradient(135deg, #0a192d 0%, #123a5c 100%);
+    linear-gradient(135deg, var(--hr-navy) 0%, var(--hr-navy-light) 100%);
 }
+.launcher::before,
+.launcher::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.launcher::before {
+  background:
+    radial-gradient(1.5px 1.5px at 8% 15%, rgba(255,255,255,0.45) 50%, transparent 50%),
+    radial-gradient(1px 1px at 25% 55%, rgba(255,255,255,0.3) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 50% 10%, rgba(255,255,255,0.35) 50%, transparent 50%),
+    radial-gradient(1px 1px at 68% 75%, rgba(255,255,255,0.25) 50%, transparent 50%),
+    radial-gradient(2px 2px at 82% 25%, rgba(255,255,255,0.4) 50%, transparent 50%),
+    radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.2) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 42% 45%, rgba(255,255,255,0.3) 50%, transparent 50%),
+    radial-gradient(1px 1px at 88% 60%, rgba(255,255,255,0.25) 50%, transparent 50%);
+}
+.launcher::after {
+  background:
+    radial-gradient(1px 1px at 12% 40%, rgba(255,255,255,0.25) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 38% 80%, rgba(255,255,255,0.3) 50%, transparent 50%),
+    radial-gradient(1px 1px at 58% 30%, rgba(255,255,255,0.2) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 72% 8%, rgba(255,255,255,0.35) 50%, transparent 50%),
+    radial-gradient(1px 1px at 48% 65%, rgba(255,255,255,0.18) 50%, transparent 50%),
+    radial-gradient(1px 1px at 92% 70%, rgba(255,255,255,0.25) 50%, transparent 50%);
+}
+.launcher-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 28px;
+  position: relative;
+  z-index: 1;
+}
+.hr-logo { width: 120px; height: auto; object-fit: contain; }
+.launcher-subtitle { font-size: 12px; color: var(--hr-silver); margin-top: 4px; }
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, 132px);
   gap: 24px;
   justify-content: start;
+  position: relative;
+  z-index: 1;
 }
-/* El nombre va DENTRO del cuadrado (lo que pidió el cliente) */
 .tile {
   width: 132px;
   height: 118px;
   border-radius: 14px;
-  background: linear-gradient(160deg, #2f7676, #245f5f);
+  background: linear-gradient(160deg, var(--hr-blue), var(--hr-blue-dark));
   border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   flex-direction: column;
@@ -101,9 +143,10 @@ function abrir(item: any) {
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
   border-color: rgba(255, 255, 255, 0.35);
 }
-.grupo-titulo { margin: 14px 0 24px; font-size: 18px; color: #fff; }
+.grupo-titulo { margin: 14px 0 24px; font-size: 18px; color: #fff; position: relative; z-index: 1; }
 .volver {
-  border: 0; background: transparent; color: #7fd1d1; font-weight: 600; font-size: 13px;
+  border: 0; background: transparent; color: var(--hr-silver); font-weight: 600; font-size: 13px;
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0;
+  position: relative; z-index: 1;
 }
 </style>

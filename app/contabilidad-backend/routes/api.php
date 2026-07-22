@@ -173,4 +173,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Fase 6 — Facturación masiva
     Route::post("invoices/masiva", [\App\Http\Controllers\MassInvoiceController::class, "store"]);
+
+    // Fase 6 — Fraccionamiento de unidades
+    Route::post("fractionations", [\App\Http\Controllers\FractionationController::class, "store"]);
+
+    // Fase 6 — Reservas de stock
+    Route::get("stock-reservations", [\App\Http\Controllers\StockReservationController::class, "index"]);
+    Route::post("stock-reservations", [\App\Http\Controllers\StockReservationController::class, "store"]);
+    Route::post("stock-reservations/{reservation}/cancel", [\App\Http\Controllers\StockReservationController::class, "cancel"]);
 });

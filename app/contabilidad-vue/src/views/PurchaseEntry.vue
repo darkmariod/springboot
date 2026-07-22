@@ -13,6 +13,7 @@ import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import KvsDocGrid from '../components/kvs/KvsDocGrid.vue'
 import KvsToolbar from '../components/kvs/KvsToolbar.vue'
+import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 
 const company = useCompanyStore()
 const rows = ref<any[]>([])
@@ -220,7 +221,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="kvs-split">
+  <div style="display:flex; flex-direction:column; height:100%;">
+    <KvsModuleHeader module-name="Compras" :company="{ ruc: company.activeId, razon_social: 'Compras' }" subtitle="Registro/Modificación" />
+    <div class="kvs-split" style="flex:1; min-height:0;">
     <!-- ══ Listado de Compras ══ -->
     <section class="kvs-panel kvs-panel--list">
       <div class="kvs-panel-title">Listado de Compras</div>
@@ -353,35 +356,13 @@ onMounted(load)
         />
       </template>
     </section>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.kvs-split { display: flex; gap: 10px; height: 100%; padding: 10px; background: #eef1f5; }
-.kvs-panel { display: flex; flex-direction: column; background: #fff; border: 1px solid #b9c2cc; border-radius: 4px; overflow: hidden; }
-.kvs-panel--list { width: 440px; flex-shrink: 0; }
-.kvs-panel--detail { flex: 1; }
-.kvs-panel-title { background: linear-gradient(#3d8b8b, #2a6b6b); color: #fff; font-weight: 600; font-size: 12.5px; padding: 5px 10px; flex-shrink: 0; }
-.kvs-search { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-bottom: 1px solid #e2e5ea; flex-shrink: 0; }
-.kvs-search-label { font-size: 12px; color: #546e7a; }
 .kvs-grid-wrap { flex: 1; overflow: auto; }
-.kvs-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.kvs-table th { text-align: left; background: #f2f4f7; border-bottom: 1px solid #b9c2cc; padding: 5px 8px; font-weight: 600; position: sticky; top: 0; z-index: 1; }
-.kvs-table td { padding: 5px 8px; border-bottom: 1px solid #eef1f5; }
-.kvs-table .der { text-align: right; }
-.kvs-table .vacio { color: #94a3b8; text-align: center; padding: 14px; }
 .kvs-table tr { cursor: pointer; }
 .kvs-table tr:hover { background: #eef6f6; }
-.kvs-table tr.kvs-row-sel { background: #d4ecec; font-weight: 600; }
-.kvs-panel-foot { font-size: 11.5px; color: #64748b; padding: 5px 10px; border-top: 1px solid #e2e5ea; background: #f7f9fb; flex-shrink: 0; }
-.kvs-empty { padding: 50px 20px; text-align: center; color: #94a3b8; font-size: 13px; }
-.kvs-tabs { display: flex; gap: 1px; background: #dde2ea; padding: 5px 6px 0; overflow-x: auto; flex-shrink: 0; scrollbar-width: thin; }
-.kvs-tab { border: 0; background: #eef1f5; color: #64748b; padding: 5px 11px; font-size: 12px; border-radius: 4px 4px 0 0; cursor: pointer; white-space: nowrap; }
-.kvs-tab.active { background: #fff; color: #1f2733; font-weight: 600; }
-.kvs-tabbody { flex: 1; overflow: auto; padding: 14px; }
-.kvs-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
-.kvs-lbl { font-size: 13px; color: #37474f; white-space: nowrap; min-width: 132px; text-align: right; }
-.kvs-lbl .req { color: #d93025; font-weight: 700; }
-.kvs-in { flex: 1; min-width: 0; }
-.kvs-hint { margin: 0 0 10px; font-size: 12px; color: #64748b; }
+.kvs-table tr.kvs-row-sel { background: #d4e4f7; font-weight: 600; }
 </style>

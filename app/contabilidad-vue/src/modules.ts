@@ -44,6 +44,8 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'inventory-adjustment', label: 'Ajuste Inventario', icon: 'pi pi-sliders-h', component: 'InventoryAdjustment', feature: 'inventario' },
       { key: 'inventory-transfer', label: 'Transferencia', icon: 'pi pi-arrow-right-arrow-left', component: 'InventoryTransfer', feature: 'inventario' },
       { key: 'article-conversion', label: 'Conversión Artículos', icon: 'pi pi-refresh', component: 'ArticleConversion', feature: 'conversion_articulos' },
+      { key: 'fractionation', label: 'Fraccionamiento', icon: 'pi pi-scissors', component: 'Fractionation', feature: 'fraccionamiento' },
+      { key: 'stock-reservations', label: 'Reservas Stock', icon: 'pi pi-bookmark', component: 'StockReservations', feature: 'reservas_stock' },
     ],
   },
   {

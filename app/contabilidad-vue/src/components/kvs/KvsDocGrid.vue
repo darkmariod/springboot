@@ -355,64 +355,7 @@ function onProductSelect(index: number, product: any) {
 </template>
 
 <style scoped>
-.kvs-doc-grid {
-  border: 1px solid #cfd6df;
-  border-radius: 6px;
-  overflow: hidden;
-  font-size: 12px;
-}
-
-/* ── Cabecera ── */
-.kvs-doc-grid-head {
-  display: flex;
-  background: linear-gradient(#3d8b8b, #2a6b6b);
-  color: #fff;
-  font-weight: 600;
-  font-size: 11px;
-  padding: 0;
-}
-.kvs-dg-col {
-  padding: 5px 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Anchos de columnas ── */
-.kvs-dg-col--idx { width: 30px; text-align: center; flex-shrink: 0; }
-.kvs-dg-col--codigo { width: 90px; flex-shrink: 0; }
-.kvs-dg-col--articulo { flex: 2; min-width: 160px; }
-.kvs-dg-col--bodega { width: 100px; flex-shrink: 0; }
-.kvs-dg-col--unidad { width: 70px; flex-shrink: 0; }
-.kvs-dg-col--iva { width: 65px; flex-shrink: 0; text-align: center; }
-.kvs-dg-col--cant { width: 70px; flex-shrink: 0; text-align: right; }
-.kvs-dg-col--precio { width: 110px; flex-shrink: 0; text-align: right; }
-.kvs-dg-col--precioc { width: 90px; flex-shrink: 0; text-align: right; }
-.kvs-dg-col--dcto { width: 55px; flex-shrink: 0; text-align: center; }
-.kvs-dg-col--dctoval { width: 70px; flex-shrink: 0; text-align: right; }
-.kvs-dg-col--subtotal { width: 90px; flex-shrink: 0; text-align: right; }
-.kvs-dg-col--serie { width: 40px; flex-shrink: 0; text-align: center; }
-.kvs-dg-col--actions { width: 30px; flex-shrink: 0; text-align: center; }
-
-/* ── Filas ── */
-.kvs-doc-grid-body {
-  max-height: 320px;
-  overflow-y: auto;
-}
-.kvs-doc-grid-row {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid #eef1f5;
-  padding: 0;
-}
-.kvs-doc-grid-row:nth-child(even) { background: #f8fafc; }
-.kvs-doc-grid-row:hover { background: #eef6f6; }
-
-.kvs-dg-cell {
-  padding: 4px 6px;
-  display: flex;
-  align-items: center;
-}
+/* KVS classes are global in style.css. Only :deep() overrides here. */
 .kvs-dg-cell :deep(.p-inputtext),
 .kvs-dg-cell :deep(.p-select) {
   width: 100%;
@@ -424,59 +367,5 @@ function onProductSelect(index: number, product: any) {
   font-size: 12px;
   padding: 3px 6px;
 }
-
-/* ── Select de artículo (más ancho) ── */
 .kvs-dg-art-select { width: 100%; }
-
-/* ── Empty ── */
-.kvs-doc-grid-empty {
-  padding: 24px;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 12px;
-}
-
-/* ── Totales ── */
-.kvs-doc-grid-totals {
-  border-top: 2px solid #cfd6df;
-  background: #f2f4f7;
-  padding: 8px 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 24px;
-  justify-content: flex-end;
-}
-.kvs-dg-tot-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-}
-.kvs-dg-tot-label {
-  color: #546e7a;
-  font-weight: 500;
-}
-.kvs-dg-tot-val {
-  font-weight: 600;
-  min-width: 80px;
-  text-align: right;
-}
-.kvs-dg-tot-val--red { color: #d93025; }
-.kvs-dg-tot-row--total {
-  border-top: 1px solid #b9c2cc;
-  padding-top: 4px;
-  font-size: 13px;
-}
-.kvs-dg-tot-row--total .kvs-dg-tot-val {
-  font-size: 14px;
-  font-weight: 800;
-  color: #1f2733;
-}
-
-/* ── Agregar ítem ── */
-.kvs-doc-grid-add {
-  padding: 4px 8px;
-  background: #f7f9fb;
-  border-top: 1px solid #eef1f5;
-}
 </style>

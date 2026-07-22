@@ -11,6 +11,7 @@ import Dialog from 'primevue/dialog'
 import Tag from 'primevue/tag'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 
 const company = useCompanyStore()
 const rows = ref<any[]>([])
@@ -19,7 +20,7 @@ const preview = ref<any>(null)
 const docRef = ref<HTMLElement>()
 
 // Filtros
-const filtro = ref({ anio: '', numero: '', cliente: '', identificacion: '' })
+const filtro = ref({ anio: '', numero: '', cliente: '', identificacion: '', valor: '' })
 
 const estadoSev: Record<string, string> = {
   generado: 'warn', firmado: 'info', enviado: 'info', AUTORIZADO: 'success', autorizado: 'success',
@@ -37,10 +38,12 @@ const filtrados = computed(() => rows.value.filter((r: any) => {
   const n = filtro.value.numero.toLowerCase()
   const c = filtro.value.cliente.toLowerCase()
   const id = filtro.value.identificacion.toLowerCase()
+  const v = filtro.value.valor
   return (!a || String(r.fecha_emision).startsWith(a))
     && (!n || (r.numero ?? '').toLowerCase().includes(n))
     && (!c || (r.contact?.razon_social ?? '').toLowerCase().includes(c))
     && (!id || (r.contact?.identificacion ?? '').toLowerCase().includes(id))
+    && (!v || Number(r.importe_total) >= Number(v))
 }))
 
 async function load() {
@@ -68,6 +71,7 @@ onMounted(load)
 
 <template>
   <div class="invoices-layout">
+    <KvsModuleHeader module-name="Facturas de Venta" :company="{ ruc: company.activeId, razon_social: 'Listado' }" subtitle="Electrónicas SRI" />
     <!-- ══ Cabecera de filtros ══ -->
     <div class="invoices-toolbar">
       <div class="invoices-filters">
@@ -77,6 +81,7 @@ onMounted(load)
         <InputText v-model="filtro.numero" placeholder="Número" size="small" style="width:100px" />
         <InputText v-model="filtro.cliente" placeholder="Cliente" size="small" style="width:160px" />
         <InputText v-model="filtro.identificacion" placeholder="CI/RUC" size="small" style="width:120px" />
+        <InputText v-model="filtro.valor" placeholder="Valor" size="small" style="width:90px" />
         <Button label="Nuevo" icon="pi pi-plus" size="small" @click="nuevo" />
       </div>
     </div>
@@ -96,6 +101,8 @@ onMounted(load)
             <th style="width:80px">Pago</th>
             <th style="width:100px">Estado SRI</th>
             <th>Observación</th>
+            <th style="width:80px">Vendedor</th>
+            <th style="width:70px">Asiento</th>
             <th style="width:70px"></th>
           </tr>
         </thead>
@@ -114,12 +121,14 @@ onMounted(load)
                    :severity="estadoSev[r.sri_document?.estado] ?? 'secondary'" size="small" />
             </td>
             <td style="font-size:11px; color:#64748b;">{{ r.sri_document?.numero_autorizacion ? 'Aut: ' + String(r.sri_document.numero_autorizacion).slice(0, 16) + '...' : '' }}</td>
+            <td style="font-size:11px; color:#64748b;">{{ r.vendedor ?? '—' }}</td>
+            <td style="font-size:11px; color:#64748b;">{{ r.asiento ?? '—' }}</td>
             <td>
               <Button icon="pi pi-eye" size="small" text @click="ver(r)" title="Ver RIDE" />
             </td>
           </tr>
           <tr v-if="!filtrados.length">
-            <td colspan="11" class="vacio">{{ loading ? 'Cargando...' : 'Sin facturas para este filtro' }}</td>
+            <td colspan="13" class="vacio">{{ loading ? 'Cargando...' : 'Sin facturas para este filtro' }}</td>
           </tr>
         </tbody>
       </table>
@@ -220,7 +229,7 @@ onMounted(load)
 .invoices-layout { display: flex; flex-direction: column; height: 100%; background: #eef1f5; }
 
 .invoices-toolbar {
-  background: linear-gradient(#3d8b8b, #2a6b6b); padding: 8px 12px; flex-shrink: 0;
+  background: var(--hr-gradient); padding: 8px 12px; flex-shrink: 0;
 }
 .invoices-filters {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;

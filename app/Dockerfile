@@ -4,7 +4,7 @@ FROM php:8.3-fpm
 RUN apt-get update && apt-get install -y \
     git unzip libpng-dev libjpeg-dev libfreetype6-dev \
     libicu-dev libonig-dev libxml2-dev libzip-dev \
-    libsoap-dev libcurl4-openssl-dev \
+    libcurl4-openssl-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl soap opcache \
     && pecl install redis && docker-php-ext-enable redis \
@@ -19,7 +19,7 @@ WORKDIR /var/www
 COPY contabilidad-backend/ /var/www/
 
 # Install dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+RUN composer update --no-dev --optimize-autoloader --no-interaction
 
 # Pre-create storage dirs
 RUN mkdir -p storage/framework/{cache,sessions,testing,views} \

@@ -9,6 +9,7 @@ import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 
 const company = useCompanyStore()
 const session = ref<any>(null)
@@ -35,7 +36,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div style="padding: 16px;">
+  <div style="display: flex; flex-direction: column; height: 100%;">
+    <KvsModuleHeader module-name="Caja y Bancos" :company="{ ruc: company.activeId, razon_social: 'Cuadre de Caja' }" subtitle="Apertura, movimientos y cierre" />
+    <div style="padding: 16px; flex: 1; overflow: auto;">
     <div class="kvs-window" style="max-width: 780px;">
       <div class="kvs-window-title">Caja Diaria</div>
 
@@ -148,6 +151,7 @@ onMounted(load)
           <Button label="Cerrar caja" icon="pi pi-lock" severity="secondary" @click="cerrar" />
         </div>
       </template>
+    </div>
     </div>
   </div>
 </template>

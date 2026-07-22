@@ -239,16 +239,8 @@ onMounted(load)
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 .kvs-window-title {
-  background: linear-gradient(#3d8b8b, #2a6b6b); color: #fff; font-weight: 600; font-size: 13px;
+  background: var(--hr-gradient); color: #fff; font-weight: 600; font-size: 13px;
   padding: 6px 12px; border-radius: 3px 3px 0 0;
 }
 .kvs-window-sub { margin: 10px 12px; font-size: 12px; color: #64748b; }
-.kvs-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.kvs-lbl { font-size: 13px; color: #37474f; white-space: nowrap; min-width: 132px; text-align: right; }
-.kvs-lbl .req { color: #d93025; font-weight: 700; }
-.kvs-in { flex: 1; }
-.kvs-footer {
-  display: flex; justify-content: flex-end; gap: 8px; padding: 10px 12px;
-  border-top: 1px solid #e2e5ea; background: #f7f9fb; border-radius: 0 0 3px 3px;
-}
 </style>

@@ -211,7 +211,7 @@ class ReportController extends Controller
     h1 { text-align: center; font-size: 14px; margin-bottom: 4px; }
     h2 { text-align: center; font-size: 11px; color: #666; margin-top: 0; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th { background: #2a6b6b; color: #fff; padding: 5px 8px; text-align: left; font-size: 9px; }
+    th { background: #1e5bb8; color: #fff; padding: 5px 8px; text-align: left; font-size: 9px; }
     td { padding: 4px 8px; border-bottom: 1px solid #ddd; font-size: 9px; }
     .num { text-align: right; }
     .total { font-weight: bold; border-top: 2px solid #333; }

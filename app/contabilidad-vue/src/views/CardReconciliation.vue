@@ -10,6 +10,7 @@ import Tag from 'primevue/tag'
 import Message from 'primevue/message'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 
 const company = useCompanyStore()
 const loading = ref(false)
@@ -74,8 +75,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div style="padding: 20px;">
-    <h2 style="margin: 0 0 14px 0;">Conciliación de Tarjetas</h2>
+  <div style="display: flex; flex-direction: column; height: 100%;">
+    <KvsModuleHeader module-name="Caja y Bancos" :company="{ ruc: company.activeId, razon_social: 'Conciliación de Tarjetas' }" subtitle="Ventas con tarjeta vs Depósitos del procesador" />
+    <div style="padding: 20px; flex: 1; overflow: auto;">
 
     <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom: 14px;">{{ msg.text }}</Message>
 
@@ -175,6 +177,7 @@ onMounted(load)
           </Column>
         </DataTable>
       </div>
+    </div>
     </div>
   </div>
 </template>

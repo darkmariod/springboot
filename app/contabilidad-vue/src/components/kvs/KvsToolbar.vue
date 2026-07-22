@@ -56,17 +56,4 @@ const emit = defineEmits<{
   </div>
 </template>
 
-<style scoped>
-.kvs-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-top: 1px solid #e2e5ea;
-  background: #f7f9fb;
-  flex-shrink: 0;
-}
-.kvs-toolbar--start { justify-content: flex-start; }
-.kvs-toolbar--center { justify-content: center; }
-.kvs-toolbar--end { justify-content: flex-end; }
-</style>
+/* KVS classes are global in style.css — no scoped styles needed */
