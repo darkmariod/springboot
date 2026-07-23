@@ -48,7 +48,7 @@ async function submit() {
 
         <small v-if="error" class="login-error">{{ error }}</small>
 
-        <Button type="submit" label="Ingresar" :loading="loading" fluid />
+        <Button type="submit" label="Ingresar" :loading="loading" fluid class="login-btn" />
         <a href="#" class="login-forgot" @click.prevent>¿Olvidó su contraseña?</a>
       </form>
     </div>
@@ -113,6 +113,13 @@ async function submit() {
 .login-form { display: flex; flex-direction: column; gap: 14px; }
 .login-form label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #475569; }
 .login-error { color: #d93025; font-size: 12px; }
+/* Botón Ingresar en AZUL de marca (no el verde del tema) — pedido del cliente */
+.login-btn {
+  background: var(--hr-blue) !important;
+  border-color: var(--hr-blue) !important;
+  color: #fff !important;
+}
+.login-btn:hover { background: var(--hr-blue-hover) !important; border-color: var(--hr-blue-hover) !important; }
 .login-forgot {
   text-align: center;
   font-size: 12px;
