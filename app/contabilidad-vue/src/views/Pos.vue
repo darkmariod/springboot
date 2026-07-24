@@ -260,9 +260,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div style="display:flex; flex-direction:column; height:100%;">
+  <div style="display:flex; flex-direction:column; height:100%; overflow:hidden;">
     <KvsModuleHeader module-name="Ventas" :company="{ ruc: company.activeId, razon_social: 'Punto de Venta' }" subtitle="Facturación" />
-    <div class="pos-layout" style="flex:1; min-height:0;">
+    <div class="pos-layout" style="flex:1; min-height:0; overflow:hidden;">
     <!-- ══ Panel izquierdo: productos ══ -->
     <section class="pos-products">
       <div class="pos-products-title">Productos</div>
@@ -362,13 +362,15 @@ onMounted(load)
       </div>
 
       <!-- Toolbar -->
-      <KvsToolbar align="end">
-        <Button label="Nuevo" icon="pi pi-plus" size="small" text @click="onAction('nuevo')" />
-        <Button label="Cotización" icon="pi pi-file-edit" size="small" text
-                :disabled="!items.length || !contactId" @click="onAction('cotizar')" />
-        <Button label="Emitir Factura" icon="pi pi-check-circle" size="small"
-                :loading="emitiendo" :disabled="!items.length" @click="onAction('emitir')" />
-      </KvsToolbar>
+      <div class="pos-toolbar">
+        <KvsToolbar align="end">
+          <Button label="Nuevo" icon="pi pi-plus" size="small" text @click="onAction('nuevo')" />
+          <Button label="Cotización" icon="pi pi-file-edit" size="small" text
+                  :disabled="!items.length || !contactId" @click="onAction('cotizar')" />
+          <Button label="Emitir Factura" icon="pi pi-check-circle" size="small"
+                  :loading="emitiendo" :disabled="!items.length" @click="onAction('emitir')" />
+        </KvsToolbar>
+      </div>
     </section>
     </div>
   </div>
@@ -421,20 +423,21 @@ onMounted(load)
 
 /* ── Panel documento ── */
 .pos-doc {
-  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;
 }
 .pos-doc-title {
   background: var(--hr-gradient); color: #fff; font-weight: 600;
-  font-size: 12.5px; padding: 5px 10px;
+  font-size: 12.5px; padding: 5px 10px; flex-shrink: 0;
 }
-.pos-header { padding: 10px 12px; border-bottom: 1px solid #e2e5ea; background: #f7f9fb; }
-.pos-grid-wrap { flex: 1; overflow: auto; padding: 10px 12px; }
+.pos-header { padding: 10px 12px; border-bottom: 1px solid #e2e5ea; background: #f7f9fb; flex-shrink: 0; max-height: 40vh; overflow-y: auto; }
+.pos-grid-wrap { flex: 1; overflow: auto; padding: 10px 12px; min-height: 0; }
 .pos-pago {
   display: flex; align-items: center; gap: 10px; padding: 8px 12px;
-  border-top: 1px solid #e2e5ea; background: #f7f9fb;
+  border-top: 1px solid #e2e5ea; background: #f7f9fb; flex-shrink: 0;
 }
 .pos-pago-label { font-size: 12px; color: #546e7a; font-weight: 600; text-transform: uppercase; }
 .pos-pago-btns { display: flex; gap: 6px; }
+.pos-toolbar { flex-shrink: 0; border-top: 1px solid #e2e5ea; background: #f7f9fb; }
 
 
 </style>

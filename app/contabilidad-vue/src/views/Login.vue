@@ -48,7 +48,8 @@ async function submit() {
 
         <small v-if="error" class="login-error">{{ error }}</small>
 
-        <Button type="submit" label="Ingresar" :loading="loading" fluid class="login-btn" />
+        <Button type="submit" label="Ingresar" :loading="loading" fluid class="login-btn"
+                style="background: var(--hr-blue) !important; border-color: var(--hr-blue) !important; color: #fff !important;" />
         <a href="#" class="login-forgot" @click.prevent>¿Olvidó su contraseña?</a>
       </form>
     </div>
