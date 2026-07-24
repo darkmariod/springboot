@@ -79,6 +79,39 @@ class CreditNoteController extends Controller
     }
 
     /**
+     * Anular nota de crédito (documento fiscal: NO se borra, se cambia estado).
+     */
+    public function anular(CreditNote $creditNote)
+    {
+        if ($creditNote->tipo === 'anulado') {
+            return response()->json(['message' => 'La nota de crédito ya está anulada.'], 422);
+        }
+
+        return DB::transaction(function () use ($creditNote) {
+            // Revertir stock si hay invoice_id y la NC tenía items
+            if ($creditNote->invoice_id && !empty($creditNote->items)) {
+                foreach ($creditNote->items as $item) {
+                    $codigo = trim((string)($item['codigo_principal'] ?? ''));
+                    $cant = (float)($item['cantidad'] ?? 0);
+                    if ($codigo === '' || $cant <= 0) continue;
+
+                    $product = Product::where('company_id', $creditNote->company_id)
+                        ->where('codigo', $codigo)->first();
+                    if ($product && $product->tipo !== 'servicio') {
+                        app(RegisterInventoryMovement::class)->handle(
+                            $product, 'salida', $cant, (float)$product->costo_promedio,
+                            'Reverso NC anulada ' . $creditNote->id, $creditNote->fecha->toDateString()
+                        );
+                    }
+                }
+            }
+
+            $creditNote->update(['tipo' => 'anulado', 'saldo_disponible' => 0]);
+            return response()->json(['ok' => true, 'mensaje' => 'Nota de crédito anulada.']);
+        });
+    }
+
+    /**
      * Emitir nota de crédito electrónica al SRI (codDoc 04)
      */
     public function emit(Request $r, CreditNote $creditNote)

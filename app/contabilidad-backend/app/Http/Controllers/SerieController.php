@@ -35,6 +35,22 @@ class SerieController extends Controller {
             ->where('estado','disponible')->first();
         return $s ?: response()->json(['message'=>'Serie no encontrada o ya vendida'], 404);
     }
+    public function update(Request $r, ProductSerie $serie) {
+        $d = $r->validate([
+            'product_id'=>['sometimes','exists:products,id'],
+            'purchase_id'=>['nullable','exists:purchases,id'],
+            'estado'=>['sometimes','in:disponible,vendido,devuelto,danado'],
+        ]);
+        $serie->update($d);
+        return $serie->load('product:id,codigo,descripcion');
+    }
+    public function destroy(ProductSerie $serie) {
+        if ($serie->estado === 'vendido') {
+            return response()->json(['message'=>'No se puede eliminar una serie vendida.'], 422);
+        }
+        $serie->delete();
+        return response()->noContent();
+    }
     public function trace(Request $r) {
         $s = ProductSerie::with('product:id,codigo,descripcion',
                 'purchase.contact:id,razon_social','invoice.contact:id,razon_social')

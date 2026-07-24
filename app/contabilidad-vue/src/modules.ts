@@ -6,7 +6,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
   {
     label: 'Catálogo',
     items: [
-      { key: 'contacts', label: 'Contactos', icon: 'pi pi-users', component: 'Contacts', feature: 'catalogo' },
+      { key: 'contacts', label: 'Clientes', icon: 'pi pi-users', component: 'Contacts', feature: 'catalogo' },
       { key: 'products', label: 'Productos y servicios', icon: 'pi pi-box', component: 'Products', feature: 'catalogo' },
       { key: 'accounts', label: 'Plan de cuentas', icon: 'pi pi-sitemap', component: 'Accounts', feature: 'contabilidad' },
     ],

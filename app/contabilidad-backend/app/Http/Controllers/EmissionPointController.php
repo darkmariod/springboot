@@ -11,5 +11,14 @@ class EmissionPointController extends Controller {
             'punto'=>['required','string','max:3'],'nombre'=>['required','string']]);
         return response()->json(EmissionPoint::create($d + ['secuencial'=>1]), 201);
     }
+    public function update(Request $r, EmissionPoint $point) {
+        $d = $r->validate([
+            'estab'=>['sometimes','string','max:3'],
+            'punto'=>['sometimes','string','max:3'],
+            'nombre'=>['sometimes','string'],
+        ]);
+        $point->update($d);
+        return $point;
+    }
     public function destroy(EmissionPoint $point) { $point->delete(); return response()->noContent(); }
 }

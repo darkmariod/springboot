@@ -181,4 +181,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("stock-reservations", [\App\Http\Controllers\StockReservationController::class, "index"]);
     Route::post("stock-reservations", [\App\Http\Controllers\StockReservationController::class, "store"]);
     Route::post("stock-reservations/{reservation}/cancel", [\App\Http\Controllers\StockReservationController::class, "cancel"]);
+
+    // Fase 1 — CRUD faltante (update/destroy/anular)
+    Route::put("advances/{advance}", [\App\Http\Controllers\AdvanceController::class, "update"]);
+    Route::delete("advances/{advance}", [\App\Http\Controllers\AdvanceController::class, "destroy"]);
+    Route::post("credit-notes/{creditNote}/anular", [\App\Http\Controllers\CreditNoteController::class, "anular"]);
+    Route::put("series/{serie}", [\App\Http\Controllers\SerieController::class, "update"]);
+    Route::delete("series/{serie}", [\App\Http\Controllers\SerieController::class, "destroy"]);
+    Route::put("emission-points/{point}", [\App\Http\Controllers\EmissionPointController::class, "update"]);
+    Route::delete("users/{user}", [\App\Http\Controllers\UserController::class, "destroy"]);
+
+    // Fase 2b — Importación SRI pluggable
+    Route::post("sri/importar", [\App\Http\Controllers\SriImportController::class, "importar"]);
 });

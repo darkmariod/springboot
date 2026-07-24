@@ -37,4 +37,11 @@ class UserController extends Controller {
         $user->update($d);
         return $user->load('emissionPoint:id,estab,punto,nombre');
     }
+    public function destroy(User $user) {
+        if ($user->id === auth()->id()) {
+            return response()->json(['message'=>'No puede eliminar su propio usuario.'], 422);
+        }
+        $user->delete();
+        return response()->noContent();
+    }
 }

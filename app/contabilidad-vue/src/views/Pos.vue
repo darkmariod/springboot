@@ -69,17 +69,57 @@ async function load() {
   loading.value = false
 }
 
-function buscarClientePorId() {
-  const id = identificacionBusqueda.value.trim()
+function detectarTipoId(id: string): string {
+  const digits = id.replace(/\D/g, '')
+  return digits.length === 13 ? '04' : '05'  // 04=RUC, 05=cédula
+}
+
+async function buscarClientePorId() {
+  const raw = identificacionBusqueda.value.trim()
+  const id = raw.replace(/\D/g, '')
   if (!id) return
+
+  const tipo = detectarTipoId(id)
+
+  // 1) Buscar en la lista local
   const match = contacts.value.find((c: any) => c.identificacion === id)
   if (match) {
     contactId.value = match.id
     msg.value = { type: 'success', text: `Cliente encontrado: ${match.razon_social}` }
-  } else {
-    nuevoClienteForm.value = { tipo_identificacion: '05', identificacion: id, es_cliente: true, es_proveedor: false }
-    nuevoClienteDialog.value = true
+    return
   }
+
+  // 2) No encontrado → consultar SRI para autocompletar
+  sriLoading.value = true
+  let sriData: any = { tipo_identificacion: tipo, identificacion: id }
+  try {
+    const res = await api.get(`/sri/consulta?identificacion=${id}`)
+    if (res.data.encontrado) {
+      sriData = {
+        tipo_identificacion: res.data.tipo_identificacion ?? tipo,
+        identificacion: id,
+        razon_social: res.data.razon_social ?? '',
+        nombre_comercial: res.data.nombre_comercial ?? '',
+        email: '',
+        telefono: '',
+        es_cliente: true,
+        es_proveedor: false,
+      }
+      msg.value = { type: 'success', text: `SRI: ${sriData.razon_social}` }
+    } else {
+      sriData.es_cliente = true
+      sriData.es_proveedor = false
+      msg.value = { type: 'warn', text: res.data.mensaje ?? 'No encontrado en SRI. Cargá los datos a mano.' }
+    }
+  } catch {
+    sriData.es_cliente = true
+    sriData.es_proveedor = false
+  } finally {
+    sriLoading.value = false
+  }
+
+  nuevoClienteForm.value = sriData
+  nuevoClienteDialog.value = true
 }
 
 async function guardarNuevoCliente() {

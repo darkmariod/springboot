@@ -95,7 +95,7 @@ onMounted(load)
   <div class="kvs-split">
     <!-- Listado de Contactos -->
     <section class="kvs-panel" style="width:440px; flex-shrink:0;">
-      <div class="kvs-panel-title">Listado de Contactos</div>
+      <div class="kvs-panel-title">Listado de Clientes</div>
       <div class="kvs-search">
         <span style="font-size:12px; color:#546e7a;">Búsqueda</span>
         <InputText v-model="filtro.identificacion" placeholder="Identificación" size="small" style="width:110px" />
@@ -122,7 +122,7 @@ onMounted(load)
       <div class="kvs-panel-title">Detalle Contacto</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elegí un contacto del listado, o tocá <b>+</b> para crear uno nuevo.
+        Elegí un cliente del listado, o tocá <b>+</b> para crear uno nuevo.
       </div>
 
       <template v-else>

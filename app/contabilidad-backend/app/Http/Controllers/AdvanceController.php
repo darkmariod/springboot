@@ -34,4 +34,24 @@ class AdvanceController extends Controller {
             return response()->json($a->load('contact'), 201);
         });
     }
+
+    public function update(Request $r, Advance $advance) {
+        $d = $r->validate([
+            'contact_id'=>['sometimes','exists:contacts,id'],
+            'monto'=>['sometimes','numeric','min:0.01'],
+            'forma_pago'=>['sometimes','in:efectivo,transferencia,cheque'],
+            'bank_id'=>['nullable','exists:banks,id'],
+            'nota'=>['nullable','string'],
+        ]);
+        $advance->update($d);
+        return $advance->load('contact');
+    }
+
+    public function destroy(Advance $advance) {
+        if ($advance->saldo > 0) {
+            return response()->json(['message' => 'No se puede eliminar un anticipo con saldo pendiente.'], 422);
+        }
+        $advance->delete();
+        return response()->noContent();
+    }
 }
