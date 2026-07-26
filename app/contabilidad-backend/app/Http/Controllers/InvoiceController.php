@@ -7,7 +7,7 @@ use App\Services\InvoiceEmitter;
 use Illuminate\Http\Request;
 class InvoiceController extends Controller {
     public function index(Request $r) {
-        return Invoice::with('contact:id,razon_social', 'sriDocument:id,documentable_id,estado,clave_acceso')
+        return Invoice::with('contact:id,razon_social,identificacion,direccion,email', 'sriDocument:id,documentable_id,estado,clave_acceso')
             ->when($r->company_id, fn($q,$id)=>$q->where('company_id',$id))->latest('fecha_emision')->get();
     }
     public function store(Request $r, InvoiceEmitter $emitter) {
