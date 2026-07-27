@@ -71,6 +71,21 @@ InventoryTransaction, PendingImport, EdocConfig. Verificar: contable:chequeo TOD
 - Quitar el estado ("generado") de la factura IMPRESA/preview en Invoices.vue (el objeto `preview`).
   El estado puede seguir en la LISTA, pero NO en la factura que se imprime.
 
+═══ FASE 4b — Reportes estilo KBS ("Reportes Cuentas por Cobrar") ═══
+El cliente quiere el módulo de reportes como KBS: elegir TIPO de reporte + parámetros + Generar/Resetear + salida PDF.
+- YA existe base: src/views/ReportViewer.vue (reportes de inventario) + backend generatePdf/exportCsv
+  en ReportController. Reusar eso.
+- Construir vista "Reportes de Cuentas por Cobrar" con:
+  * Panel izquierdo: lista de TIPOS de reporte (radio): Saldos Iniciales, Abonos (Resumido/Detallado),
+    Anticipos (Resumido/Detallado/Saldos), Nota de Crédito (Res/Det), Nota de Débito (Res/Det),
+    Cruce de Saldos (Res/Det), Facturas de Venta.
+  * Panel derecho: parámetros (Desde, Hasta, Establecimiento, Secuencia, Comprobante, Categoría,
+    Doc.Cliente, Cliente, Cerrado, Ordenar por) + botones Generar / Resetear.
+  * Salida: preview PDF + export (reusar generatePdf/exportCsv).
+- Backend: un endpoint por tipo de reporte (los datos de cartera están en ReceivableController).
+- ESFUERZO: cada tipo es una consulta + layout. Empezar por Saldos + Facturas de Venta + Cruce de
+  Saldos (los que la contadora más mira); el resto se suma después. NO hace falta los 13 para probar.
+
 ═══ FASE 5 — Replicar módulos desde capturas de KBS/MicroPlus (con las imágenes) ═══
 Por CADA captura, seguir siempre:
   1. Leer: lista (columnas) + formulario (campos, pestañas) + botones.
