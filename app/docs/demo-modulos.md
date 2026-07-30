@@ -37,6 +37,10 @@ ESTADO ACTUAL (YA hecho — NO rehacer, solo verificar):
   Products, Accounts(árbol). Componentes kvs y PurchaseEntry/ReportViewer también.
 - Usuario contador creado (contador@demo.com / password123). Segundo email + alta inline en POS.
 - Login rebrandeado (HasReset, botón Ingresar azul).
+- Import del historial SRI (Compras → "Importar del SRI (lote)"): flujo COMPLETO y parseo del .txt
+  VERIFICADO — extrae claves de acceso (49 díg) → SriXmlDownloader baja el XML → StorePurchaseFromXml
+  crea la compra. Solo falta probar con un .txt REAL del portal SRI (comprobantes recibidos del mes).
+  Se importa con la CLAVE DEL PORTAL SRI (no el .p12). Ver docs/GUIA-IMPORTAR-SRI-CLIENTE.md.
 
 ═══ FASE 1 — Completar el BACKEND (CRUD que falta) ═══
 Agregar los métodos + rutas que faltan en estos controladores de ENTIDAD:
