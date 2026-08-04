@@ -209,6 +209,8 @@ label .req-star { color: #d93025; font-weight: 700; }
 .kvs-dg-col--dctoval { width: 70px; flex-shrink: 0; text-align: right; }
 .kvs-dg-col--subtotal { width: 90px; flex-shrink: 0; text-align: right; }
 .kvs-dg-col--serie { width: 40px; flex-shrink: 0; text-align: center; }
+.kvs-dg-col--kardex { width: 80px; flex-shrink: 0; text-align: right; }
+.kvs-dg-col--ccosto { width: 70px; flex-shrink: 0; }
 .kvs-dg-col--actions { width: 30px; flex-shrink: 0; text-align: center; }
 .kvs-doc-grid-body { max-height: 320px; overflow-y: auto; }
 .kvs-doc-grid-row {

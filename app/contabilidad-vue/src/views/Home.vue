@@ -38,9 +38,12 @@ function abrir(item: any) {
       </button>
       <h2 class="grupo-titulo">{{ grupoActivo.label }}</h2>
       <div class="tiles">
-        <div v-for="item in grupoActivo.items" :key="item.key" class="tile" @click="abrir(item)">
+        <div v-for="item in grupoActivo.items" :key="item.key" class="tile"
+             :class="{ 'tile--disabled': item.disabled }"
+             @click="item.disabled ? null : abrir(item)">
           <i :class="item.icon" />
           <span class="tile-label">{{ item.label }}</span>
+          <span v-if="item.disabled" class="tile-prox">Próximamente</span>
         </div>
       </div>
     </template>
@@ -142,6 +145,19 @@ function abrir(item: any) {
   transform: translateY(-3px);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
   border-color: rgba(255, 255, 255, 0.35);
+}
+.tile--disabled {
+  cursor: not-allowed;
+  background: linear-gradient(160deg, #3b4a5f, #2b3748);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.tile--disabled:hover { transform: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); border-color: rgba(255,255,255,0.06); }
+.tile--disabled i { color: #7a8aa0; }
+.tile--disabled .tile-label { color: #aebccd; }
+.tile-prox {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+  color: #c9d4e0; background: rgba(255,255,255,0.12); border-radius: 8px; padding: 2px 7px;
 }
 .grupo-titulo { margin: 14px 0 24px; font-size: 18px; color: #fff; position: relative; z-index: 1; }
 .volver {

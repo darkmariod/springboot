@@ -89,6 +89,90 @@ class ReportController extends Controller
         ]);
     }
 
+    /** Reporte de series por artículo (detalle) + resumen por producto. */
+    public function seriesReport(Request $r)
+    {
+        $r->validate([
+            'company_id' => ['required', 'exists:companies,id'],
+        ]);
+
+        $query = \App\Models\ProductSerie::query()
+            ->where('company_id', $r->company_id)
+            ->with(['product:id,codigo,descripcion,maneja_series', 'invoice:id,numero,fecha_emision,estado']);
+
+        if ($r->filled('producto')) {
+            $q = $r->producto;
+            $query->whereHas('product', function ($sub) use ($q) {
+                $sub->where('codigo', 'like', "%{$q}%")
+                    ->orWhere('descripcion', 'like', "%{$q}%");
+            });
+        }
+
+        if ($r->filled('estado')) {
+            $query->where('estado', $r->estado);
+        }
+
+        $series = $query->orderBy('product_id')->orderBy('serie')->get();
+
+        $items = $series->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'codigo' => $s->product?->codigo ?? '—',
+                'descripcion' => $s->product?->descripcion ?? '—',
+                'serie' => $s->serie,
+                'estado' => $s->estado,
+                'factura' => $s->invoice?->numero ?? null,
+                'fecha_venta' => $s->invoice?->fecha_emision ?? null,
+            ];
+        });
+
+        $resumen = $series->groupBy('product_id')->map(function ($grupo) {
+            $p = $grupo->first()->product;
+            $disponibles = $grupo->where('estado', 'disponible')->count();
+            $vendidas = $grupo->where('estado', 'vendido')->count();
+            return [
+                'codigo' => $p->codigo ?? '—',
+                'descripcion' => $p->descripcion ?? '—',
+                'disponibles' => $disponibles,
+                'vendidas' => $vendidas,
+                'total' => $grupo->count(),
+            ];
+        })->values();
+
+        return response()->json([
+            'items' => $items,
+            'resumen' => $resumen,
+            'totales' => [
+                'disponibles' => $series->where('estado', 'disponible')->count(),
+                'vendidas' => $series->where('estado', 'vendido')->count(),
+                'total' => $series->count(),
+            ],
+        ]);
+    }
+
+    /** Exportar CSV del reporte de series. */
+    public function exportSeriesCsv(Request $r)
+    {
+        $data = $this->seriesReport($r)->original;
+
+        $header = ['Código', 'Descripción', 'Serie', 'Estado', 'Factura', 'Fecha Venta'];
+        $csv = $header . "\n";
+        foreach ($data['items'] as $item) {
+            $csv .= implode(',', array_map(fn($v) => '"' . str_replace('"', '""', $v) . '"', [
+                $item['codigo'],
+                $item['descripcion'],
+                $item['serie'],
+                $item['estado'],
+                $item['factura'] ?? '',
+                $item['fecha_venta'] ?? '',
+            ])) . "\n";
+        }
+
+        return response($csv)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="reporte-series.csv"');
+    }
+
     public function generatePdf(Request $r)
     {
         $r->validate([

@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ventas
     Route::apiResource('invoices', \App\Http\Controllers\InvoiceController::class)->only(['index', 'store']);
+    Route::post("invoices/{invoice}/anular", [\App\Http\Controllers\InvoiceController::class, "anular"]);
 
     // Compras
     Route::get("purchases", [\App\Http\Controllers\PurchaseController::class, "index"]);
@@ -167,6 +168,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("reports/kardex/{product}", [\App\Http\Controllers\ReportController::class, "kardexReport"]);
     Route::post("reports/pdf", [\App\Http\Controllers\ReportController::class, "generatePdf"]);
     Route::get("reports/csv", [\App\Http\Controllers\ReportController::class, "exportCsv"]);
+    Route::get("reports/series", [\App\Http\Controllers\ReportController::class, "seriesReport"]);
+    Route::get("reports/series-csv", [\App\Http\Controllers\ReportController::class, "exportSeriesCsv"]);
 
     // Fase 6 — Conversión de artículos
     Route::post("conversions", [\App\Http\Controllers\ArticleConversionController::class, "store"]);

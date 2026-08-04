@@ -11,13 +11,18 @@ import Dialog from 'primevue/dialog'
 import Tag from 'primevue/tag'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import { useTabsStore } from '../stores/tabs'
 import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 
 const company = useCompanyStore()
+const tabs = useTabsStore()
 const rows = ref<any[]>([])
 const loading = ref(true)
 const preview = ref<any>(null)
+const seleccion = ref<any>(null)
 const docRef = ref<HTMLElement>()
+const anularTarget = ref<any>(null)
+const anularBusy = ref(false)
 
 // Filtros
 const filtro = ref({ anio: '', numero: '', cliente: '', identificacion: '', valor: '' })
@@ -25,8 +30,13 @@ const filtro = ref({ anio: '', numero: '', cliente: '', identificacion: '', valo
 const estadoSev: Record<string, string> = {
   generado: 'warn', firmado: 'info', enviado: 'info', AUTORIZADO: 'success', autorizado: 'success',
 }
+const facturaSev: Record<string, string> = { emitida: 'success', anulada: 'danger', pendiente: 'warn' }
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 const empresa = computed(() => company.companies.find((c: any) => c.id === company.activeId))
+
+const secuencia = (r: any) => String(r.numero ?? '').slice(-9)
+const serie = (r: any) => String(r.numero ?? '').slice(0, 7)
+const fechaCorta = (d: any) => d ? String(d).replace('T', ' ').slice(0, 16) : '—'
 
 const anios = computed(() => {
   const set = new Set(rows.value.map((r: any) => String(r.fecha_emision).slice(0, 4)))
@@ -63,8 +73,27 @@ function imprimir() {
   w.print()
 }
 
-function ver(r: any) { preview.value = r }
-function nuevo() { /* navegar a POS */ }
+function ver(r: any) { seleccion.value = r; preview.value = r }
+function editar(r: any) { seleccion.value = r; ver(r) }
+function nuevo() {
+  tabs.open({ key: 'pos', label: 'Ventas (POS)', icon: 'pi pi-shopping-cart', component: 'Pos' })
+}
+function salir() { tabs.close(tabs.activeKey ?? 'invoices') }
+
+function pedirAnular(r: any) { anularTarget.value = r }
+async function confirmarAnular() {
+  if (!anularTarget.value || anularBusy.value) return
+  anularBusy.value = true
+  try {
+    await api.post(`/invoices/${anularTarget.value.id}/anular`)
+    anularTarget.value = null
+    await load()
+  } catch (e: any) {
+    alert(e?.response?.data?.message ?? 'No se pudo anular la factura.')
+  } finally {
+    anularBusy.value = false
+  }
+}
 
 onMounted(load)
 </script>
@@ -82,7 +111,13 @@ onMounted(load)
         <InputText v-model="filtro.cliente" placeholder="Cliente" size="small" style="width:160px" />
         <InputText v-model="filtro.identificacion" placeholder="CI/RUC" size="small" style="width:120px" />
         <InputText v-model="filtro.valor" placeholder="Valor" size="small" style="width:90px" />
+        <div style="flex:1"></div>
         <Button label="Nuevo" icon="pi pi-plus" size="small" @click="nuevo" />
+        <Button label="Editar" icon="pi pi-pencil" size="small" outlined
+                :disabled="!seleccion" @click="seleccion && editar(seleccion)" />
+        <Button label="Anular" icon="pi pi-ban" size="small" outlined severity="danger"
+                :disabled="!seleccion || seleccion?.estado === 'anulado'" @click="seleccion && pedirAnular(seleccion)" />
+        <Button label="Salir" icon="pi pi-times" size="small" text @click="salir" />
       </div>
     </div>
 
@@ -91,44 +126,56 @@ onMounted(load)
       <table class="kvs-table invoices-table">
         <thead>
           <tr>
-            <th style="width:85px">Fecha</th>
-            <th style="width:70px">Secuencia</th>
-            <th style="width:100px">Serie</th>
-            <th style="width:110px">Número</th>
+            <th style="width:88px">Fecha</th>
+            <th style="width:76px">Secuencia</th>
+            <th style="width:74px">Serie</th>
+            <th style="width:112px">Número</th>
+            <th style="width:90px">Tipo Precio</th>
             <th>Cliente</th>
             <th style="width:110px">CI/RUC</th>
-            <th style="width:90px" class="der">Total</th>
+            <th style="width:92px" class="der">Total</th>
+            <th style="width:86px">Estado</th>
+            <th style="width:104px">Estado Electrónico</th>
+            <th style="width:82px">Vendedor</th>
+            <th style="width:90px">Referencia</th>
             <th style="width:80px">Pago</th>
-            <th style="width:100px">Estado SRI</th>
-            <th>Observación</th>
-            <th style="width:80px">Vendedor</th>
-            <th style="width:70px">Asiento</th>
-            <th style="width:70px"></th>
+            <th style="width:60px">Asiento</th>
+            <th style="width:104px">Creado</th>
+            <th style="width:104px">Editado</th>
+            <th style="width:52px"></th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in filtrados" :key="r.id" class="invoices-row">
+          <tr v-for="r in filtrados" :key="r.id" class="invoices-row"
+              :class="{ 'invoices-row--sel': seleccion?.id === r.id, 'invoices-row--anulada': r.estado === 'anulado' }"
+              @click="seleccion = r" :dblclick="() => ver(r)">
             <td>{{ String(r.fecha_emision).slice(0, 10) }}</td>
-            <td>{{ r.numero }}</td>
-            <td>{{ r.sri_document?.numero_autorizacion ? String(r.numero).replace(/\d{3}$/, '') : '—' }}</td>
+            <td>{{ secuencia(r) }}</td>
+            <td>{{ serie(r) }}</td>
             <td><b>{{ r.numero }}</b></td>
+            <td style="font-size:11px;">{{ r.tipo_precio ?? (r.items?.[0]?.tipo_precio ?? '—') }}</td>
             <td>{{ r.contact?.razon_social }}</td>
             <td style="font-family:monospace; font-size:11.5px;">{{ r.contact?.identificacion }}</td>
             <td class="der"><b>{{ money(r.importe_total) }}</b></td>
-            <td>{{ r.forma_pago }}</td>
+            <td>
+              <Tag :value="r.estado ?? '—'" :severity="facturaSev[r.estado] ?? 'secondary'" size="small" />
+            </td>
             <td>
               <Tag :value="r.sri_document?.estado ?? '—'"
                    :severity="estadoSev[r.sri_document?.estado] ?? 'secondary'" size="small" />
             </td>
-            <td style="font-size:11px; color:#64748b;">{{ r.sri_document?.numero_autorizacion ? 'Aut: ' + String(r.sri_document.numero_autorizacion).slice(0, 16) + '...' : '' }}</td>
             <td style="font-size:11px; color:#64748b;">{{ r.vendedor ?? '—' }}</td>
-            <td style="font-size:11px; color:#64748b;">{{ r.asiento ?? '—' }}</td>
+            <td style="font-size:11px; color:#64748b;">{{ r.referencia ?? '—' }}</td>
+            <td style="font-size:11px;">{{ r.forma_pago }}</td>
+            <td style="font-size:11px; color:#64748b;">{{ r.journal_entries_count ? 'Sí' : '—' }}</td>
+            <td style="font-size:11px; color:#64748b;">{{ fechaCorta(r.created_at) }}</td>
+            <td style="font-size:11px; color:#64748b;">{{ fechaCorta(r.updated_at) }}</td>
             <td>
-              <Button icon="pi pi-eye" size="small" text @click="ver(r)" title="Ver RIDE" />
+              <Button icon="pi pi-eye" size="small" text @click.stop="ver(r)" title="Ver RIDE" />
             </td>
           </tr>
           <tr v-if="!filtrados.length">
-            <td colspan="13" class="vacio">{{ loading ? 'Cargando...' : 'Sin facturas para este filtro' }}</td>
+            <td colspan="17" class="vacio">{{ loading ? 'Cargando...' : 'Sin facturas para este filtro' }}</td>
           </tr>
         </tbody>
       </table>
@@ -138,6 +185,26 @@ onMounted(load)
     <div class="invoices-foot">
       Mostrando {{ filtrados.length }} de {{ rows.length }} facturas
     </div>
+
+    <!-- ══ Confirmar anulación ══ -->
+    <Dialog :visible="!!anularTarget" modal header="Anular factura" style="width:420px"
+            @update:visible="anularTarget = null">
+      <div v-if="anularTarget">
+        <p style="margin:0 0 10px; font-size:13px;">
+          ¿Anular la factura <b>{{ anularTarget.numero }}</b> por <b>{{ money(anularTarget.importe_total) }}</b>?
+        </p>
+        <p style="margin:0; font-size:12px; color:#64748b;">
+          El documento fiscal no se borra: quedará con estado <b>anulado</b>, se revertirá el asiento contable y se devolverá el stock y las series.
+        </p>
+      </div>
+      <template #footer>
+        <div class="kvs-footer">
+          <Button label="Cancelar" text @click="anularTarget = null" />
+          <Button label="Anular factura" icon="pi pi-ban" severity="danger"
+                  :loading="anularBusy" @click="confirmarAnular" />
+        </div>
+      </template>
+    </Dialog>
 
     <!-- ══ Preview RIDE ══ -->
     <Dialog :visible="!!preview" modal :header="'Factura ' + (preview?.numero ?? '')"
@@ -247,6 +314,10 @@ onMounted(load)
 .invoices-table .vacio { color: #94a3b8; text-align: center; padding: 20px; }
 .invoices-row { cursor: pointer; }
 .invoices-row:hover { background: #eef6f6; }
+.invoices-row--sel { background: #e0eef0; box-shadow: inset 3px 0 0 var(--hr-navy); }
+.invoices-row--sel:hover { background: #d8e9ec; }
+.invoices-row--anulada { opacity: 0.55; }
+.invoices-row--anulada td { text-decoration: line-through; }
 
 .invoices-foot {
   font-size: 11.5px; color: #64748b; padding: 5px 12px;

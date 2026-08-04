@@ -9,6 +9,7 @@
  *   showWarehouse — mostrar columna de bodega
  *   showDiscount — mostrar columnas de descuento
  *   showCostCenter — mostrar columna de centro de costos
+ *   showKardex — mostrar columna Cant. Kardex
  *   productOptions — productos disponibles para autocompletado
  *   warehouseOptions — bodegas disponibles
  *   unitOptions — unidades de medida
@@ -32,6 +33,7 @@ const props = withDefaults(defineProps<{
   showWarehouse?: boolean
   showDiscount?: boolean
   showCostCenter?: boolean
+  showKardex?: boolean
   productOptions?: any[]
   warehouseOptions?: any[]
   unitOptions?: { label: string; value: string }[]
@@ -43,6 +45,7 @@ const props = withDefaults(defineProps<{
   showWarehouse: true,
   showDiscount: true,
   showCostCenter: false,
+  showKardex: false,
   productOptions: () => [],
   warehouseOptions: () => [],
   unitOptions: () => [
@@ -152,6 +155,8 @@ function onProductSelect(index: number, product: any) {
       <div v-if="showDiscount" class="kvs-dg-col kvs-dg-col--dctoval">$Dcto</div>
       <div class="kvs-dg-col kvs-dg-col--subtotal">Subtotal</div>
       <div v-if="showSeries" class="kvs-dg-col kvs-dg-col--serie">Serie</div>
+      <div v-if="showKardex" class="kvs-dg-col kvs-dg-col--kardex">Cant. Kardex</div>
+      <div v-if="showCostCenter" class="kvs-dg-col kvs-dg-col--ccosto">Centro Costo</div>
       <div class="kvs-dg-col kvs-dg-col--actions"></div>
     </div>
 
@@ -278,6 +283,7 @@ function onProductSelect(index: number, product: any) {
             size="small"
             text
             :title="'Series: ' + (item.series ?? []).join(', ')"
+            @click="emit('scan-serie', i)"
           />
           <Button
             v-else
@@ -288,6 +294,27 @@ function onProductSelect(index: number, product: any) {
             title="Agregar serie"
             :disabled="readonly"
             @click="emit('scan-serie', i)"
+          />
+        </div>
+        <div v-if="showKardex" class="kvs-dg-cell kvs-dg-col--kardex">
+          <InputNumber
+            :model-value="Number(item.cant_kardex ?? 0)"
+            :min="0"
+            :minFractionDigits="2"
+            :maxFractionDigits="4"
+            :useGrouping="false"
+            size="small"
+            :disabled="readonly"
+            @update:model-value="(v: number) => updateItem(i, 'cant_kardex', v)"
+          />
+        </div>
+        <div v-if="showCostCenter" class="kvs-dg-cell kvs-dg-col--ccosto">
+          <InputText
+            :model-value="item.centro_costo ?? ''"
+            placeholder="CC"
+            size="small"
+            :disabled="readonly"
+            @update:model-value="(v: string | undefined) => updateItem(i, 'centro_costo', v ?? '')"
           />
         </div>
         <div class="kvs-dg-cell kvs-dg-col--actions">

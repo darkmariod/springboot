@@ -9,4 +9,5 @@ class Invoice extends Model {
     protected $casts = ['items'=>'array','fecha_emision'=>'datetime'];
     public function sriDocument() { return $this->morphOne(SriDocument::class, 'documentable'); }
     public function contact() { return $this->belongsTo(Contact::class); }
+    public function journalEntries() { return $this->morphMany(JournalEntry::class, 'origen'); }
 }

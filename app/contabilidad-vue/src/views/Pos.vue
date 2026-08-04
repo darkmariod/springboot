@@ -9,6 +9,7 @@ import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Dialog from 'primevue/dialog'
+import Checkbox from 'primevue/checkbox'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import KvsDocGrid from '../components/kvs/KvsDocGrid.vue'
@@ -40,6 +41,13 @@ const nuevoClienteDialog = ref(false)
 const nuevoClienteForm = ref<any>({ tipo_identificacion: '05', es_cliente: true, es_proveedor: false })
 const sriLoading = ref(false)
 const identificacionBusqueda = ref('')
+
+// Selector de series (PANTALLA 5)
+const seriesDialog = ref(false)
+const seriesItemIndex = ref<number | null>(null)
+const seriesDisponibles = ref<any[]>([])
+const seriesSeleccionadas = ref<string[]>([])
+const seriesCargando = ref(false)
 
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 
@@ -196,6 +204,47 @@ function addItem() {
   })
 }
 
+// ── PANTALLA 5: selector de series por artículo ──
+async function abrirSelectorSeries(index: number) {
+  const item = items.value[index]
+  if (!item?.producto_id) {
+    msg.value = { type: 'warn', text: 'Primero elegí el artículo para poder seleccionar series.' }
+    return
+  }
+  seriesItemIndex.value = index
+  seriesSeleccionadas.value = [...(item.series ?? [])]
+  seriesDisponibles.value = []
+  seriesCargando.value = true
+  seriesDialog.value = true
+  try {
+    const res = await api.get(`/series?company_id=${company.activeId}&product_id=${item.producto_id}&estado=disponible`)
+    seriesDisponibles.value = res.data
+    if (!seriesDisponibles.value.length) {
+      msg.value = { type: 'warn', text: 'No hay series disponibles para este artículo.' }
+    }
+  } catch {
+    msg.value = { type: 'error', text: 'No se pudieron cargar las series.' }
+  } finally {
+    seriesCargando.value = false
+  }
+}
+
+function toggleSerie(serie: string) {
+  const idx = seriesSeleccionadas.value.indexOf(serie)
+  if (idx >= 0) seriesSeleccionadas.value.splice(idx, 1)
+  else seriesSeleccionadas.value.push(serie)
+}
+
+function confirmarSeries() {
+  const idx = seriesItemIndex.value
+  if (idx === null) return
+  const newItems = [...items.value]
+  newItems[idx] = { ...newItems[idx], series: [...seriesSeleccionadas.value] }
+  items.value = newItems
+  seriesDialog.value = false
+  seriesItemIndex.value = null
+}
+
 // Emitir factura
 async function emitir() {
   if (!items.value.length) { msg.value = { type: 'warn', text: 'Agregá al menos un producto.' }; return }
@@ -334,9 +383,12 @@ onMounted(load)
           :product-options="products"
           show-series
           show-discount
+          show-kardex
+          show-cost-center
           @update:items="updateItems"
           @add-item="addItem"
           @remove-item="removeItem"
+          @scan-serie="abrirSelectorSeries"
         />
       </div>
 
@@ -381,6 +433,37 @@ onMounted(load)
       <div class="kvs-footer">
         <Button label="Cancelar" text @click="nuevoClienteDialog=false" />
         <Button label="Guardar cliente" @click="guardarNuevoCliente" />
+      </div>
+    </template>
+  </Dialog>
+
+  <!-- PANTALLA 5: selector de series disponibles -->
+  <Dialog v-model:visible="seriesDialog" modal header="Series por Artículo" style="width:460px;">
+    <div v-if="seriesCargando" class="kvs-dg-cell" style="padding:16px; text-align:center; color:#64748b;">
+      <i class="pi pi-spin pi-spinner" /> Cargando series...
+    </div>
+    <div v-else-if="seriesDisponibles.length" style="max-height:320px; overflow:auto;">
+      <label
+        v-for="s in seriesDisponibles"
+        :key="s.id"
+        style="display:flex; align-items:center; gap:10px; padding:8px 6px; border-bottom:1px solid #eef1f5; cursor:pointer;"
+      >
+        <Checkbox
+          :model-value="seriesSeleccionadas.includes(s.serie)"
+          :binary="true"
+          @update:model-value="toggleSerie(s.serie)"
+        />
+        <span style="font-family:monospace; font-size:13px; font-weight:600;">{{ s.serie }}</span>
+        <span style="font-size:11px; color:#64748b;">{{ s.product?.codigo ?? '' }}</span>
+      </label>
+    </div>
+    <div v-else style="padding:16px; text-align:center; color:#94a3b8;">
+      No hay series disponibles para este artículo.
+    </div>
+    <template #footer>
+      <div class="kvs-footer">
+        <Button label="Cancelar" text @click="seriesDialog=false" />
+        <Button label="Aplicar" icon="pi pi-check" :disabled="!seriesSeleccionadas.length" @click="confirmarSeries" />
       </div>
     </template>
   </Dialog>

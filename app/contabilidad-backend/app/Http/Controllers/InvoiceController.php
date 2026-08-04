@@ -3,11 +3,16 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Contact;
 use App\Models\Invoice;
+use App\Models\JournalEntry;
+use App\Models\Product;
 use App\Services\InvoiceEmitter;
+use App\Services\RegisterInventoryMovement;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 class InvoiceController extends Controller {
     public function index(Request $r) {
-        return Invoice::with('contact:id,razon_social,identificacion,direccion,email', 'sriDocument:id,documentable_id,estado,clave_acceso')
+        return Invoice::with('contact:id,razon_social,identificacion,direccion,email', 'sriDocument:id,documentable_id,estado,clave_acceso,numero_autorizacion')
+            ->withCount('journalEntries')
             ->when($r->company_id, fn($q,$id)=>$q->where('company_id',$id))->latest('fecha_emision')->get();
     }
     public function store(Request $r, InvoiceEmitter $emitter) {
@@ -34,5 +39,59 @@ class InvoiceController extends Controller {
         $contact = Contact::findOrFail($data['contact_id']);
         $invoice = $emitter->emit($company, $contact, $data['items'], $data['forma_pago'] ?? 'efectivo', $data['emission_point_id'] ?? null);
         return response()->json(['invoice'=>$invoice, 'sri_document'=>$invoice->sriDocument], 201);
+    }
+
+    /**
+     * Anular factura (documento fiscal: NO se borra).
+     * Marca estado 'anulado', revierte el asiento contable y devuelve el stock + series.
+     */
+    public function anular(Request $r, Invoice $invoice, RegisterInventoryMovement $inventario) {
+        if ($invoice->estado === 'anulado') {
+            return response()->json(['message'=>'La factura ya está anulada.'], 422);
+        }
+
+        return DB::transaction(function () use ($invoice, $inventario) {
+            // 1) Revertir el asiento contable generado por la venta
+            $asiento = JournalEntry::where('origen_type', $invoice->getMorphClass())
+                ->where('origen_id', $invoice->id)->first();
+            if ($asiento) {
+                $asiento->lines()->delete();
+                $asiento->delete();
+            }
+
+            // 2) Devolver stock (inverso del egreso; soporta combos)
+            foreach ($invoice->items ?? [] as $item) {
+                $codigo = trim((string)($item['codigo_principal'] ?? ''));
+                $cant = (float)($item['cantidad'] ?? 0);
+                if ($codigo === '' || $cant <= 0) continue;
+                $product = Product::where('company_id', $invoice->company_id)->where('codigo', $codigo)->first();
+                if (! $product) continue;
+                if ($product->es_combo) {
+                    foreach ($product->components as $c) {
+                        $parte = $c->component;
+                        if ($parte && $parte->tipo !== 'servicio')
+                            $inventario->handle($parte, 'ingreso', $cant * (float)$c->cantidad,
+                                (float)$parte->costo_promedio, 'Anulación '.$invoice->numero,
+                                $invoice->fecha_emision->toDateString());
+                    }
+                } elseif ($product->tipo !== 'servicio') {
+                    $inventario->handle($product, 'ingreso', $cant, (float)$product->costo_promedio,
+                        'Anulación '.$invoice->numero, $invoice->fecha_emision->toDateString());
+                }
+            }
+
+            // 3) Liberar series ligadas a esta factura
+            \App\Models\ProductSerie::where('invoice_id', $invoice->id)
+                ->update(['estado' => 'disponible', 'invoice_id' => null]);
+
+            // 4) Marcar anulada
+            $invoice->update(['estado' => 'anulado']);
+
+            return response()->json([
+                'ok' => true,
+                'mensaje' => 'Factura '.$invoice->numero.' anulada. Asiento revertido y stock devuelto.',
+                'invoice' => $invoice->fresh(['contact:id,razon_social,identificacion', 'sriDocument']),
+            ]);
+        });
     }
 }
