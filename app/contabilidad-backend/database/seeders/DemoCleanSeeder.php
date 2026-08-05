@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\GeneratePurchaseJournalEntry;
 use App\Services\RegisterInventoryMovement;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -31,7 +32,9 @@ class DemoCleanSeeder extends Seeder
     {
         $company = Company::firstOrFail();
 
-        // ── 1. Borrar datos transaccionales ──
+        // ── 1+2. Borrar TODO (FKs off durante la limpieza; es un wipe de demo) ──
+        DB::statement('PRAGMA foreign_keys = OFF');
+
         foreach ([
             'App\Models\JournalEntryLine', 'App\Models\JournalEntry',
             'App\Models\InventoryMovement', 'App\Models\SriDocument',
@@ -44,12 +47,13 @@ class DemoCleanSeeder extends Seeder
             if (class_exists($model)) $model::query()->delete();
         }
 
-        // ── 2. Borrar usuarios y catálogos (sin nombres reales) ──
         foreach ([
             Employee::class, Contact::class, Product::class, Bank::class, User::class,
         ] as $model) {
             if (class_exists($model)) $model::query()->delete();
         }
+
+        DB::statement('PRAGMA foreign_keys = ON');
 
         // ── 3. Reset secuenciales ──
         $company->update(['secuencial' => 1]);
