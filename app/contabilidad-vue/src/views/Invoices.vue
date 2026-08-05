@@ -230,8 +230,6 @@ onMounted(load)
               <div style="font-family:monospace; font-size:10px; word-break:break-all;">
                 {{ preview.sri_document?.numero_autorizacion ?? preview.sri_document?.clave_acceso ?? 'PENDIENTE DE AUTORIZACIÓN' }}
               </div>
-              <div style="margin-top:6px;"><b>AMBIENTE:</b> {{ Number(empresa?.ambiente) === 2 ? 'PRODUCCIÓN' : 'PRUEBAS' }}</div>
-              <div><b>EMISIÓN:</b> NORMAL</div>
               <div style="margin-top:6px;"><b>CLAVE DE ACCESO:</b></div>
               <div style="font-family:monospace; font-size:10px; word-break:break-all;">{{ preview.sri_document?.clave_acceso }}</div>
             </div>
