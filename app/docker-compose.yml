@@ -29,17 +29,6 @@ services:
     networks:
       - contable
 
-  # ── Cloudflare Tunnel (sin dominio necesario) ──
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: contable-tunnel
-    restart: unless-stopped
-    command: tunnel --url http://frontend:80
-    depends_on:
-      - frontend
-    networks:
-      - contable
-
 volumes:
   db-data:
   storage-data:
