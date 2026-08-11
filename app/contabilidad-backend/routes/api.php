@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 // Público
@@ -15,6 +16,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/companies', [CompanyController::class, 'index']);
     Route::get('/companies/{company}', [CompanyController::class, 'show']);
+    Route::put('/companies/{company}', [CompanyController::class, 'update']);
     Route::get('/companies/{company}/plan', [CompanyController::class, 'plan']);
     Route::post('/companies/{company}/plan', [CompanyController::class, 'cambiarPlan']);
 
@@ -22,6 +24,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/accounts', [AccountController::class, 'store']);
     Route::put('/accounts/{account}', [AccountController::class, 'update']);
     Route::delete('/accounts/{account}', [AccountController::class, 'destroy']);
+
+    // Resumen ejecutivo de la pestaña Inicio
+    Route::get('/dashboard/resumen', [DashboardController::class, 'resumen']);
 
     // Catálogos
     Route::apiResource('contacts', \App\Http\Controllers\ContactController::class)->only(['index', 'store', 'update', 'destroy']);

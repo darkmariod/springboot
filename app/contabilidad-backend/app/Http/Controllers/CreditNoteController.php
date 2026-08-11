@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\EmitirSriDocument;
 use App\Models\Company;
 use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Models\Product;
-use App\Models\SriDocument;
 use App\Services\DocumentCalculator;
 use App\Services\RegisterInventoryMovement;
 use App\Services\SimpleEntry;
@@ -18,7 +18,7 @@ class CreditNoteController extends Controller
     public function index(Request $r)
     {
         return CreditNote::with('contact:id,razon_social', 'invoice:id,numero')
-            ->when($r->company_id, fn($q, $id) => $q->where('company_id', $id))
+            ->when($r->company_id, fn ($q, $id) => $q->where('company_id', $id))
             ->latest('fecha')->get();
     }
 
@@ -35,7 +35,7 @@ class CreditNoteController extends Controller
         ]);
 
         return DB::transaction(function () use ($d, $calc) {
-            if (!empty($d['items'])) {
+            if (! empty($d['items'])) {
                 $t = $calc->fromItems($d['items']);
                 $d['total_sin_impuestos'] = $t['total_sin_impuestos'];
                 $d['total_impuesto'] = $t['total_impuesto'];
@@ -47,30 +47,44 @@ class CreditNoteController extends Controller
                 'saldo_disponible' => $d['importe_total'],
             ]);
 
-            SimpleEntry::make($d['company_id'], 'Nota de crédito ' . $d['tipo'] . ' — ' . $d['motivo'], [
+            SimpleEntry::make($d['company_id'], 'Nota de crédito '.$d['tipo'].' — '.$d['motivo'], [
                 ['codigo' => '4.1.02', 'nombre' => 'Devoluciones y descuentos en ventas', 'tipo' => 'gasto',
-                    'debe' => $d['importe_total'], 'haber' => 0, 'ref' => 'NC-' . $n->id],
+                    'debe' => $d['importe_total'], 'haber' => 0, 'ref' => 'NC-'.$n->id],
                 ['codigo' => '1.1.03', 'nombre' => 'Cuentas por cobrar clientes', 'tipo' => 'activo',
-                    'debe' => 0, 'haber' => $d['importe_total'], 'ref' => 'NC-' . $n->id],
+                    'debe' => 0, 'haber' => $d['importe_total'], 'ref' => 'NC-'.$n->id],
             ], $n);
 
             // Devolver stock y series si hay invoice_id y items con códigos
-            if (!empty($d['invoice_id']) && !empty($d['items'])) {
+            if (! empty($d['invoice_id']) && ! empty($d['items'])) {
                 $invoice = Invoice::find($d['invoice_id']);
                 if ($invoice) {
-                    foreach ($d['items'] as $item) {
-                        $codigo = trim((string)($item['codigo_principal'] ?? ''));
-                        $cant = (float)($item['cantidad'] ?? 0);
-                        if ($codigo === '' || $cant <= 0) continue;
+                    $itemsFinal = $d['items'];
+                    foreach ($itemsFinal as &$item) {
+                        $codigo = trim((string) ($item['codigo_principal'] ?? ''));
+                        $cant = (float) ($item['cantidad'] ?? 0);
+                        if ($codigo === '' || $cant <= 0) {
+                            continue;
+                        }
 
                         $product = Product::where('company_id', $d['company_id'])->where('codigo', $codigo)->first();
                         if ($product && $product->tipo !== 'servicio') {
+                            // Si el ítem no trae series, tomarlas de la factura original (devolución por línea)
+                            $series = $item['series'] ?? [];
+                            if (empty($series)) {
+                                $invItem = collect($invoice->items ?? [])->firstWhere('codigo_principal', $codigo);
+                                $series = $invItem['series'] ?? [];
+                            }
+                            $item['series'] = $series; // persistir en la NC para que la anulación la revierta
+
                             app(RegisterInventoryMovement::class)->handle(
-                                $product, 'ingreso', $cant, (float)$product->costo_promedio,
-                                'Devolución NC ' . $n->id, $n->fecha->toDateString()
+                                $product, 'ingreso', $cant, (float) $product->costo_promedio,
+                                'Devolución NC '.$n->id, $n->fecha->toDateString(),
+                                null, $series
                             );
                         }
                     }
+                    unset($item);
+                    $n->update(['items' => $itemsFinal]);
                 }
             }
 
@@ -89,24 +103,28 @@ class CreditNoteController extends Controller
 
         return DB::transaction(function () use ($creditNote) {
             // Revertir stock si hay invoice_id y la NC tenía items
-            if ($creditNote->invoice_id && !empty($creditNote->items)) {
+            if ($creditNote->invoice_id && ! empty($creditNote->items)) {
                 foreach ($creditNote->items as $item) {
-                    $codigo = trim((string)($item['codigo_principal'] ?? ''));
-                    $cant = (float)($item['cantidad'] ?? 0);
-                    if ($codigo === '' || $cant <= 0) continue;
+                    $codigo = trim((string) ($item['codigo_principal'] ?? ''));
+                    $cant = (float) ($item['cantidad'] ?? 0);
+                    if ($codigo === '' || $cant <= 0) {
+                        continue;
+                    }
 
                     $product = Product::where('company_id', $creditNote->company_id)
                         ->where('codigo', $codigo)->first();
                     if ($product && $product->tipo !== 'servicio') {
                         app(RegisterInventoryMovement::class)->handle(
-                            $product, 'salida', $cant, (float)$product->costo_promedio,
-                            'Reverso NC anulada ' . $creditNote->id, $creditNote->fecha->toDateString()
+                            $product, 'egreso', $cant, (float) $product->costo_promedio,
+                            'Reverso NC anulada '.$creditNote->id, $creditNote->fecha->toDateString(),
+                            null, $item['series'] ?? []
                         );
                     }
                 }
             }
 
             $creditNote->update(['tipo' => 'anulado', 'saldo_disponible' => 0]);
+
             return response()->json(['ok' => true, 'mensaje' => 'Nota de crédito anulada.']);
         });
     }
@@ -148,7 +166,7 @@ class CreditNoteController extends Controller
             ],
         ];
 
-        $emitir = app(\App\Actions\EmitirSriDocument::class);
+        $emitir = app(EmitirSriDocument::class);
         $sriDoc = $emitir->execute($creditNote, 'notaCredito', $company, $payload);
 
         $company->increment('secuencial');
@@ -156,7 +174,7 @@ class CreditNoteController extends Controller
         return response()->json([
             'ok' => true,
             'sri_document' => $sriDoc,
-            'mensaje' => 'Nota de crédito emitida al SRI. Clave de acceso: ' . $sriDoc->clave_acceso,
+            'mensaje' => 'Nota de crédito emitida al SRI. Clave de acceso: '.$sriDoc->clave_acceso,
         ]);
     }
 }

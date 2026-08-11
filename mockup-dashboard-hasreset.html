@@ -1,0 +1,349 @@
+<title>HasReset — Nuevo dashboard (mockup)</title>
+<style>
+  :root {
+    --brand: #1e5bb8; --brand-dk: #1a4a8c;
+    --ink: #1f2733; --muted: #64748b; --faint: #94a3b8;
+    --ground: #eef1f5; --panel: #ffffff; --rail: #0f2744;
+    --border: #e2e5ea; --hover: #eef4fc;
+    --good: #16a34a; --good-bg: #e8f5e9;
+    --warn: #d97706; --warn-bg: #fff7ed;
+    --crit: #d93025; --crit-bg: #fdecea;
+    --shadow: 0 1px 2px rgba(15,39,68,.06), 0 1px 3px rgba(15,39,68,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e6ebf2; --muted: #94a3b8; --faint: #64748b;
+      --ground: #0b1220; --panel: #131c2b; --rail: #0a1424;
+      --border: #24314a; --hover: #1b2740;
+      --good-bg: #12241a; --warn-bg: #2a1e10; --crit-bg: #2a1414;
+      --shadow: 0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e6ebf2; --muted: #94a3b8; --faint: #64748b;
+    --ground: #0b1220; --panel: #131c2b; --rail: #0a1424;
+    --border: #24314a; --hover: #1b2740;
+    --good-bg: #12241a; --warn-bg: #2a1e10; --crit-bg: #2a1414;
+    --shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  :root[data-theme="light"] {
+    --ink: #1f2733; --muted: #64748b; --faint: #94a3b8;
+    --ground: #eef1f5; --panel: #ffffff; --rail: #0f2744;
+    --border: #e2e5ea; --hover: #eef4fc;
+    --good-bg: #e8f5e9; --warn-bg: #fff7ed; --crit-bg: #fdecea;
+    --shadow: 0 1px 2px rgba(15,39,68,.06), 0 1px 3px rgba(15,39,68,.04);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+  /* ── Shell ── */
+  .app { display: grid; grid-template-columns: 232px 1fr; grid-template-rows: 56px 1fr; min-height: 100vh; }
+
+  /* ── Topbar ── */
+  .topbar {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 18px;
+    background: linear-gradient(90deg, var(--brand-dk), var(--brand));
+    color: #fff; padding: 0 18px; position: sticky; top: 0; z-index: 10;
+  }
+  .logo { display: flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: .2px; }
+  .logo .mark {
+    width: 28px; height: 28px; border-radius: 7px; background: rgba(255,255,255,.16);
+    display: grid; place-items: center; font-size: 13px; font-weight: 800;
+    border: 1px solid rgba(255,255,255,.25);
+  }
+  .search {
+    flex: 1; max-width: 380px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.18);
+    border-radius: 8px; padding: 7px 12px; color: #fff; font-size: 13px;
+  }
+  .search::placeholder { color: rgba(255,255,255,.7); }
+  .topbar .spacer { flex: 1; }
+  .pill-btn {
+    display: flex; align-items: center; gap: 7px; background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2); color: #fff; padding: 6px 12px;
+    border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+  .pill-btn:hover { background: rgba(255,255,255,.2); }
+  .pill-btn .chev { opacity: .8; font-size: 10px; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--rail); color: #c7d2e0; overflow-y: auto; padding: 12px 0 24px;
+    border-right: 1px solid var(--border);
+  }
+  .nav-sec { margin-top: 16px; }
+  .nav-sec:first-child { margin-top: 4px; }
+  .nav-head {
+    font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #6b83a3;
+    padding: 6px 20px 4px; font-weight: 700;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px; padding: 8px 20px; color: #c7d2e0;
+    text-decoration: none; font-size: 13.5px; cursor: pointer; border-left: 3px solid transparent;
+  }
+  .nav-item .ico { width: 16px; text-align: center; opacity: .7; font-size: 13px; }
+  .nav-item:hover { background: rgba(255,255,255,.05); color: #fff; }
+  .nav-item.active {
+    background: linear-gradient(90deg, rgba(30,91,184,.35), transparent);
+    color: #fff; border-left-color: #4d9bff; font-weight: 600;
+  }
+  .nav-item.active .ico { opacity: 1; }
+
+  /* ── Main ── */
+  .main { padding: 22px 26px 40px; overflow-y: auto; }
+  .crumb { color: var(--faint); font-size: 12.5px; margin-bottom: 2px; }
+  .page-title { font-size: 21px; font-weight: 700; margin: 0 0 2px; letter-spacing: -.2px; }
+  .page-sub { color: var(--muted); margin: 0 0 20px; font-size: 13.5px; }
+
+  .section-label {
+    font-size: 11.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--muted);
+    font-weight: 700; margin: 26px 0 12px;
+  }
+
+  /* KPI tiles */
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .kpi .k-label { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+  .kpi .k-value { font-size: 27px; font-weight: 700; letter-spacing: -.5px; margin-top: 4px; }
+  .kpi .k-foot { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; }
+  .trend-up { color: var(--good); font-weight: 600; }
+  .trend-flat { color: var(--muted); }
+  .kpi svg { position: absolute; right: 14px; bottom: 12px; opacity: .9; }
+  .kpi.accent-pending .k-value { color: var(--warn); }
+
+  /* Panels */
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .grid-2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 18px; align-items: start; }
+
+  /* Documents table */
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-size: 10.5px; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; padding: 11px 16px; border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--hover); }
+  .doc-type { color: var(--muted); font-size: 12px; }
+  .amount { text-align: right; font-weight: 600; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  }
+  .chip.good { background: var(--good-bg); color: var(--good); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.crit { background: var(--crit-bg); color: var(--crit); }
+  .chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* Actions list */
+  .action-list { list-style: none; margin: 0; padding: 6px; }
+  .action-item {
+    display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 9px; cursor: pointer;
+  }
+  .action-item:hover { background: var(--hover); }
+  .action-item .badge {
+    width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+    font-weight: 700; font-size: 13px; flex-shrink: 0;
+  }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.brand { background: rgba(30,91,184,.12); color: var(--brand); }
+  .badge.crit { background: var(--crit-bg); color: var(--crit); }
+  .action-item .a-text { flex: 1; font-size: 13.5px; }
+  .action-item .a-go { color: var(--faint); font-size: 15px; }
+
+  /* Activity */
+  .feed { list-style: none; margin: 0; padding: 4px 6px; }
+  .feed li { display: flex; gap: 12px; padding: 9px 12px; font-size: 13px; }
+  .feed .f-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+  .feed .f-time { color: var(--faint); font-size: 12px; }
+  .panel-head {
+    padding: 13px 16px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 13.5px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-head a { color: var(--brand); text-decoration: none; font-size: 12.5px; font-weight: 600; }
+
+  .theme-toggle {
+    position: fixed; right: 16px; bottom: 16px; z-index: 20; background: var(--panel);
+    border: 1px solid var(--border); color: var(--ink); border-radius: 999px; padding: 8px 14px;
+    font-size: 12.5px; cursor: pointer; box-shadow: var(--shadow); font-weight: 600;
+  }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 56px 1fr; }
+    .sidebar { display: none; }
+    .kpis { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .search { display: none; }
+  }
+</style>
+
+<div class="app">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="logo"><span class="mark">HR</span> HasReset</div>
+    <input class="search" placeholder="Buscar factura, cliente, producto…" />
+    <div class="spacer"></div>
+    <button class="pill-btn">JAVIER A. SOLIZ <span class="chev">▼</span></button>
+    <button class="pill-btn">Administrador <span class="chev">▼</span></button>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="nav-sec">
+      <div class="nav-item active"><span class="ico">◧</span> Inicio</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-head">Ventas</div>
+      <div class="nav-item"><span class="ico">🛒</span> Ventas</div>
+      <div class="nav-item"><span class="ico">👤</span> Clientes</div>
+      <div class="nav-item"><span class="ico">💵</span> Cobros</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-head">Compras</div>
+      <div class="nav-item"><span class="ico">📦</span> Compras</div>
+      <div class="nav-item"><span class="ico">🏭</span> Proveedores</div>
+      <div class="nav-item"><span class="ico">💳</span> Pagos</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-head">Inventario</div>
+      <div class="nav-item"><span class="ico">🏷️</span> Productos</div>
+      <div class="nav-item"><span class="ico">📊</span> Kardex</div>
+      <div class="nav-item"><span class="ico">🏬</span> Bodegas</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-head">Contabilidad</div>
+      <div class="nav-item"><span class="ico">≡</span> Asientos</div>
+      <div class="nav-item"><span class="ico">📖</span> Diario</div>
+      <div class="nav-item"><span class="ico">📚</span> Mayor</div>
+      <div class="nav-item"><span class="ico">⚖️</span> Balances</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-head">Auditoría</div>
+      <div class="nav-item"><span class="ico">🔎</span> Trazabilidad</div>
+      <div class="nav-item"><span class="ico">⚠️</span> Excepciones</div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="crumb">Inicio</div>
+    <h1 class="page-title">Resumen del negocio</h1>
+    <p class="page-sub">Agosto 2026 · JAVIER ALEXIS SOLIZ CRESPO · RUC 1600749590001</p>
+
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi">
+        <div class="k-label">Ventas del mes</div>
+        <div class="k-value num">$12.450</div>
+        <div class="k-foot"><span class="trend-up">▲ 8,2%</span> <span class="trend-flat">vs. julio</span></div>
+        <svg width="78" height="34" viewBox="0 0 78 34" fill="none">
+          <path d="M2 28 L14 24 L26 26 L38 18 L50 20 L62 10 L76 6" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="76" cy="6" r="3" fill="#16a34a"/>
+        </svg>
+      </div>
+      <div class="kpi">
+        <div class="k-label">Cobrado</div>
+        <div class="k-value num">$8.200</div>
+        <div class="k-foot"><span class="trend-flat">66% de lo facturado</span></div>
+        <svg width="78" height="34" viewBox="0 0 78 34" fill="none">
+          <path d="M2 22 L14 20 L26 22 L38 16 L50 18 L62 14 L76 12" stroke="#1e5bb8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="76" cy="12" r="3" fill="#1e5bb8"/>
+        </svg>
+      </div>
+      <div class="kpi accent-pending">
+        <div class="k-label">Por cobrar</div>
+        <div class="k-value num">$3.450</div>
+        <div class="k-foot"><span class="chip warn"><span class="dot"></span> 4 facturas</span></div>
+        <svg width="78" height="34" viewBox="0 0 78 34" fill="none">
+          <path d="M2 12 L14 16 L26 14 L38 20 L50 18 L62 24 L76 22" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="76" cy="22" r="3" fill="#d97706"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:26px;">
+      <!-- Recent documents -->
+      <section class="panel">
+        <div class="panel-head">Documentos recientes <a href="#">Ver todos</a></div>
+        <table>
+          <thead>
+            <tr><th>Documento</th><th>Cliente</th><th class="amount">Valor</th><th>Estado SRI</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="mono">001-001-125</span><div class="doc-type">Factura</div></td>
+              <td>Comercial XYZ</td>
+              <td class="amount num">$1.150</td>
+              <td><span class="chip good"><span class="dot"></span> Autorizado</span></td>
+            </tr>
+            <tr>
+              <td><span class="mono">001-001-124</span><div class="doc-type">Factura</div></td>
+              <td>Distribuidora ABC</td>
+              <td class="amount num">$850</td>
+              <td><span class="chip good"><span class="dot"></span> Autorizado</span></td>
+            </tr>
+            <tr>
+              <td><span class="mono">001-001-045</span><div class="doc-type">Retención</div></td>
+              <td>Comercial XYZ</td>
+              <td class="amount num">$120</td>
+              <td><span class="chip good"><span class="dot"></span> Autorizado</span></td>
+            </tr>
+            <tr>
+              <td><span class="mono">001-001-012</span><div class="doc-type">Nota de crédito</div></td>
+              <td>Juan Pérez</td>
+              <td class="amount num">$280</td>
+              <td><span class="chip warn"><span class="dot"></span> En proceso</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Pending actions -->
+      <section class="panel">
+        <div class="panel-head">Acciones pendientes</div>
+        <ul class="action-list">
+          <li class="action-item">
+            <span class="badge warn">3</span>
+            <span class="a-text">Documentos SRI por reenviar</span>
+            <span class="a-go">→</span>
+          </li>
+          <li class="action-item">
+            <span class="badge brand">2</span>
+            <span class="a-text">Conciliaciones bancarias</span>
+            <span class="a-go">→</span>
+          </li>
+          <li class="action-item">
+            <span class="badge crit">4</span>
+            <span class="a-text">Facturas por cobrar vencidas</span>
+            <span class="a-go">→</span>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- Activity -->
+    <div class="section-label">Actividad reciente</div>
+    <section class="panel">
+      <ul class="feed">
+        <li><span class="f-dot" style="background:var(--good)"></span><div>Factura <span class="mono">001-001-125</span> autorizada por el SRI<div class="f-time">hace 8 min · Administrador</div></div></li>
+        <li><span class="f-dot" style="background:var(--brand)"></span><div>Cobro de $850 registrado — Distribuidora ABC<div class="f-time">hace 41 min · Administrador</div></div></li>
+        <li><span class="f-dot" style="background:var(--warn)"></span><div>Nota de crédito <span class="mono">001-001-012</span> enviada al SRI<div class="f-time">hace 2 h · Administrador</div></div></li>
+        <li><span class="f-dot" style="background:var(--brand)"></span><div>Ingreso de inventario — 5 IPHONE 17 PRO MAX<div class="f-time">ayer · Administrador</div></div></li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<button class="theme-toggle" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme:dark)').matches);r.setAttribute('data-theme',d?'light':'dark');})()">◐ Tema</button>

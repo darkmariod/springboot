@@ -10,3 +10,10 @@
 
 # Backups locales
 springboot-backup-*/
+
+# Directorios locales de asistentes IA — no van al repo
+.atl/
+.claude/
+
+# Archivos de texto de comprobantes SRI / imports
+*.txt

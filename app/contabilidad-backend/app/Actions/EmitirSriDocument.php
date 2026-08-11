@@ -27,7 +27,12 @@ class EmitirSriDocument {
             $doc->update(['estado'=>'enviado', 'mensajes'=>$recepcion]);
             try {
                 $aut = $this->facturacion->autorizarSri($claveAcceso, (string)$company->ambiente);
-                $doc->update(['estado'=>$aut['estado'] ?? 'enviado', 'numero_autorizacion'=>$aut['numeroAutorizacion'] ?? null, 'mensajes'=>$aut]);
+                $datos = $this->extraerAutorizacion($aut);
+                $doc->update([
+                    'estado' => $datos['estado'] ?? 'enviado',
+                    'numero_autorizacion' => $datos['numeroAutorizacion'] ?? null,
+                    'mensajes' => $aut,
+                ]);
             } catch (\Throwable $e) {
                 $doc->update(['estado'=>'enviado', 'mensajes'=>['error_autorizar'=>$e->getMessage()]]);
             }
@@ -36,6 +41,23 @@ class EmitirSriDocument {
         }
         return $doc;
     }
+    /**
+     * El SRI devuelve la autorización ANIDADA, no en el primer nivel:
+     *   RespuestaAutorizacionComprobante.autorizaciones.autorizacion.{estado,numeroAutorizacion}
+     * Si se lee plano, una factura AUTORIZADA queda guardada como "enviado".
+     * Cuando hay varias autorizaciones, el SRI manda una lista: se toma la primera.
+     */
+    private function extraerAutorizacion(mixed $aut): array {
+        if (! is_array($aut)) return [];
+        $nodo = $aut['RespuestaAutorizacionComprobante']['autorizaciones']['autorizacion'] ?? null;
+        if ($nodo === null) return is_array($aut) ? $aut : [];   // respuesta plana (compatibilidad)
+        // Lista de autorizaciones → la primera; si es una sola, viene como mapa.
+        if (is_array($nodo) && ! isset($nodo['estado'])) {
+            $nodo = $nodo[0] ?? [];
+        }
+        return is_array($nodo) ? $nodo : [];
+    }
+
     private function construirPayload(Company $company, array $data): array {
         $infoTributaria = [
             'ambiente'=>(string)$company->ambiente, 'tipoEmision'=>'1', 'razonSocial'=>$company->razon_social,

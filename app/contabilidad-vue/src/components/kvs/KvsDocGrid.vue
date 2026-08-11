@@ -26,6 +26,14 @@ import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 
+// Serie requerida: producto con maneja_series e ítem sin series asignadas
+function serieRequerida(index: number): boolean {
+  const item: any = props.items[index]
+  if (!item || (item.series ?? []).length) return false
+  const p: any = props.productOptions.find((x: any) => x.id === item.producto_id || x.codigo === item.codigo_principal)
+  return !!p?.maneja_series
+}
+
 const props = withDefaults(defineProps<{
   items?: any[]
   readonly?: boolean
@@ -285,16 +293,16 @@ function onProductSelect(index: number, product: any) {
             :title="'Series: ' + (item.series ?? []).join(', ')"
             @click="emit('scan-serie', i)"
           />
-          <Button
-            v-else
-            icon="pi pi-plus"
-            size="small"
-            text
-            severity="secondary"
-            title="Agregar serie"
-            :disabled="readonly"
-            @click="emit('scan-serie', i)"
-          />
+                        <Button
+                            v-else
+                            icon="pi pi-plus"
+                            size="small"
+                            text
+                            :severity="serieRequerida(i) ? 'warn' : 'secondary'"
+                            :title="serieRequerida(i) ? 'Producto maneja series: seleccioná la(s) serie(s)' : 'Agregar serie'"
+                            :disabled="readonly"
+                            @click="emit('scan-serie', i)"
+                        />
         </div>
         <div v-if="showKardex" class="kvs-dg-cell kvs-dg-col--kardex">
           <InputNumber

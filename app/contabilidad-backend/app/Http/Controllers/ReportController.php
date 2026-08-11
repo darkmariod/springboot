@@ -129,7 +129,7 @@ class ReportController extends Controller
         $resumen = $series->groupBy('product_id')->map(function ($grupo) {
             $p = $grupo->first()->product;
             $disponibles = $grupo->where('estado', 'disponible')->count();
-            $vendidas = $grupo->where('estado', 'vendido')->count();
+            $vendidas = $grupo->where('estado', 'vendida')->count();
             return [
                 'codigo' => $p->codigo ?? '—',
                 'descripcion' => $p->descripcion ?? '—',
@@ -144,7 +144,7 @@ class ReportController extends Controller
             'resumen' => $resumen,
             'totales' => [
                 'disponibles' => $series->where('estado', 'disponible')->count(),
-                'vendidas' => $series->where('estado', 'vendido')->count(),
+                'vendidas' => $series->where('estado', 'vendida')->count(),
                 'total' => $series->count(),
             ],
         ]);

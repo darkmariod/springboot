@@ -49,6 +49,7 @@ import ReportViewer from '../views/ReportViewer.vue'
 import ArticleConversion from '../views/ArticleConversion.vue'
 import CardReconciliation from '../views/CardReconciliation.vue'
 import MassInvoicing from '../views/MassInvoicing.vue'
+import SideRail from '../components/SideRail.vue'
 
 const auth = useAuthStore()
 const company = useCompanyStore()
@@ -70,8 +71,8 @@ onMounted(async () => {
   await auth.fetchUser()
   await company.load()
   if (company.activeId) await plan.load(company.activeId)
-  // Al entrar se abre el lanzador de módulos (tiles, como KVS)
-  tabs.open({ key: 'home', label: 'Módulos', icon: 'pi pi-th-large', component: 'Home' })
+  // Al entrar se abre el resumen ejecutivo (Inicio); el lanzador sigue en "Módulos".
+  tabs.open({ key: 'inicio', label: 'Inicio', icon: 'pi pi-home', component: 'Dashboard' })
   window.addEventListener('keydown', onKeydown)
 })
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
@@ -111,7 +112,9 @@ function onKeydown(e: KeyboardEvent) {
         </div>
       </header>
 
-      <div class="workspace">
+      <div class="body">
+        <SideRail />
+        <div class="workspace">
         <div v-if="tabs.tabs.length" class="tabbar">
           <button
             v-for="t in tabs.tabs"
@@ -136,12 +139,13 @@ function onKeydown(e: KeyboardEvent) {
         <div class="tabcontent">
           <template v-for="t in tabs.tabs" :key="t.key">
             <KeepAlive>
-              <component :is="componentMap[t.component]" v-show="tabs.activeKey === t.key" />
+              <component v-if="tabs.activeKey === t.key" :is="componentMap[t.component]" />
             </KeepAlive>
           </template>
           <div v-if="!tabs.tabs.length" class="empty">
             Abrá un módulo del menú para empezar.
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -151,7 +155,7 @@ function onKeydown(e: KeyboardEvent) {
 <style scoped>
 .layout { display: flex; height: 100vh; overflow: hidden; }
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-/* Sin menú lateral (como KVS): la marca vive en la barra superior */
+/* La marca vive en la barra superior; el menú lateral global vive en .body */
 .topbar {
   height: 52px; background: var(--hr-navy); border-bottom: 1px solid var(--hr-blue-dark); display: flex;
   align-items: center; gap: 14px; padding: 0 16px; flex-shrink: 0;
@@ -166,6 +170,7 @@ function onKeydown(e: KeyboardEvent) {
 .topbar .user { color: #cdd5e0; }
 .user { font-size: 13px; color: #475569; }
 .workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #eef1f5; }
+.body { flex: 1; display: flex; overflow: hidden; }
 .tabbar {
   display: flex; gap: 2px; background: #dde2ea; padding: 6px 8px 0;
   flex-shrink: 0; align-items: stretch; min-height: 40px;
@@ -204,4 +209,5 @@ function onKeydown(e: KeyboardEvent) {
 .maximizar:hover { background: #eef1f5; color: #1f2733; }
 
 .layout.maximized .topbar { display: none; }
+.layout.maximized .body :deep(.rail) { display: none; }
 </style>

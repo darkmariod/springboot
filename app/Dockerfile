@@ -10,6 +10,27 @@ RUN apt-get update && apt-get install -y \
     && pecl install redis && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
 
+# OpenSSL 3 desactiva por defecto los algoritmos "legacy" (RC2-40/SHA1) con los que se
+# generan los certificados .p12 del SRI de Ecuador. Sin el proveedor legacy activo,
+# openssl_pkcs12_read() falla con "no abre con esa clave" AUNQUE la clave sea correcta.
+RUN printf '%s\n' \
+    'openssl_conf = openssl_init' \
+    '' \
+    '[openssl_init]' \
+    'providers = provider_sect' \
+    '' \
+    '[provider_sect]' \
+    'default = default_sect' \
+    'legacy = legacy_sect' \
+    '' \
+    '[default_sect]' \
+    'activate = 1' \
+    '' \
+    '[legacy_sect]' \
+    'activate = 1' \
+    > /etc/ssl/openssl-legacy.cnf
+ENV OPENSSL_CONF=/etc/ssl/openssl-legacy.cnf
+
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

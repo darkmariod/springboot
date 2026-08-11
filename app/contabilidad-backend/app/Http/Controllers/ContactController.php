@@ -17,8 +17,31 @@ class ContactController extends Controller {
             'telefono'=>['nullable','string'],'email'=>['nullable','email'],
             'email2'=>['nullable','email'],'parte_relacionada'=>['boolean'],
         ]);
+        $this->validarIdentificacion($data['tipo_identificacion'], $data['identificacion']);
         return response()->json(Contact::create($data), 201);
     }
-    public function update(Request $r, Contact $contact) { $contact->update($r->all()); return $contact; }
+    public function update(Request $r, Contact $contact) {
+        if ($r->filled('tipo_identificacion') && $r->filled('identificacion')) {
+            $this->validarIdentificacion($r->tipo_identificacion, $r->identificacion);
+        }
+        $contact->update($r->all());
+        return $contact;
+    }
+
+    /**
+     * El SRI rechaza la factura si el tipo no coincide con la longitud:
+     * 04 = RUC (13 dígitos) · 05 = cédula (10) · 06 = pasaporte · 07 = consumidor final.
+     * Se valida acá para no descubrirlo recién cuando el SRI devuelve el error.
+     */
+    private function validarIdentificacion(string $tipo, string $numero): void {
+        $n = preg_replace('/\D/', '', $numero);
+        $esperado = match ($tipo) { '04' => 13, '05' => 10, default => null };
+        if ($esperado !== null && strlen($n) !== $esperado) {
+            $etiqueta = $tipo === '04' ? 'RUC' : 'cédula';
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'identificacion' => ["El {$etiqueta} debe tener {$esperado} dígitos (tiene ".strlen($n)."). El SRI rechaza la factura si no coincide."],
+            ]);
+        }
+    }
     public function destroy(Contact $contact) { $contact->delete(); return response()->noContent(); }
 }

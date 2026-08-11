@@ -16,6 +16,35 @@ class CompanyController extends Controller
         return $company->load('emissionPoints');
     }
 
+    /**
+     * Editar los datos de la empresa.
+     * OJO: el RUC debe ser el del titular del certificado .p12, si no el SRI rechaza la factura.
+     */
+    public function update(\Illuminate\Http\Request $request, Company $company)
+    {
+        $data = $request->validate([
+            'ruc' => ['sometimes', 'string', 'size:13'],
+            'razon_social' => ['sometimes', 'string', 'max:300'],
+            'nombre_comercial' => ['nullable', 'string', 'max:300'],
+            'dir_matriz' => ['sometimes', 'string', 'max:300'],
+            'estab' => ['sometimes', 'string', 'size:3'],
+            'pto_emi' => ['sometimes', 'string', 'size:3'],
+            'secuencial' => ['sometimes', 'integer', 'min:1'],
+            'regimen' => ['nullable', 'string', 'max:100'],
+            'obligado_contabilidad' => ['sometimes', 'boolean'],
+            'ambiente' => ['sometimes', 'in:1,2'],
+            'email_envio' => ['nullable', 'email'],
+        ]);
+
+        $company->update($data);
+
+        return response()->json([
+            'ok' => true,
+            'mensaje' => 'Empresa actualizada.',
+            'company' => $company->fresh(),
+        ]);
+    }
+
     public function uploadCertificate(\Illuminate\Http\Request $request, Company $company)
     {
         $request->validate([

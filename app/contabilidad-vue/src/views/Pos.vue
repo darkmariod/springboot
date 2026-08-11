@@ -87,6 +87,16 @@ async function buscarClientePorId() {
   const id = raw.replace(/\D/g, '')
   if (!id) return
 
+  // El SRI solo consulta con el número COMPLETO: cédula = 10 dígitos, RUC = 13.
+  // Sin este aviso, un número a medias abría el diálogo vacío y parecía que "no trae nada".
+  if (id.length !== 10 && id.length !== 13) {
+    msg.value = {
+      type: 'warn',
+      text: `Escribí el número completo para consultar al SRI: cédula = 10 dígitos, RUC = 13 (llevás ${id.length}).`,
+    }
+    return
+  }
+
   const tipo = detectarTipoId(id)
 
   // 1) Buscar en la lista local
@@ -119,9 +129,13 @@ async function buscarClientePorId() {
       sriData.es_proveedor = false
       msg.value = { type: 'warn', text: res.data.mensaje ?? 'No encontrado en SRI. Cargá los datos a mano.' }
     }
-  } catch {
+  } catch (err: any) {
     sriData.es_cliente = true
     sriData.es_proveedor = false
+    msg.value = {
+      type: 'warn',
+      text: err.response?.data?.error ?? 'No se pudo consultar el SRI ahora. Cargá los datos a mano.',
+    }
   } finally {
     sriLoading.value = false
   }
@@ -178,6 +192,10 @@ function addItemFromProduct(p: any, serie?: string) {
       warehouse_id: null,
       series: serie ? [serie] : [],
     })
+    // Producto con maneja_series: abrir el selector de series de inmediato
+    if (p.maneja_series && !serie) {
+      abrirSelectorSeries(items.value.length - 1)
+    }
   }
 }
 
@@ -250,6 +268,16 @@ async function emitir() {
   if (!items.value.length) { msg.value = { type: 'warn', text: 'Agregá al menos un producto.' }; return }
   if (!contactId.value) { msg.value = { type: 'warn', text: 'Seleccioná un cliente.' }; return }
 
+  // Validación client-side: productos con maneja_series exigen serie antes de emitir
+  const sinSeries = items.value.find((i: any) => {
+    const prod = products.value.find((x: any) => x.codigo === i.codigo_principal)
+    return prod?.maneja_series && !(i.series ?? []).length
+  })
+  if (sinSeries) {
+    msg.value = { type: 'warn', text: `El artículo ${sinSeries.codigo_principal} maneja series; seleccioná las series antes de emitir.` }
+    return
+  }
+
   emitiendo.value = true
   msg.value = null
   ok.value = null
@@ -309,7 +337,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div style="display:flex; flex-direction:column; height:100%; overflow:hidden;">
+  <div class="pos-root">
     <KvsModuleHeader module-name="Ventas" :company="{ ruc: company.activeId, razon_social: 'Punto de Venta' }" subtitle="Facturación" />
     <div class="pos-layout" style="flex:1; min-height:0; overflow:hidden;">
     <!-- ══ Panel izquierdo: productos ══ -->
@@ -320,18 +348,26 @@ onMounted(load)
         class="pos-scan-input"
         @keydown.enter.prevent="escanear(($event.target as HTMLInputElement).value); ($event.target as HTMLInputElement).value=''"
       />
-      <div class="pos-product-grid">
-        <button v-for="p in products" :key="p.id" class="pos-product-card"
-                @click="addItemFromProduct(p)">
-          <div v-if="p.imagen" class="pos-product-img">
-            <img :src="p.imagen" alt="" />
+      <div class="pos-product-list">
+        <button v-for="p in products" :key="p.id" class="pos-product-row"
+                @click="addItemFromProduct(p)" :title="p.descripcion">
+          <img v-if="p.imagen" :src="p.imagen" alt="" class="pos-product-thumb" />
+          <i v-else class="pi pi-box pos-product-icon" />
+          <div class="pos-product-info">
+            <div class="pos-product-name">{{ p.descripcion }}</div>
+            <div class="pos-product-meta">
+              <span class="pos-product-code">{{ p.codigo }}</span>
+              <span v-if="p.tipo !== 'servicio'" class="pos-product-stock"
+                    :class="{ 'is-low': Number(p.stock ?? 0) <= 0 }">
+                stock {{ Number(p.stock ?? 0) }}
+              </span>
+            </div>
           </div>
-          <div v-else class="pos-product-img pos-product-img--empty">
-            <i class="pi pi-box" />
-          </div>
-          <div class="pos-product-name">{{ p.descripcion }}</div>
           <div class="pos-product-price">{{ money(Number(p.precio)) }}</div>
         </button>
+        <div v-if="!products.length" class="pos-product-empty">
+          No hay productos cargados.
+        </div>
       </div>
     </section>
 
@@ -470,6 +506,7 @@ onMounted(load)
 </template>
 
 <style scoped>
+.pos-root { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .pos-layout { display: flex; height: 100%; background: #eef1f5; }
 
 /* ── Panel productos ── */
@@ -486,23 +523,35 @@ onMounted(load)
   font-size: 13px; outline: none;
 }
 .pos-scan-input:focus { background: #f0faf8; }
-.pos-product-grid {
-  flex: 1; overflow: auto; padding: 10px;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;
+/* Lista densa de productos (estilo ERP), en vez de tarjetas con imagen vacía */
+.pos-product-list { flex: 1; overflow: auto; padding: 0; }
+.pos-product-row {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  padding: 7px 10px; border: 0; border-bottom: 1px solid #eef1f5;
+  background: #fff; cursor: pointer; text-align: left; transition: background 0.12s;
 }
-.pos-product-card {
-  border: 1px solid #e2e5ea; border-radius: 6px; background: #fff;
-  padding: 6px; cursor: pointer; text-align: left; transition: border-color 0.15s;
+.pos-product-row:hover { background: #eef4fc; }
+.pos-product-thumb {
+  width: 34px; height: 34px; object-fit: cover; border-radius: 4px; flex-shrink: 0;
+  border: 1px solid #e2e5ea;
 }
-.pos-product-card:hover { border-color: var(--hr-blue); }
-.pos-product-img { height: 60px; border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
-.pos-product-img img { width: 100%; height: 100%; object-fit: cover; }
-.pos-product-img--empty {
-  background: #f1f3f6; display: flex; align-items: center; justify-content: center;
-  color: #cbd5e1;
+.pos-product-icon {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 4px; background: #f1f3f6;
+  color: #94a3b8; font-size: 15px; display: flex; align-items: center; justify-content: center;
 }
-.pos-product-name { font-size: 12px; color: #37474f; line-height: 1.3; }
-.pos-product-price { font-size: 13px; color: #22a06b; font-weight: 600; margin-top: 2px; }
+.pos-product-info { flex: 1; min-width: 0; }
+.pos-product-name {
+  font-size: 12.5px; color: #1f2733; font-weight: 500; line-height: 1.25;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pos-product-meta { display: flex; gap: 8px; margin-top: 2px; font-size: 11px; color: #8a94a6; }
+.pos-product-code { font-family: "SF Mono", Menlo, monospace; }
+.pos-product-stock { color: #64748b; }
+.pos-product-stock.is-low { color: #d93025; font-weight: 600; }
+.pos-product-price {
+  font-size: 13px; color: #16a34a; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+}
+.pos-product-empty { padding: 24px 12px; text-align: center; color: #94a3b8; font-size: 12.5px; }
 
 /* ── Panel documento ── */
 .pos-doc {

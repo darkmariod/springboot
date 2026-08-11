@@ -7,6 +7,9 @@ import Dialog from 'primevue/dialog'
 import Password from 'primevue/password'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
+import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
+import Checkbox from 'primevue/checkbox'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { usePlanStore } from '../stores/plan'
@@ -45,6 +48,42 @@ async function subirCert() {
     msg.value = { type: 'error', text: err.response?.data?.errors?.clave?.[0] ?? 'No se pudo cargar.' }
   }
 }
+// ── Edición de la empresa ──
+// El RUC debe ser el del titular del .p12, si no el SRI rechaza la factura.
+const editDialog = ref<any>(null)
+const guardando = ref(false)
+const ambientes = [
+  { label: 'PRUEBAS (celcer)', value: 1 },
+  { label: 'PRODUCCIÓN (cel)', value: 2 },
+]
+function abrirEditar(row: any) {
+  editDialog.value = {
+    id: row.id,
+    ruc: row.ruc, razon_social: row.razon_social, nombre_comercial: row.nombre_comercial,
+    dir_matriz: row.dir_matriz, estab: row.estab, pto_emi: row.pto_emi,
+    secuencial: Number(row.secuencial ?? 1), regimen: row.regimen,
+    obligado_contabilidad: !!row.obligado_contabilidad,
+    ambiente: Number(row.ambiente ?? 1), email_envio: row.email_envio,
+  }
+}
+async function guardarEmpresa() {
+  guardando.value = true
+  msg.value = null
+  try {
+    const { id, ...datos } = editDialog.value
+    const res = await api.put('/companies/' + id, datos)
+    msg.value = { type: 'success', text: res.data.mensaje ?? 'Empresa actualizada.' }
+    editDialog.value = null
+    await load()
+    await companyStore.load()
+  } catch (err: any) {
+    const e = err.response?.data?.errors
+    msg.value = { type: 'error', text: e ? Object.values(e).flat().join(' · ') : 'No se pudo guardar.' }
+  } finally {
+    guardando.value = false
+  }
+}
+
 // Cambia el plan en vivo: los tiles del lanzador aparecen/desaparecen al instante
 async function cambiarPlan(row: any, plan: string) {
   await api.post('/companies/' + row.id + '/plan', { plan })
@@ -74,7 +113,71 @@ onMounted(load)
           <Button label="Cargar .p12" icon="pi pi-shield" size="small" outlined @click="certDialog = data" />
         </template>
       </Column>
+      <Column header="" style="width:110px">
+        <template #body="{ data }">
+          <Button label="Editar" icon="pi pi-pencil" size="small" @click="abrirEditar(data)" />
+        </template>
+      </Column>
     </DataTable>
+
+    <!-- Editar datos de la empresa -->
+    <Dialog :visible="!!editDialog" modal header="Editar empresa" style="width:640px" @update:visible="editDialog=null">
+      <div v-if="editDialog">
+        <Message severity="warn" :closable="false" style="margin-bottom:12px;">
+          El <b>RUC</b> debe ser el del titular del certificado <b>.p12</b>. Si no coincide, el SRI rechaza la factura.
+        </Message>
+
+        <fieldset class="kvs-fieldset">
+          <legend>Datos de la empresa</legend>
+          <div class="kvs-row">
+            <label class="kvs-lbl"><span class="req">*</span> RUC:</label>
+            <InputText v-model="editDialog.ruc" maxlength="13" class="kvs-in" style="max-width:190px" />
+            <label class="kvs-lbl" style="margin-left:14px;">Régimen:</label>
+            <InputText v-model="editDialog.regimen" class="kvs-in" />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl"><span class="req">*</span> Razón social:</label>
+            <InputText v-model="editDialog.razon_social" class="kvs-in" />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl">Nombre comercial:</label>
+            <InputText v-model="editDialog.nombre_comercial" class="kvs-in" />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl"><span class="req">*</span> Dir. matriz:</label>
+            <InputText v-model="editDialog.dir_matriz" class="kvs-in" />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl">Correo de envío:</label>
+            <InputText v-model="editDialog.email_envio" class="kvs-in" />
+          </div>
+        </fieldset>
+
+        <fieldset class="kvs-fieldset" style="margin-top:14px;">
+          <legend>Facturación electrónica</legend>
+          <div class="kvs-row">
+            <label class="kvs-lbl"><span class="req">*</span> Establecimiento:</label>
+            <InputText v-model="editDialog.estab" maxlength="3" class="kvs-in" style="max-width:90px" />
+            <label class="kvs-lbl" style="margin-left:14px;"><span class="req">*</span> Pto. emisión:</label>
+            <InputText v-model="editDialog.pto_emi" maxlength="3" class="kvs-in" style="max-width:90px" />
+            <label class="kvs-lbl" style="margin-left:14px;">Secuencial:</label>
+            <InputNumber v-model="editDialog.secuencial" :useGrouping="false" class="kvs-in" style="max-width:120px" />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl"><span class="req">*</span> Ambiente:</label>
+            <Select v-model="editDialog.ambiente" :options="ambientes" optionLabel="label" optionValue="value"
+                    class="kvs-in" style="max-width:230px" />
+            <label style="display:flex; align-items:center; gap:7px; margin-left:18px; font-size:13px; white-space:nowrap;">
+              <Checkbox v-model="editDialog.obligado_contabilidad" :binary="true" /> Obligado a llevar contabilidad
+            </label>
+          </div>
+        </fieldset>
+      </div>
+      <template #footer>
+        <Button label="Cancelar" text @click="editDialog=null" />
+        <Button label="Guardar" icon="pi pi-save" :loading="guardando" @click="guardarEmpresa" />
+      </template>
+    </Dialog>
 
     <Dialog :visible="!!certDialog" modal header="Cargar certificado de firma (.p12)" style="width:420px" @update:visible="certDialog=null">
       <div style="display:flex; flex-direction:column; gap:12px;">

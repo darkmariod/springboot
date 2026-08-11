@@ -49,7 +49,9 @@ class DemoSeeder extends Seeder
             ['tipo_identificacion' => '04', 'razon_social' => 'DISTRIBUIDORA TECNOLOGICA S.A.',
              'direccion' => 'Av. Amazonas, Quito', 'es_proveedor' => true, 'es_cliente' => false]);
         $cliente = Contact::updateOrCreate(
-            ['company_id' => $company->id, 'identificacion' => '1803553062001'],
+            // Cédula = 10 dígitos. Si el tipo es 05 y el número trae 13, el SRI rechaza:
+            // "ERROR EN LA IDENTIFICACION DEL RECEPTOR - La longitud del número de cédula debe ser 10".
+            ['company_id' => $company->id, 'identificacion' => '1803553062'],
             ['tipo_identificacion' => '05', 'razon_social' => 'EMILY ARMENDARIZ SERRANO',
              'email' => 'emily@mail.com', 'telefono' => '0999000001',
              'es_cliente' => true, 'es_proveedor' => false]);
