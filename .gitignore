@@ -17,3 +17,9 @@ springboot-backup-*/
 
 # Archivos de texto de comprobantes SRI / imports
 *.txt
+
+# Certificado y comprobantes (nunca al repo)
+certificados/
+*.pfx
+*.key
+Lib_Firmador_Xml_Facturacion _SRI/.env
