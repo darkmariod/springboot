@@ -19,6 +19,15 @@ class RegisterInventoryMovement
         return DB::transaction(function () use ($p, $tipo, $cant, $costo, $concepto, $fecha, $warehouseId, $series, $invoiceId) {
             $p = Product::whereKey($p->id)->lockForUpdate()->firstOrFail();
 
+            if (in_array($tipo, ['egreso', 'salida'], true)) {
+                $stockActual = (float) $p->stock;
+                if ($stockActual < $cant) {
+                    throw new \InvalidArgumentException(
+                        "Stock insuficiente para {$p->codigo}: disponible {$stockActual}, solicitado {$cant}"
+                    );
+                }
+            }
+
             $cantPrev = (float) $p->stock;
             $promPrev = (float) $p->costo_promedio;
 

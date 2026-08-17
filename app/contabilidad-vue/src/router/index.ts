@@ -3,7 +3,7 @@ import Login from '../views/Login.vue'
 import MainLayout from '../layouts/MainLayout.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/app/'),
   routes: [
     { path: '/login', name: 'login', component: Login },
     { path: '/', name: 'app', component: MainLayout },

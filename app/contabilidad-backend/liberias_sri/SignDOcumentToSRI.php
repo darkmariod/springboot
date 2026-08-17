@@ -406,6 +406,9 @@ public    function istDocumentoS($doc){
         case 'guiaRemision':
              return true;
             break;  
+        case 'liquidacionCompra':
+             return true;
+            break;  
     
         default:
             return false;

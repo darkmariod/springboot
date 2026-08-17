@@ -49,6 +49,9 @@ import ReportViewer from '../views/ReportViewer.vue'
 import ArticleConversion from '../views/ArticleConversion.vue'
 import CardReconciliation from '../views/CardReconciliation.vue'
 import MassInvoicing from '../views/MassInvoicing.vue'
+import LiquidacionCompra from '../views/LiquidacionCompra.vue'
+import NotaDebito from '../views/NotaDebito.vue'
+import GuiaRemision from '../views/GuiaRemision.vue'
 import SideRail from '../components/SideRail.vue'
 
 const auth = useAuthStore()
@@ -64,7 +67,7 @@ const componentMap: Record<string, any> = {
   SriDocuments, Quotes, Reconciliation, Ledger, Companies, EmissionPoints, Suppliers, InventoryReports,
   Series, Users, Audit, Advances, CreditNotes, BatchImport, Employees, Payroll, Warehouses,
   Taxes, InventoryAdjustment, InventoryTransfer, ReportViewer, ArticleConversion,
-  CardReconciliation, MassInvoicing,
+  CardReconciliation, MassInvoicing, LiquidacionCompra, NotaDebito, GuiaRemision,
 }
 
 onMounted(async () => {

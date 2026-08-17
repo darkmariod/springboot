@@ -25,8 +25,8 @@ export const usePlanStore = defineStore('plan', () => {
   }
   function tiene(feature?: string) {
     if (!feature) return true
-    // Sin plan cargado = mostrar todo (fail-open)
-    if (!features.value.length) return true
+    // fail-closed: si no hay features cargados, solo mostrar módulos sin feature
+    if (!features.value.length) return !feature
     return features.value.includes(feature)
   }
   return { plan, nombre, features, vence, vencido, load, tiene }

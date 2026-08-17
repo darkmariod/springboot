@@ -4,6 +4,9 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GuiaRemisionController;
+use App\Http\Controllers\LiquidacionCompraController;
+use App\Http\Controllers\NotaDebitoController;
 use Illuminate\Support\Facades\Route;
 
 // Público
@@ -97,10 +100,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete("quotes/{quote}", [\App\Http\Controllers\QuoteController::class, "destroy"]);
 
     // Bancos y conciliación
-    Route::get("bank-movements", [\App\Http\Controllers\BankMovementController::class, "index"]);
-    Route::post("bank-movements", [\App\Http\Controllers\BankMovementController::class, "store"]);
-    Route::post("bank-movements/{movement}/toggle", [\App\Http\Controllers\BankMovementController::class, "toggle"]);
-    Route::post("bank-movements/auto-match", [\App\Http\Controllers\BankMovementController::class, "autoMatch"]);
+    Route::middleware('feature:conciliacion')->group(function () {
+        Route::get("bank-movements", [\App\Http\Controllers\BankMovementController::class, "index"]);
+        Route::post("bank-movements", [\App\Http\Controllers\BankMovementController::class, "store"]);
+        Route::post("bank-movements/{movement}/toggle", [\App\Http\Controllers\BankMovementController::class, "toggle"]);
+        Route::post("bank-movements/auto-match", [\App\Http\Controllers\BankMovementController::class, "autoMatch"]);
+    });
 
     // Puntos de emisión + certificado
     Route::get("emission-points", [\App\Http\Controllers\EmissionPointController::class, "index"]);
@@ -113,16 +118,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post("companies/{company}/smtp/test", [\App\Http\Controllers\SmtpTestController::class, "send"]);
 
     // Fase 2 — Series (garantías)
-    Route::get("series", [\App\Http\Controllers\SerieController::class, "index"]);
-    Route::post("series", [\App\Http\Controllers\SerieController::class, "store"]);
-    Route::get("series/lookup", [\App\Http\Controllers\SerieController::class, "lookup"]);
-    Route::get("series/trace", [\App\Http\Controllers\SerieController::class, "trace"]);
+    Route::middleware('feature:series')->group(function () {
+        Route::get("series", [\App\Http\Controllers\SerieController::class, "index"]);
+        Route::post("series", [\App\Http\Controllers\SerieController::class, "store"]);
+        Route::get("series/lookup", [\App\Http\Controllers\SerieController::class, "lookup"]);
+        Route::get("series/trace", [\App\Http\Controllers\SerieController::class, "trace"]);
+        Route::put("series/{serie}", [\App\Http\Controllers\SerieController::class, "update"]);
+        Route::delete("series/{serie}", [\App\Http\Controllers\SerieController::class, "destroy"]);
+    });
 
     // Fase 3 — Usuarios y auditoría
     Route::get("users", [\App\Http\Controllers\UserController::class, "index"]);
     Route::post("users", [\App\Http\Controllers\UserController::class, "store"]);
     Route::put("users/{user}", [\App\Http\Controllers\UserController::class, "update"]);
-    Route::get("audit", [\App\Http\Controllers\AuditController::class, "index"]);
+    Route::delete("users/{user}", [\App\Http\Controllers\UserController::class, "destroy"]);
+
+    Route::middleware('feature:auditoria')->group(function () {
+        Route::get("audit", [\App\Http\Controllers\AuditController::class, "index"]);
+    });
 
     // Fase 4 — Notas de crédito, anticipos, uso de saldos
     Route::get("advances", [\App\Http\Controllers\AdvanceController::class, "index"]);
@@ -132,6 +145,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("credits/available", [\App\Http\Controllers\CreditApplicationController::class, "available"]);
     Route::post("credits/apply/{invoice}", [\App\Http\Controllers\CreditApplicationController::class, "apply"]);
 
+    // ── Liquidación de compra ──
+    Route::get('liquidacion-compra', [LiquidacionCompraController::class, 'index']);
+    Route::post('liquidacion-compra', [LiquidacionCompraController::class, 'store']);
+    Route::post('liquidacion-compra/{purchase}/emit', [LiquidacionCompraController::class, 'emit']);
+
+    // ── Nota de débito ──
+    Route::get('notas-debito', [NotaDebitoController::class, 'index']);
+    Route::post('notas-debito', [NotaDebitoController::class, 'store']);
+    Route::post('notas-debito/{notaDebito}/emit', [NotaDebitoController::class, 'emit']);
+
+    // ── Guía de remisión ──
+    Route::get('guias-remision', [GuiaRemisionController::class, 'index']);
+    Route::post('guias-remision', [GuiaRemisionController::class, 'store']);
+    Route::post('guias-remision/{guia}/emit', [GuiaRemisionController::class, 'emit']);
+
     // Fase 5 — Importación en lote
     Route::get("pending-imports", [\App\Http\Controllers\PendingImportController::class, "index"]);
     Route::post("pending-imports/upload-txt", [\App\Http\Controllers\PendingImportController::class, "uploadTxt"]);
@@ -139,13 +167,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post("pending-imports/{pending}/process", [\App\Http\Controllers\PendingImportController::class, "processOne"]);
 
     // Fase 7 — Nómina
-    Route::apiResource("employees", \App\Http\Controllers\EmployeeController::class)
-        ->only(['index','store','update','destroy']);
-    Route::get("payrolls", [\App\Http\Controllers\PayrollController::class, "index"]);
-    Route::get("payrolls/{payroll}", [\App\Http\Controllers\PayrollController::class, "show"]);
-    Route::post("payrolls/generate", [\App\Http\Controllers\PayrollController::class, "generate"]);
-    Route::post("payrolls/{payroll}/close", [\App\Http\Controllers\PayrollController::class, "close"]);
-    Route::post("employees/{employee}/liquidacion", [\App\Http\Controllers\PayrollController::class, "liquidacion"]);
+    Route::middleware('feature:nomina')->group(function () {
+        Route::apiResource("employees", \App\Http\Controllers\EmployeeController::class)
+            ->only(['index','store','update','destroy']);
+        Route::get("payrolls", [\App\Http\Controllers\PayrollController::class, "index"]);
+        Route::get("payrolls/{payroll}", [\App\Http\Controllers\PayrollController::class, "show"]);
+        Route::post("payrolls/generate", [\App\Http\Controllers\PayrollController::class, "generate"]);
+        Route::post("payrolls/{payroll}/close", [\App\Http\Controllers\PayrollController::class, "close"]);
+        Route::post("employees/{employee}/liquidacion", [\App\Http\Controllers\PayrollController::class, "liquidacion"]);
+    });
 
     // Fase A — Catálogos (formas de pago, sustentos tributarios)
     Route::get("catalogos/formas-pago", [\App\Http\Controllers\CatalogosController::class, "formasPago"]);
@@ -177,27 +207,32 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("reports/series-csv", [\App\Http\Controllers\ReportController::class, "exportSeriesCsv"]);
 
     // Fase 6 — Conversión de artículos
-    Route::post("conversions", [\App\Http\Controllers\ArticleConversionController::class, "store"]);
+    Route::middleware('feature:conversion_articulos')->group(function () {
+        Route::post("conversions", [\App\Http\Controllers\ArticleConversionController::class, "store"]);
+    });
 
     // Fase 6 — Facturación masiva
-    Route::post("invoices/masiva", [\App\Http\Controllers\MassInvoiceController::class, "store"]);
+    Route::middleware('feature:facturacion_masiva')->group(function () {
+        Route::post("invoices/masiva", [\App\Http\Controllers\MassInvoiceController::class, "store"]);
+    });
 
     // Fase 6 — Fraccionamiento de unidades
-    Route::post("fractionations", [\App\Http\Controllers\FractionationController::class, "store"]);
+    Route::middleware('feature:fraccionamiento')->group(function () {
+        Route::post("fractionations", [\App\Http\Controllers\FractionationController::class, "store"]);
+    });
 
     // Fase 6 — Reservas de stock
-    Route::get("stock-reservations", [\App\Http\Controllers\StockReservationController::class, "index"]);
-    Route::post("stock-reservations", [\App\Http\Controllers\StockReservationController::class, "store"]);
-    Route::post("stock-reservations/{reservation}/cancel", [\App\Http\Controllers\StockReservationController::class, "cancel"]);
+    Route::middleware('feature:reservas_stock')->group(function () {
+        Route::get("stock-reservations", [\App\Http\Controllers\StockReservationController::class, "index"]);
+        Route::post("stock-reservations", [\App\Http\Controllers\StockReservationController::class, "store"]);
+        Route::post("stock-reservations/{reservation}/cancel", [\App\Http\Controllers\StockReservationController::class, "cancel"]);
+    });
 
     // Fase 1 — CRUD faltante (update/destroy/anular)
     Route::put("advances/{advance}", [\App\Http\Controllers\AdvanceController::class, "update"]);
     Route::delete("advances/{advance}", [\App\Http\Controllers\AdvanceController::class, "destroy"]);
     Route::post("credit-notes/{creditNote}/anular", [\App\Http\Controllers\CreditNoteController::class, "anular"]);
-    Route::put("series/{serie}", [\App\Http\Controllers\SerieController::class, "update"]);
-    Route::delete("series/{serie}", [\App\Http\Controllers\SerieController::class, "destroy"]);
     Route::put("emission-points/{point}", [\App\Http\Controllers\EmissionPointController::class, "update"]);
-    Route::delete("users/{user}", [\App\Http\Controllers\UserController::class, "destroy"]);
 
     // Fase 2b — Importación SRI pluggable
     Route::post("sri/importar", [\App\Http\Controllers\SriImportController::class, "importar"]);

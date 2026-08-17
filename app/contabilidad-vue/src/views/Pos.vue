@@ -339,7 +339,7 @@ onMounted(load)
 <template>
   <div class="pos-root">
     <KvsModuleHeader module-name="Ventas" :company="{ ruc: company.activeId, razon_social: 'Punto de Venta' }" subtitle="Facturación" />
-    <div class="pos-layout" style="flex:1; min-height:0; overflow:hidden;">
+    <div class="pos-layout">
     <!-- ══ Panel izquierdo: productos ══ -->
     <section class="pos-products">
       <div class="pos-products-title">Productos</div>
@@ -507,7 +507,7 @@ onMounted(load)
 
 <style scoped>
 .pos-root { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.pos-layout { display: flex; height: 100%; background: #eef1f5; }
+.pos-layout { display: flex; height: 100%; background: #eef1f5; flex: 1; min-height: 0; overflow: hidden; }
 
 /* ── Panel productos ── */
 .pos-products {
