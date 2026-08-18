@@ -83,7 +83,7 @@ class CompanyController extends Controller
     }
     public function cambiarPlan(\Illuminate\Http\Request $r, Company $company) {
         $d = $r->validate([
-            'plan' => ['required', 'in:emprendedor,pro,business,corporativo'],
+            'plan' => ['required', 'in:emprendedor,negocio,profesional,empresarial'],
             'plan_vence' => ['nullable', 'date'],
         ]);
         $company->update($d);

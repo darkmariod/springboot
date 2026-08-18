@@ -22,12 +22,12 @@ const certDialog = ref<any>(null)
 const clave = ref('')
 const msg = ref<any>(null)
 const fileRef = ref<HTMLInputElement>()
-// Mismos niveles que KBS (kbs-erp.com)
+// Deben coincidir con config/planes.php (backend)
 const planes = [
-  { label: 'Emprendedor — $289', value: 'emprendedor' },
-  { label: 'PRO — $389 (series + firma)', value: 'pro' },
-  { label: 'Business — $559 (contabilidad + nómina)', value: 'business' },
-  { label: 'Corporativo — $659', value: 'corporativo' },
+  { label: 'Emprendedor — $49 (POS + inventario, sin factura SRI)', value: 'emprendedor' },
+  { label: 'Negocio — $99 (con facturación electrónica SRI)', value: 'negocio' },
+  { label: 'Profesional — $149 (todo + series y contabilidad)', value: 'profesional' },
+  { label: 'Empresarial — personalizado', value: 'empresarial' },
 ]
 
 async function load() {

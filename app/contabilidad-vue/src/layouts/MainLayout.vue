@@ -175,8 +175,9 @@ function onKeydown(e: KeyboardEvent) {
 .workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #eef1f5; }
 .body { flex: 1; display: flex; overflow: hidden; }
 .tabbar {
-  display: flex; gap: 2px; background: #dde2ea; padding: 6px 8px 0;
-  flex-shrink: 0; align-items: stretch; min-height: 40px;
+  --tab-accent: #1e5bb8;
+  display: flex; gap: 3px; background: #e4e9f1; padding: 7px 10px 0;
+  flex-shrink: 0; align-items: stretch; min-height: 42px;
   /* overflow-y hidden: sin esto, la barra de scroll corta las pestañas por la mitad */
   overflow-x: auto; overflow-y: hidden;
   scrollbar-width: thin; scrollbar-color: #b8c0cc transparent;
@@ -185,20 +186,29 @@ function onKeydown(e: KeyboardEvent) {
 .tabbar::-webkit-scrollbar-thumb { background: #b8c0cc; border-radius: 2px; }
 .tabbar::-webkit-scrollbar-track { background: transparent; }
 .worktab {
-  display: flex; align-items: center; gap: 7px; padding: 7px 12px; border: 0;
-  background: #eef1f5; color: #64748b; border-radius: 6px 6px 0 0; cursor: pointer;
-  font-size: 13px; white-space: nowrap;
-  /* Se achican en vez de desbordarse, pero nunca por debajo de lo legible:
-     al llegar al mínimo, la barra scrollea. */
-  flex: 0 1 auto; min-width: 128px; max-width: 190px;
+  position: relative;
+  display: flex; align-items: center; gap: 8px; padding: 8px 11px 9px; border: 0;
+  background: transparent; color: #5a6675; border-radius: 8px 8px 0 0; cursor: pointer;
+  font-size: 13px; white-space: nowrap; transition: background 0.12s, color 0.12s;
+  /* Más compactas → entran más antes de scrollear; al mínimo, la barra scrollea. */
+  flex: 0 1 auto; min-width: 104px; max-width: 178px;
 }
+.worktab:hover { background: #eef2f8; color: #1f2733; }
 .worktab > span {
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
 }
-.worktab > i { flex-shrink: 0; }
-.worktab.active { background: #fff; color: #1f2733; font-weight: 600; }
-.worktab .close { font-size: 11px; opacity: 0.6; }
-.worktab .close:hover { opacity: 1; color: #d93025; }
+.worktab > i:first-child { flex-shrink: 0; font-size: 13px; opacity: 0.75; }
+.worktab.active {
+  background: #fff; color: #16202e; font-weight: 600;
+  box-shadow: inset 0 3px 0 var(--tab-accent);
+}
+.worktab.active > i:first-child { opacity: 1; color: var(--tab-accent); }
+.worktab .close {
+  flex-shrink: 0; font-size: 11px; opacity: 0; border-radius: 4px; padding: 2px;
+  transition: opacity 0.12s, background 0.12s;
+}
+.worktab:hover .close, .worktab.active .close { opacity: 0.5; }
+.worktab .close:hover { opacity: 1 !important; color: #d93025; background: #fbe3e1; }
 .tabcontent { flex: 1; overflow: auto; background: #fff; }
 .empty { padding: 60px; text-align: center; color: #94a3b8; }
 
