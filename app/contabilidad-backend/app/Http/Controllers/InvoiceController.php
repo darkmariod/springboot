@@ -17,7 +17,7 @@ class InvoiceController extends Controller
 {
     public function index(Request $r)
     {
-        return Invoice::with('contact:id,razon_social,identificacion,direccion,email', 'sriDocument:id,documentable_id,estado,clave_acceso,numero_autorizacion')
+        return Invoice::with('contact:id,razon_social,identificacion,direccion,email,telefono', 'sriDocument:id,documentable_id,estado,clave_acceso,numero_autorizacion,updated_at')
             ->withCount('journalEntries')
             ->when($r->company_id, fn ($q, $id) => $q->where('company_id', $id))->latest('fecha_emision')->get();
     }
