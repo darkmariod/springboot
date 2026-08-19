@@ -139,11 +139,42 @@
   footer{border-top:1px solid var(--line);padding:22px 0;color:var(--soft);font-size:13px}
   footer .w{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 
-  @media(max-width:980px){.plans{grid-template-columns:1fr 1fr}.docs{grid-template-columns:1fr 1fr}}
-  @media(max-width:860px){.head .w{grid-template-columns:1fr;gap:34px}}
+  /* ── Responsive ── */
+  /* Tablet: encabezado y bandas de planes pasan a una sola columna. */
+  @media(max-width:900px){
+    .head .w{grid-template-columns:1fr;gap:32px}
+    .pb{grid-template-columns:1fr;gap:26px;padding:36px 0}
+    /* En una columna el texto va siempre primero y la imagen debajo. */
+    .pb.rev .txt,.pb.rev .art{order:0}
+    .art svg{max-width:270px}
+  }
+  /* Teléfono */
   @media(max-width:720px){
-    .head h1{font-size:30px}.plans,.docs,.mods{grid-template-columns:1fr}
-    .bar nav{display:none}.head ul.check{flex-direction:column;align-items:center}
+    .w{padding:0 18px}
+    .bar .w{gap:14px}
+    .bar nav{display:none}
+    .head{padding:38px 0 36px}
+    .head h1{font-size:29px;max-width:none}
+    .head .p{font-size:15.5px;max-width:none}
+    h2{font-size:23px}
+    .s{padding:42px 0}
+    .form{padding:20px}
+    .pill{font-size:20px;padding:10px 26px;margin-bottom:16px}
+    .pb h3{font-size:23px;max-width:none}
+    .pb .desc{max-width:none}
+    .pb{padding:32px 0}
+    .switch{flex-wrap:wrap;gap:10px 12px}
+    .off{order:3;flex-basis:100%;width:fit-content;margin:2px auto 0}
+    .art svg{max-width:230px}
+    footer .w{flex-direction:column;text-align:center}
+  }
+  /* Teléfono angosto */
+  @media(max-width:400px){
+    .head h1{font-size:26px}
+    .pill{font-size:18px;padding:9px 22px}
+    .pb h3{font-size:21px}
+    .art svg{max-width:200px}
+    .b{width:100%;justify-content:center}
   }
 </style>
 </head>
