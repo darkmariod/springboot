@@ -1,0 +1,159 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1200px;height:840px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Arial,sans-serif}
+.card{width:1200px;height:840px;position:relative;overflow:hidden;
+  background:linear-gradient(170deg,#8b6cf7 0%,#7c5cf5 38%,#5b3fd6 62%,#1a1030 100%)}
+.glow{position:absolute;inset:0;background:
+  radial-gradient(680px 380px at 62% 6%,rgba(190,170,255,.55),transparent 62%),
+  radial-gradient(420px 300px at 18% 30%,rgba(150,120,255,.35),transparent 65%)}
+.floor{position:absolute;left:0;right:0;bottom:0;height:170px;
+  background:linear-gradient(180deg,rgba(10,6,24,0) 0%,rgba(10,6,24,.85) 55%,#0a0618 100%)}
+
+/* ── Panel de info ── */
+.info{position:absolute;left:58px;top:172px;width:300px;background:#17171c;border:1px solid #26262e;
+  border-radius:15px;padding:22px 20px;box-shadow:0 30px 70px rgba(0,0,0,.5)}
+.tag{font-size:9.5px;letter-spacing:.16em;color:#a78bfa;font-weight:700;margin-bottom:11px}
+.info h1{font-size:23px;line-height:1.2;color:#fff;font-weight:800;letter-spacing:-.4px;margin-bottom:8px}
+.info h1 em{font-style:normal;color:#a78bfa}
+.info .sd{font-size:11.5px;color:#8b8b96;line-height:1.5;margin-bottom:20px}
+.row{display:flex;gap:11px;margin-bottom:15px}
+.ic{width:26px;height:26px;border-radius:7px;background:#221f2e;border:1px solid #302b40;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.row b{display:block;font-size:11.5px;color:#fff;margin-bottom:2px;font-weight:600}
+.row span{font-size:10.5px;color:#7d7d8a;line-height:1.45;display:block}
+.brand{display:flex;align-items:center;gap:9px;margin-top:19px;padding-top:15px;border-top:1px solid #26262e}
+.brand .lg{width:27px;height:27px;border-radius:7px;background:#0f2430;display:flex;align-items:center;
+  justify-content:center;color:#fff;font-size:9.5px;font-weight:800}
+.brand b{font-size:11.5px;color:#fff;display:block}
+.brand span{font-size:9.5px;color:#7d7d8a}
+
+/* ── Laptop ── */
+.lap{position:absolute;right:52px;top:150px;width:690px;
+  transform:perspective(1900px) rotateY(-13deg) rotateX(3deg);transform-origin:right center}
+.win{background:#fff;border-radius:11px;overflow:hidden;box-shadow:0 42px 90px rgba(0,0,0,.62)}
+.tb{height:29px;background:#e9edf1;display:flex;align-items:center;padding:0 12px;gap:6px;border-bottom:1px solid #d5dde3}
+.dot{width:8px;height:8px;border-radius:50%}
+.url{margin-left:10px;background:#fff;border:1px solid #d5dde3;border-radius:5px;height:17px;flex:1;max-width:230px;
+  font-size:8.5px;color:#7b8a95;display:flex;align-items:center;padding:0 8px}
+.app{display:flex;height:430px}
+.sb{width:152px;background:#0f2744;padding:11px 9px;flex-shrink:0}
+.sb .hd{font-size:7px;letter-spacing:.14em;color:#5f7590;margin:11px 0 5px 7px;font-weight:700}
+.mi{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:5px;font-size:9.5px;color:#b6c5d8;margin-bottom:1px}
+.mi.on{background:rgba(255,255,255,.09);color:#fff;font-weight:600;box-shadow:inset 2px 0 0 #4d9bff}
+.sq{width:11px;height:11px;border-radius:3px;background:#2f4964;flex-shrink:0}
+.mi.on .sq{background:#4d9bff}
+.main{flex:1;background:#f4f7f9;padding:13px}
+.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
+.hdr h2{font-size:13px;color:#0f2430;font-weight:700}
+.btn{background:#0f9b8e;color:#fff;font-size:8.5px;padding:5px 11px;border-radius:5px;font-weight:600}
+.kpis{display:flex;gap:8px;margin-bottom:11px}
+.k{flex:1;background:#fff;border:1px solid #e2e9ed;border-radius:8px;padding:9px 10px}
+.k span{font-size:7.5px;color:#8fa2ad;letter-spacing:.06em;font-weight:700;display:block;margin-bottom:3px}
+.k b{font-size:16px;color:#0f2430;font-weight:800;letter-spacing:-.4px}
+.k.g b{color:#0f9b8e}
+.tbl{background:#fff;border:1px solid #e2e9ed;border-radius:8px;overflow:hidden}
+.tr{display:grid;grid-template-columns:1.35fr 1.2fr .62fr .78fr;padding:7px 11px;border-bottom:1px solid #eef3f5;
+  font-size:9px;color:#4b6270;align-items:center}
+.tr.h{background:#f8fafb;font-size:7.5px;letter-spacing:.06em;color:#8fa2ad;font-weight:700}
+.tr:last-child{border-bottom:0}
+.tr b{color:#0f2430;font-weight:600;font-family:ui-monospace,Menlo,monospace;font-size:8.5px}
+.ch{margin-left:10px;font-size:7.5px;font-weight:700;padding:2px 7px;border-radius:99px;justify-self:start;
+  background:#e3f5ef;color:#0b7c72}
+.num{text-align:right;font-family:ui-monospace,Menlo,monospace;padding-right:12px}
+.base{height:11px;background:linear-gradient(180deg,#cfd4dd,#9aa2b0);border-radius:0 0 12px 12px;
+  margin:0 -14px;box-shadow:0 16px 34px rgba(0,0,0,.45)}
+
+/* ── Teléfono ── */
+.ph{position:absolute;right:448px;bottom:58px;width:143px;height:292px;background:#12121a;border-radius:21px;
+  padding:6px;box-shadow:0 34px 62px rgba(0,0,0,.6);transform:perspective(1300px) rotateY(-9deg)}
+.ps{background:#fff;border-radius:16px;height:100%;overflow:hidden}
+.pt{background:#0f2744;height:26px;display:flex;align-items:center;padding:0 8px;gap:5px}
+.pt .l{width:13px;height:13px;border-radius:3.5px;background:#fff;color:#0f2744;font-size:6px;font-weight:800;
+  display:flex;align-items:center;justify-content:center}
+.pt span{color:#fff;font-size:8px;font-weight:700}
+.pc{padding:9px}
+.pk{background:#e6f5f3;border-radius:6px;padding:7px 8px;margin-bottom:7px}
+.pk span{font-size:6.5px;color:#0b7c72;font-weight:700;letter-spacing:.06em;display:block}
+.pk b{font-size:14px;color:#0f2430;font-weight:800}
+.pl{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eef3f5;font-size:7px;color:#4b6270}
+.pl b{font-family:ui-monospace,Menlo,monospace;color:#0f2430;font-size:6.5px}
+.pch{background:#e3f5ef;color:#0b7c72;font-size:5.5px;font-weight:700;padding:1px 5px;border-radius:99px}
+</style></head><body>
+<div class="card"><div class="glow"></div>
+
+  <div class="info">
+    <div class="tag">SISTEMA CONTABLE</div>
+    <h1>Facturación electrónica para el <em>SRI</em></h1>
+    <p class="sd">Comprobantes autorizados, inventario y contabilidad en un solo sistema.</p>
+
+    <div class="row"><div class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg></div>
+      <div><b>Seis comprobantes</b><span>Factura, notas, retención, guía y liquidación.</span></div></div>
+
+    <div class="row"><div class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <div><b>Firma con tu certificado</b><span>Envío y autorización automática ante el SRI.</span></div></div>
+
+    <div class="row"><div class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/></svg></div>
+      <div><b>Inventario y kárdex</b><span>Cada venta descuenta el stock al instante.</span></div></div>
+
+    <div class="row"><div class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M4 20V4M4 20h16"/><path d="M8 16v-4M13 16V8M18 16v-6"/></svg></div>
+      <div><b>Contabilidad automática</b><span>Los asientos se generan desde las ventas.</span></div></div>
+
+    <div class="brand"><div class="lg">HR</div><div><b>HasReset</b><span>Sistema Contable · Ecuador</span></div></div>
+  </div>
+
+  <div class="lap"><div class="win">
+    <div class="tb"><div class="dot" style="background:#ff5f57"></div><div class="dot" style="background:#febc2e"></div>
+      <div class="dot" style="background:#28c840"></div><div class="url">hasreset.ec/app</div></div>
+    <div class="app">
+      <div class="sb">
+        <div class="mi on"><div class="sq"></div>Inicio</div>
+        <div class="hd">VENTAS</div>
+        <div class="mi"><div class="sq"></div>Punto de Venta</div>
+        <div class="mi"><div class="sq"></div>Facturas</div>
+        <div class="mi"><div class="sq"></div>Cotizaciones</div>
+        <div class="hd">INVENTARIO</div>
+        <div class="mi"><div class="sq"></div>Inventario y kárdex</div>
+        <div class="mi"><div class="sq"></div>Bodegas</div>
+        <div class="hd">CONTABILIDAD</div>
+        <div class="mi"><div class="sq"></div>Libro diario</div>
+        <div class="mi"><div class="sq"></div>Balances</div>
+      </div>
+      <div class="main">
+        <div class="hdr"><h2>Resumen del negocio</h2><div class="btn">+ Nueva factura</div></div>
+        <div class="kpis">
+          <div class="k"><span>VENTAS DEL MES</span><b>$12.450</b></div>
+          <div class="k g"><span>AUTORIZADAS</span><b>128</b></div>
+          <div class="k"><span>POR COBRAR</span><b>$3.450</b></div>
+        </div>
+        <div class="tbl">
+          <div class="tr h"><div>COMPROBANTE</div><div>CLIENTE</div><div class="num">VALOR</div><div style="padding-left:10px">ESTADO</div></div>
+          <div class="tr"><b>001-001-000865101</b><div>Comercial XYZ</div><div class="num">155.25</div><div class="ch">AUTORIZADO</div></div>
+          <div class="tr"><b>001-001-000865100</b><div>Distribuidora ABC</div><div class="num">920.00</div><div class="ch">AUTORIZADO</div></div>
+          <div class="tr"><b>001-001-000865099</b><div>Juan Pérez</div><div class="num">45.00</div><div class="ch">AUTORIZADO</div></div>
+          <div class="tr"><b>001-001-000865098</b><div>Ferretería El Tornillo</div><div class="num">1.150.00</div><div class="ch">AUTORIZADO</div></div>
+          <div class="tr"><b>001-001-000865097</b><div>Tecno Importadora</div><div class="num">680.00</div><div class="ch">AUTORIZADO</div></div>
+          <div class="tr"><b>001-001-000865096</b><div>María Chávez</div><div class="num">92.00</div><div class="ch">AUTORIZADO</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="base"></div>
+  </div></div>
+
+  <div class="ph"><div class="ps">
+    <div class="pt"><div class="l">HR</div><span>HasReset</span></div>
+    <div class="pc">
+      <div class="pk"><span>VENTAS DEL MES</span><b>$12.450</b></div>
+      <div class="pl"><b>001-...865101</b><span class="pch">AUTORIZADO</span></div>
+      <div class="pl"><b>001-...865100</b><span class="pch">AUTORIZADO</span></div>
+      <div class="pl"><b>001-...865099</b><span class="pch">AUTORIZADO</span></div>
+      <div class="pl"><b>001-...865098</b><span class="pch">AUTORIZADO</span></div>
+      <div class="pl"><b>001-...865097</b><span class="pch">AUTORIZADO</span></div>
+      <div class="pl"><b>001-...865096</b><span class="pch">AUTORIZADO</span></div>
+      <div class="pl"><b>001-...865095</b><span class="pch">AUTORIZADO</span></div>
+      <div class="pl"><b>001-...865094</b><span class="pch">AUTORIZADO</span></div>
+      <div class="pl"><b>001-...865093</b><span class="pch">AUTORIZADO</span></div>
+    </div>
+  </div></div>
+
+  <div class="floor"></div>
+</div></body></html>
