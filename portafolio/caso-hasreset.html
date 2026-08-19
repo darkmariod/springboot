@@ -1,0 +1,163 @@
+<title>HasReset — Caso de estudio</title>
+<style>
+  :root{
+    --bg:#fbfcfc; --panel:#f1f6f6; --ink:#0f2430; --body:#4b6270; --soft:#8ba0aa;
+    --line:#dfe9ea; --teal:#0f9b8e; --teal-dk:#0b7c72; --teal-soft:#e6f5f3; --deep:#0d5c58;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0a1620; --panel:#0f202a; --ink:#e7eef2; --body:#a1b4bf; --soft:#6a808c;
+    --line:#1e3340; --teal:#1cc0ae; --teal-dk:#15a294; --teal-soft:#0b2b28; --deep:#1cc0ae;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0a1620; --panel:#0f202a; --ink:#e7eef2; --body:#a1b4bf; --soft:#6a808c;
+    --line:#1e3340; --teal:#1cc0ae; --teal-dk:#15a294; --teal-soft:#0b2b28; --deep:#1cc0ae;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.65;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .w{max-width:860px;margin:0 auto;padding:0 26px}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  h1,h2,h3{letter-spacing:-.5px}
+
+  header{padding:64px 0 44px;border-bottom:1px solid var(--line)}
+  .kick{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-dk);margin-bottom:18px}
+  h1{font-size:40px;line-height:1.1;margin:0 0 16px;font-weight:700;max-width:18ch}
+  .sub{font-size:17.5px;color:var(--body);margin:0;max-width:60ch}
+  .meta{display:flex;flex-wrap:wrap;gap:26px 40px;margin-top:32px;padding-top:26px;border-top:1px solid var(--line)}
+  .meta div span{display:block;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin-bottom:3px}
+  .meta div b{font-size:14.5px;font-weight:600}
+
+  section{padding:46px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:23px;margin:0 0 14px;font-weight:700}
+  p{color:var(--body);margin:0 0 14px;max-width:68ch}
+  ul{color:var(--body);padding-left:19px;margin:0 0 14px;max-width:68ch}
+  li{margin-bottom:7px}
+  strong{color:var(--ink)}
+
+  .cita{border-left:3px solid var(--teal);background:var(--panel);padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0}
+  .cita p{margin:0;color:var(--ink)}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:24px 0}
+  .kpi{background:var(--bg);padding:18px 16px}
+  .kpi b{display:block;font-size:26px;font-weight:800;letter-spacing:-.8px;color:var(--deep)}
+  .kpi span{font-size:12.5px;color:var(--soft)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:8px}
+  .card{border:1px solid var(--line);border-radius:10px;padding:18px}
+  .card h3{font-size:15.5px;margin:0 0 6px}
+  .card p{font-size:13.5px;margin:0}
+
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+  th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);
+    padding:9px 10px;border-bottom:1px solid var(--line);font-weight:700}
+  td{padding:10px;border-bottom:1px solid var(--line);color:var(--body)}
+  td:first-child{color:var(--ink);font-weight:600}
+  tr:last-child td{border-bottom:0}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .chip{border:1px solid var(--line);border-radius:6px;padding:6px 12px;font-size:13px;font-weight:600}
+  .chip small{color:var(--soft);font-weight:400}
+
+  .prueba{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:18px 0}
+  .prueba .l{font-family:var(--mono);font-size:12.5px;color:var(--body);margin:0;line-height:1.9;word-break:break-all}
+  .ok{color:var(--deep);font-weight:700}
+
+  footer{padding:36px 0 54px}
+  footer p{font-size:13px;color:var(--soft)}
+  .tog{position:fixed;right:16px;top:16px;background:var(--bg);border:1px solid var(--line);color:var(--ink);
+    border-radius:999px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer}
+  @media(max-width:700px){
+    h1{font-size:29px}.kpis{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}
+    .meta{gap:18px 26px}
+  }
+</style>
+
+<button class="tog" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme:dark)').matches);r.setAttribute('data-theme',d?'light':'dark');})()">◐ Tema</button>
+
+<header><div class="w">
+  <div class="kick">Caso de estudio · Producto propio</div>
+  <h1>HasReset — Facturación electrónica del SRI para pymes</h1>
+  <p class="sub">Sistema de facturación, inventario y contabilidad para Ecuador. Emite los seis comprobantes electrónicos, los firma con el certificado del contribuyente y gestiona la autorización ante el SRI.</p>
+  <div class="meta">
+    <div><span>Rol</span><b>Desarrollo completo</b></div>
+    <div><span>Stack</span><b>Laravel 12 · Vue 3</b></div>
+    <div><span>Dominio</span><b>Fiscal / contable</b></div>
+    <div><span>Estado</span><b>En producción</b></div>
+  </div>
+</div></header>
+
+<section><div class="w">
+  <h2>El problema</h2>
+  <p>En Ecuador toda venta formal exige un comprobante electrónico autorizado por el SRI: hay que armar un XML con una estructura específica, firmarlo digitalmente con un certificado <span class="mono">.p12</span> del contribuyente y enviarlo a dos servicios SOAP distintos, uno de recepción y otro de autorización.</p>
+  <p>Los comercios pequeños terminan con tres sistemas desconectados: uno para facturar, una hoja de cálculo para el inventario y el contador aparte. <strong>Los mismos datos se digitan tres veces</strong> y los descuadres aparecen a fin de mes.</p>
+</div></section>
+
+<section><div class="w">
+  <h2>La solución</h2>
+  <p>Un solo sistema donde una venta dispara todo el proceso: emite y autoriza el comprobante, descuenta el inventario y genera el asiento contable en una sola operación.</p>
+  <div class="grid2">
+    <div class="card"><h3>Emisión ante el SRI</h3><p>Los seis comprobantes: factura, liquidación de compra, nota de crédito, nota de débito, guía de remisión y retención.</p></div>
+    <div class="card"><h3>Consulta al padrón del SRI</h3><p>Con el RUC o la cédula, el sistema trae la razón social del contribuyente. Elimina el error de digitación que rechaza comprobantes.</p></div>
+    <div class="card"><h3>Inventario con series</h3><p>Costo promedio ponderado y trazabilidad por número de serie: a qué proveedor se compró y a qué cliente se vendió cada unidad.</p></div>
+    <div class="card"><h3>Contabilidad automática</h3><p>Cada venta y compra genera su asiento. Libro diario, mayor y balances sin carga manual.</p></div>
+  </div>
+</div></section>
+
+<section><div class="w">
+  <h2>Decisiones técnicas</h2>
+  <table>
+    <tr><th>Problema</th><th>Decisión</th></tr>
+    <tr><td>Los certificados del SRI usan algoritmos que OpenSSL 3 bloquea</td><td>Proveedor <span class="mono">legacy</span> habilitado en la imagen Docker, para poder leer los <span class="mono">.p12</span> reales</td></tr>
+    <tr><td>El stock podía corromperse desde varios flujos</td><td>Un único servicio de movimientos de inventario: nada escribe existencias por fuera</td></tr>
+    <tr><td>Ventas simultáneas pisaban el saldo</td><td>Transacción con bloqueo de fila al calcular el costo promedio</td></tr>
+    <tr><td>Vender lo mismo a comercios de distinto tamaño</td><td>Planes por funcionalidad: el plan contratado activa o bloquea cada módulo</td></tr>
+    <tr><td>Entregar a varios clientes sin mezclar datos</td><td>Una instancia Docker por cliente, con su propio certificado y su base</td></tr>
+  </table>
+</div></section>
+
+<section><div class="w">
+  <h2>Verificación con el SRI</h2>
+  <p>El sistema fue probado de punta a punta en el ambiente de certificación del SRI, con el certificado real de un contribuyente. Una venta de prueba:</p>
+  <div class="prueba">
+    <p class="l">
+      Producto creado ................ TECLADO MECANICO RGB · stock 20<br>
+      Venta de 3 unidades ............ stock 20 → <span class="ok">17</span><br>
+      Comprobante .................... factura 001-001-000865101 · USD 155.25<br>
+      Estado ante el SRI ............. <span class="ok">AUTORIZADO</span><br>
+      Número de autorización ......... 1908202601160074959000110010010008651012756868213<br>
+      Asiento contable ............... debe 155.25 = haber 155.25 <span class="ok">✓</span>
+    </p>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><b>6</b><span>comprobantes SRI</span></div>
+    <div class="kpi"><b>1</b><span>operación por venta</span></div>
+    <div class="kpi"><b>4</b><span>planes comerciales</span></div>
+    <div class="kpi"><b>0</b><span>doble digitación</span></div>
+  </div>
+</div></section>
+
+<section><div class="w">
+  <h2>Tecnología</h2>
+  <div class="chips">
+    <span class="chip">Laravel 12 <small>PHP 8.3</small></span>
+    <span class="chip">Vue 3 <small>Composition API</small></span>
+    <span class="chip">PrimeVue</span>
+    <span class="chip">Pinia</span>
+    <span class="chip">Docker <small>Nginx + PHP-FPM</small></span>
+    <span class="chip">XAdES-BES <small>firma .p12</small></span>
+    <span class="chip">SOAP <small>webservices SRI</small></span>
+    <span class="chip">API REST <small>Sanctum</small></span>
+    <span class="chip">SQLite</span>
+  </div>
+</div></section>
+
+<section><div class="w">
+  <h2>Qué me llevo</h2>
+  <p>La parte difícil no fue la interfaz, sino el <strong>dominio fiscal</strong>: la longitud de la cédula frente al RUC, los secuenciales que el SRI no acepta repetidos, la autorización que llega de forma asíncrona. Cada uno de esos detalles rechaza un comprobante y detiene una venta real.</p>
+  <div class="cita"><p>Construir sobre una normativa obliga a leer la especificación antes que el código: el sistema no puede “casi” cumplir, o el comprobante no se autoriza.</p></div>
+</div></section>
+
+<footer><div class="w">
+  <p>HasReset · Sistema de facturación electrónica SRI · Ecuador · Mario Pazmiño</p>
+</div></footer>
