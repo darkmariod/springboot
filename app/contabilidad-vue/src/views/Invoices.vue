@@ -73,6 +73,15 @@ function imprimir() {
   w.print()
 }
 
+// Fecha y hora de autorización, en el formato del RIDE (dd/mm/aaaa hh:mm:ss).
+function fechaHora(v: any) {
+  if (!v) return '—'
+  const d = new Date(v)
+  if (isNaN(d.getTime())) return String(v)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
+
 function ver(r: any) { seleccion.value = r; preview.value = r }
 function editar(r: any) { seleccion.value = r; ver(r) }
 function nuevo() {
@@ -213,84 +222,153 @@ onMounted(load)
         <Button label="Imprimir / PDF" icon="pi pi-print" size="small" outlined @click="imprimir" />
       </div>
 
-      <div v-if="preview" ref="docRef">
-        <div style="border:1.5px solid #444; border-radius:6px; padding:0; font-size:12px; color:#222;">
-          <!-- Cabecera: emisor + datos del comprobante -->
-          <div style="display:flex; border-bottom:1.5px solid #444;">
-            <div style="flex:1; padding:14px; border-right:1.5px solid #444;">
-              <div style="font-size:17px; font-weight:800;">{{ empresa?.razon_social }}</div>
-              <div style="margin-top:6px;"><b>RUC:</b> {{ empresa?.ruc }}</div>
-              <div><b>Matriz:</b> {{ empresa?.dir_matriz }}</div>
-              <div><b>Obligado a llevar contabilidad:</b> SI</div>
+      <div v-if="preview" ref="docRef" class="ride">
+        <!-- ══ Cabecera: emisor (con logo del cliente) + datos del comprobante ══ -->
+        <div class="ride-top">
+          <div class="ride-emisor">
+            <img v-if="empresa?.logo" :src="empresa.logo" class="ride-logo" alt="" />
+            <div class="ride-rs">{{ empresa?.razon_social }}</div>
+            <div v-if="empresa?.nombre_comercial" class="ride-nc">{{ empresa.nombre_comercial }}</div>
+            <div class="ride-l"><b>Matriz:</b> {{ empresa?.dir_matriz }}</div>
+            <div v-if="empresa?.telefonos" class="ride-l"><b>Teléfonos:</b> {{ empresa.telefonos }}</div>
+            <div v-if="empresa?.email_envio" class="ride-l"><b>E-Mail:</b> {{ empresa.email_envio }}</div>
+            <div v-if="empresa?.agente_retencion" class="ride-l">
+              <b>AGENTE DE RETENCIÓN RESOLUCIÓN NRO.</b> {{ empresa.agente_retencion }}
             </div>
-            <div style="flex:1; padding:14px;">
-              <div style="font-size:15px; font-weight:800;">FACTURA</div>
-              <div><b>No.:</b> {{ preview.numero }}</div>
-              <div style="margin-top:6px;"><b>NÚMERO DE AUTORIZACIÓN:</b></div>
-              <div style="font-family:monospace; font-size:10px; word-break:break-all;">
-                {{ preview.sri_document?.numero_autorizacion ?? preview.sri_document?.clave_acceso ?? 'PENDIENTE DE AUTORIZACIÓN' }}
-              </div>
-              <div style="margin-top:6px;"><b>CLAVE DE ACCESO:</b></div>
-              <div style="font-family:monospace; font-size:10px; word-break:break-all;">{{ preview.sri_document?.clave_acceso }}</div>
+            <div v-if="empresa?.contribuyente_especial" class="ride-l">
+              <b>CONTRIBUYENTE ESPECIAL NRO.</b> {{ empresa.contribuyente_especial }}
             </div>
+            <div class="ride-l"><b>OBLIGADO A LLEVAR CONTABILIDAD -</b>
+              {{ empresa?.obligado_contabilidad ? 'SI' : 'NO' }}</div>
+            <div v-if="empresa?.sitio_web" class="ride-l">{{ empresa.sitio_web }}</div>
           </div>
 
-          <!-- Cliente -->
-          <div style="padding:10px 14px; border-bottom:1.5px solid #444;">
-            <div><b>Razón Social / Nombres:</b> {{ preview.contact?.razon_social }}</div>
-            <div style="display:flex; gap:24px;">
-              <span><b>RUC / CI:</b> {{ preview.contact?.identificacion }}</span>
-              <span><b>Fecha Emisión:</b> {{ String(preview.fecha_emision).slice(0,10) }}</span>
-            </div>
-          </div>
+          <div class="ride-doc">
+            <div class="ride-ruc">R.U.C.: {{ empresa?.ruc }}</div>
+            <div class="ride-tipo">FACTURA</div>
+            <div class="ride-num">No. {{ preview.numero }}</div>
 
-          <!-- Detalle -->
-          <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
-            <thead>
-              <tr style="border-bottom:1px solid #444; background:#f2f2f2;">
-                <th style="text-align:left; padding:6px 10px;">Código</th>
-                <th style="text-align:left; padding:6px 10px;">Cant.</th>
-                <th style="text-align:left; padding:6px 10px;">Descripción</th>
-                <th style="text-align:right; padding:6px 10px;">Precio Unitario</th>
-                <th style="text-align:right; padding:6px 10px;">Valor Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(it, i) in (preview.items ?? [])" :key="i" style="border-bottom:1px solid #ddd;">
-                <td style="padding:5px 10px;">{{ it.codigo_principal }}</td>
-                <td style="padding:5px 10px;">{{ it.cantidad }}</td>
-                <td style="padding:5px 10px;">{{ it.descripcion }}
-                  <span v-if="it.series?.length" style="color:#555;"> (Serie: {{ it.series.join(', ') }})</span></td>
-                <td style="text-align:right; padding:5px 10px;">{{ money(it.precio_unitario) }}</td>
-                <td style="text-align:right; padding:5px 10px;">{{ money(it.cantidad * it.precio_unitario) }}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Totales + forma de pago -->
-          <div style="display:flex; border-top:1.5px solid #444;">
-            <div style="flex:1; padding:10px 14px; border-right:1.5px solid #444;">
-              <b>Forma de pago:</b> {{ preview.forma_pago?.toUpperCase() }}
-              <div v-if="Number(preview.saldo_pendiente) > 0" style="margin-top:4px;">
-                <b>Saldo pendiente:</b> {{ money(preview.saldo_pendiente) }}
-              </div>
+            <div class="ride-f"><span>NÚMERO DE AUTORIZACIÓN</span>
+              <em class="mono">{{ preview.sri_document?.numero_autorizacion ?? 'PENDIENTE DE AUTORIZACIÓN' }}</em></div>
+            <div class="ride-2c">
+              <div class="ride-f"><span>AMBIENTE DE AUTORIZACIÓN</span>
+                <em>{{ Number(empresa?.ambiente) === 2 ? 'PRODUCCIÓN' : 'PRUEBAS' }}</em></div>
+              <div class="ride-f"><span>TIPO DE EMISIÓN</span><em>NORMAL</em></div>
             </div>
-            <div style="width:260px; padding:10px 14px;">
-              <div style="display:flex; justify-content:space-between;">
-                <span>SUBTOTAL 15%</span><span>{{ money(preview.total_sin_impuestos) }}</span></div>
-              <div style="display:flex; justify-content:space-between;">
-                <span>IVA 15%</span><span>{{ money(preview.total_impuesto) }}</span></div>
-              <div style="display:flex; justify-content:space-between; font-weight:800; border-top:1px solid #444; margin-top:4px; padding-top:4px;">
-                <span>VALOR TOTAL</span><span>{{ money(preview.importe_total) }}</span></div>
-            </div>
+            <div class="ride-f"><span>FECHA Y HORA DE AUTORIZACIÓN</span>
+              <em>{{ fechaHora(preview.sri_document?.updated_at ?? preview.fecha_emision) }}</em></div>
+            <div class="ride-f"><span>CLAVE DE ACCESO</span>
+              <em class="mono">{{ preview.sri_document?.clave_acceso ?? '—' }}</em></div>
+            <div class="ride-f"><span>GUÍA DE REMISIÓN</span><em>NO ENVIADA</em></div>
           </div>
         </div>
+
+        <!-- ══ Datos del cliente ══ -->
+        <div class="ride-cli">
+          <div class="ride-f"><span>RUC / CI</span><em>{{ preview.contact?.identificacion }}</em></div>
+          <div class="ride-f ride-w2"><span>NOMBRE O RAZÓN SOCIAL DEL CLIENTE</span>
+            <em>{{ preview.contact?.razon_social }}</em></div>
+          <div class="ride-f"><span>FECHA DE EMISIÓN</span>
+            <em>{{ String(preview.fecha_emision).slice(0,10).split('-').reverse().join('/') }}</em></div>
+          <div class="ride-f ride-w2"><span>DIRECCIÓN</span><em>{{ preview.contact?.direccion ?? '—' }}</em></div>
+          <div class="ride-f"><span>TELÉFONO</span><em>{{ preview.contact?.telefono ?? '—' }}</em></div>
+          <div class="ride-f"><span>CORREO ELECTRÓNICO</span><em>{{ preview.contact?.email ?? '—' }}</em></div>
+        </div>
+
+        <!-- ══ Detalle ══ -->
+        <table class="ride-tbl">
+          <thead>
+            <tr><th>CÓDIGO</th><th class="c">CANT</th><th>DESCRIPCIÓN</th>
+                <th class="c">UNI</th><th class="d">P.UNITARIO</th><th class="d">P.TOTAL</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="(it, i) in (preview.items ?? [])" :key="i">
+              <td class="mono">{{ it.codigo_principal }}</td>
+              <td class="c">{{ Number(it.cantidad).toFixed(2) }}</td>
+              <td>{{ it.descripcion }}</td>
+              <td class="c">U</td>
+              <td class="d">{{ Number(it.precio_unitario).toFixed(2) }}</td>
+              <td class="d">{{ (Number(it.cantidad) * Number(it.precio_unitario)).toFixed(2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- ══ Pie: pagos + totales ══ -->
+        <div class="ride-pie">
+          <div class="ride-pagos">
+            <div class="ride-l"><b>FORMA DE PAGO:</b> {{ (preview.forma_pago ?? '').toUpperCase() }}</div>
+            <div class="ride-l"><b>CONDICIONES DE PAGO:</b>
+              {{ preview.forma_pago === 'credito' ? 'CRÉDITO' : 'CONTADO' }}</div>
+            <div class="ride-l"><b>DETALLE DE PAGO:</b></div>
+            <div class="ride-l"><b>BODEGA:</b> {{ preview.bodega ?? 'BODEGA PRINCIPAL' }}
+              &nbsp;&nbsp; <b>VENDEDOR:</b> {{ preview.vendedor ?? '—' }}</div>
+            <div class="ride-adic"><b>INFORMACIÓN ADICIONAL</b></div>
+          </div>
+
+          <table class="ride-tot">
+            <tr><td>SUBTOTAL 15%</td><td class="d mono">{{ Number(preview.total_sin_impuestos ?? 0).toFixed(2) }}</td></tr>
+            <tr><td>SUBTOTAL 0%</td><td class="d mono">0.00</td></tr>
+            <tr><td>SUBTOTAL</td><td class="d mono">{{ Number(preview.total_sin_impuestos ?? 0).toFixed(2) }}</td></tr>
+            <tr><td>DESCUENTO</td><td class="d mono">0.00</td></tr>
+            <tr><td>IVA 15%</td><td class="d mono">{{ Number(preview.total_impuesto ?? 0).toFixed(2) }}</td></tr>
+            <tr class="ride-total"><td>VALOR TOTAL</td>
+              <td class="d mono">{{ Number(preview.importe_total ?? 0).toFixed(2) }}</td></tr>
+          </table>
+        </div>
+
+        <div v-if="empresa?.nota_pie" class="ride-nota">{{ empresa.nota_pie }}</div>
       </div>
     </Dialog>
   </div>
 </template>
 
 <style scoped>
+/* ══ RIDE: mismo formato que la factura impresa del SRI ══
+   Bordes finos y tipografía compacta; se imprime tal cual se ve. */
+.ride { border: 1px solid #000; font-size: 10.5px; color: #000; background: #fff; line-height: 1.35; }
+.ride .mono { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+.ride .c { text-align: center; }
+.ride .d { text-align: right; }
+
+.ride-top { display: flex; border-bottom: 1px solid #000; }
+.ride-emisor { flex: 1.05; padding: 10px 12px; border-right: 1px solid #000; }
+.ride-logo { max-width: 150px; max-height: 62px; object-fit: contain; margin-bottom: 8px; display: block; }
+.ride-rs { font-size: 12.5px; font-weight: 700; text-transform: uppercase; }
+.ride-nc { font-size: 11px; margin-bottom: 5px; }
+.ride-l { margin-top: 2px; }
+.ride-doc { flex: 1; padding: 10px 12px; }
+.ride-ruc { font-weight: 700; font-size: 12px; }
+.ride-tipo { font-weight: 700; font-size: 14px; margin-top: 4px; letter-spacing: .5px; }
+.ride-num { font-weight: 700; font-size: 11.5px; margin-bottom: 7px; }
+
+/* Campo con etiqueta arriba y valor recuadrado, como el formulario del SRI */
+.ride-f { margin-bottom: 5px; }
+.ride-f > span { display: block; font-size: 7.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.ride-f > em { display: block; font-style: normal; border: 1px solid #000; padding: 2px 5px;
+  min-height: 16px; word-break: break-all; font-size: 9.5px; }
+.ride-2c { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.ride-cli { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px 8px;
+  padding: 8px 12px; border-bottom: 1px solid #000; }
+.ride-cli .ride-w2 { grid-column: span 2; }
+
+.ride-tbl { width: 100%; border-collapse: collapse; }
+.ride-tbl th { border-bottom: 1px solid #000; border-top: 1px solid #000;
+  padding: 4px 6px; font-size: 8px; letter-spacing: .04em; text-align: left; background: #f2f2f2; }
+.ride-tbl td { padding: 3px 6px; border-bottom: 1px solid #dcdcdc; font-size: 9.5px; }
+.ride-tbl tbody tr:last-child td { border-bottom: 1px solid #000; }
+
+.ride-pie { display: flex; }
+.ride-pagos { flex: 1.35; padding: 8px 12px; border-right: 1px solid #000; }
+.ride-adic { margin-top: 8px; padding-top: 6px; border-top: 1px solid #bbb; font-size: 8px; }
+.ride-tot { flex: 1; border-collapse: collapse; align-self: flex-start; width: 100%; }
+.ride-tot td { padding: 3px 10px; border-bottom: 1px solid #dcdcdc; font-size: 9.5px; }
+.ride-tot tr:last-child td { border-bottom: 0; }
+.ride-total td { font-weight: 700; font-size: 11px; border-top: 1px solid #000; }
+.ride-nota { border-top: 1px solid #000; padding: 6px 12px; font-size: 8.5px; font-weight: 700; }
+
+@media print { .ride { border: 1px solid #000; } }
+
 .invoices-layout { display: flex; flex-direction: column; height: 100%; background: #eef1f5; }
 
 .invoices-toolbar {

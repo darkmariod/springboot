@@ -19,6 +19,7 @@ const planStore = usePlanStore()
 const rows = ref<any[]>([])
 const loading = ref(true)
 const certDialog = ref<any>(null)
+const logoDialog = ref<any>(null)
 const clave = ref('')
 const msg = ref<any>(null)
 const fileRef = ref<HTMLInputElement>()
@@ -63,6 +64,9 @@ function abrirEditar(row: any) {
     dir_matriz: row.dir_matriz, estab: row.estab, pto_emi: row.pto_emi,
     secuencial: Number(row.secuencial ?? 1), regimen: row.regimen,
     obligado_contabilidad: !!row.obligado_contabilidad,
+    telefonos: row.telefonos, agente_retencion: row.agente_retencion,
+    contribuyente_especial: row.contribuyente_especial,
+    sitio_web: row.sitio_web, nota_pie: row.nota_pie,
     ambiente: Number(row.ambiente ?? 1), email_envio: row.email_envio,
   }
 }
@@ -81,6 +85,23 @@ async function guardarEmpresa() {
     msg.value = { type: 'error', text: e ? Object.values(e).flat().join(' · ') : 'No se pudo guardar.' }
   } finally {
     guardando.value = false
+  }
+}
+
+// ── Logo del RIDE ──
+// Se imprime en la factura; cada cliente sube el suyo.
+const logoRef = ref<HTMLInputElement>()
+async function subirLogo(row: any) {
+  const file = logoRef.value?.files?.[0]
+  if (!file) { msg.value = { type: 'error', text: 'Elegí una imagen (PNG o JPG).' }; return }
+  const form = new FormData()
+  form.append('logo', file)
+  try {
+    const res = await api.post('/companies/' + row.id + '/logo', form)
+    msg.value = { type: 'success', text: res.data.mensaje }
+    await load(); await companyStore.load()
+  } catch (err: any) {
+    msg.value = { type: 'error', text: err.response?.data?.errors?.logo?.[0] ?? 'No se pudo subir el logo.' }
   }
 }
 
@@ -108,6 +129,16 @@ onMounted(load)
         </template>
       </Column>
       <Column field="dir_matriz" header="Dirección" />
+      <Column header="Logo (sale en la factura)" style="width:210px">
+        <template #body="{ data }">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <img v-if="data.logo" :src="data.logo" alt=""
+                 style="max-width:64px; max-height:30px; object-fit:contain; border:1px solid #e2e5ea; border-radius:4px;" />
+            <span v-else style="font-size:12px; color:#94a3b8;">sin logo</span>
+            <Button label="Cambiar" icon="pi pi-image" size="small" outlined @click="logoDialog = data" />
+          </div>
+        </template>
+      </Column>
       <Column header="Certificado .p12">
         <template #body="{ data }">
           <Button label="Cargar .p12" icon="pi pi-shield" size="small" outlined @click="certDialog = data" />
@@ -150,6 +181,29 @@ onMounted(load)
           <div class="kvs-row">
             <label class="kvs-lbl">Correo de envío:</label>
             <InputText v-model="editDialog.email_envio" class="kvs-in" />
+            <label class="kvs-lbl" style="margin-left:14px;">Teléfonos:</label>
+            <InputText v-model="editDialog.telefonos" class="kvs-in" />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl">Sitio web:</label>
+            <InputText v-model="editDialog.sitio_web" class="kvs-in" placeholder="www.miempresa.com" />
+          </div>
+        </fieldset>
+
+        <fieldset class="kvs-fieldset" style="margin-top:14px;">
+          <legend>Datos que salen impresos en la factura (RIDE)</legend>
+          <div class="kvs-row">
+            <label class="kvs-lbl">Agente de retención Nro.:</label>
+            <InputText v-model="editDialog.agente_retencion" class="kvs-in" placeholder="Resolución NAC-..." />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl">Contribuyente especial Nro.:</label>
+            <InputText v-model="editDialog.contribuyente_especial" class="kvs-in" placeholder="Resolución Nro." />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl">Nota al pie:</label>
+            <InputText v-model="editDialog.nota_pie" class="kvs-in"
+                       placeholder="NOTA: SALIDA LA MERCADERÍA NO SE ACEPTA CAMBIOS NI DEVOLUCIONES" />
           </div>
         </fieldset>
 
@@ -176,6 +230,22 @@ onMounted(load)
       <template #footer>
         <Button label="Cancelar" text @click="editDialog=null" />
         <Button label="Guardar" icon="pi pi-save" :loading="guardando" @click="guardarEmpresa" />
+      </template>
+    </Dialog>
+
+    <Dialog :visible="!!logoDialog" modal header="Logo que se imprime en la factura" style="width:430px"
+            @update:visible="logoDialog=null">
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <p style="margin:0; font-size:13px; color:#64748b;">
+          PNG o JPG, máximo 1 MB. Aparece arriba a la izquierda del comprobante.
+        </p>
+        <img v-if="logoDialog?.logo" :src="logoDialog.logo" alt=""
+             style="max-width:180px; max-height:70px; object-fit:contain; border:1px solid #e2e5ea; border-radius:6px; padding:6px;" />
+        <input ref="logoRef" type="file" accept="image/png,image/jpeg" />
+      </div>
+      <template #footer>
+        <Button label="Cancelar" text @click="logoDialog=null" />
+        <Button label="Subir logo" icon="pi pi-upload" @click="subirLogo(logoDialog); logoDialog=null" />
       </template>
     </Dialog>
 

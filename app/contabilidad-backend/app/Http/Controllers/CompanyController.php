@@ -33,6 +33,11 @@ class CompanyController extends Controller
             'regimen' => ['nullable', 'string', 'max:100'],
             'obligado_contabilidad' => ['sometimes', 'boolean'],
             'ambiente' => ['sometimes', 'in:1,2'],
+            'telefonos' => ['nullable','string','max:120'],
+            'agente_retencion' => ['nullable','string','max:120'],
+            'contribuyente_especial' => ['nullable','string','max:120'],
+            'sitio_web' => ['nullable','string','max:160'],
+            'nota_pie' => ['nullable','string','max:600'],
             'email_envio' => ['nullable', 'email'],
         ]);
 
@@ -88,5 +93,15 @@ class CompanyController extends Controller
         ]);
         $company->update($d);
         return $this->plan($company);
+    }
+
+    /** Sube el logo del cliente que se imprime en el RIDE. Se guarda como data URI. */
+    public function logo(\Illuminate\Http\Request $r, Company $company) {
+        $r->validate(['logo' => ['required','image','mimes:png,jpg,jpeg','max:1024']]);
+        $f = $r->file('logo');
+        $company->update([
+            'logo' => 'data:'.$f->getMimeType().';base64,'.base64_encode(file_get_contents($f->getRealPath())),
+        ]);
+        return response()->json(['ok' => true, 'mensaje' => 'Logo actualizado.', 'logo' => $company->logo]);
     }
 }
