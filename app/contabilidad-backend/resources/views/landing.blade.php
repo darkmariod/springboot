@@ -117,6 +117,7 @@
   .pb .pr b{font-size:36px;font-weight:800;letter-spacing:-1.2px;color:var(--deep)}
   .pb .pr b sup{font-size:18px;top:-.65em;position:relative}
   .pb .pr i{font-style:normal;font-size:13px;color:var(--body)}
+  .pb .aviso{font-size:12px;color:var(--soft);margin:-12px 0 18px;max-width:40ch;font-style:italic}
   .pb .go{display:inline-block;background:var(--deep);color:#fff;padding:11px 26px;border-radius:6px;
     font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;transition:background .16s}
   .pb .go:hover{background:var(--teal-dk)}
@@ -355,6 +356,7 @@
         <li>Capacitación incluida</li>
       </ul>
       <div class="pr"><b style="font-size:26px">A convenir</b><i class="per">según tu negocio</i></div>
+      <p class="aviso">Se cotiza y se desarrolla según los requerimientos de tu empresa.</p>
       <a class="go" href="#contacto">Cotizar</a>
     </div>
     <div class="art">
