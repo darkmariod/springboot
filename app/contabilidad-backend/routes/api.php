@@ -136,6 +136,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('feature:auditoria')->group(function () {
         Route::get("audit", [\App\Http\Controllers\AuditController::class, "index"]);
+        Route::get('audit/opciones', [\App\Http\Controllers\AuditController::class, 'opciones']);
+        Route::get('audit/exportar', [\App\Http\Controllers\AuditController::class, 'exportar']);
     });
 
     // Fase 4 — Notas de crédito, anticipos, uso de saldos

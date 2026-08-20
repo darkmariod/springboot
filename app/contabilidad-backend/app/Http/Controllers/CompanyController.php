@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\AuditLog;
 
 class CompanyController extends Controller
 {
@@ -102,6 +103,9 @@ class CompanyController extends Controller
         $company->update([
             'logo' => 'data:'.$f->getMimeType().';base64,'.base64_encode(file_get_contents($f->getRealPath())),
         ]);
+        AuditLog::create(['company_id'=>$company->id,'user_id'=>\Illuminate\Support\Facades\Auth::id(),
+            'accion'=>'cambio_logo','modelo'=>'Company','modelo_id'=>$company->id,
+            'descripcion'=>$company->razon_social,'ip'=>$r->ip()]);
         return response()->json(['ok' => true, 'mensaje' => 'Logo actualizado.', 'logo' => $company->logo]);
     }
 }

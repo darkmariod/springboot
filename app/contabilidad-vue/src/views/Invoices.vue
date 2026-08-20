@@ -64,13 +64,31 @@ async function load() {
 
 function imprimir() {
   if (!docRef.value) return
-  const w = window.open('', '_blank', 'width=820,height=900')
+  const w = window.open('', '_blank', 'width=880,height=1000')
   if (!w) return
-  w.document.write('<html><head><title>Factura ' + preview.value.numero + '</title></head><body style="margin:0; font-family: Arial, Helvetica, sans-serif;">'
-    + docRef.value.innerHTML + '</body></html>')
+
+  // La ventana nueva arranca sin estilos: hay que llevarle las hojas de estilo
+  // de la app, o el RIDE sale como texto plano sin bordes ni columnas.
+  const estilos = Array.from(
+    document.querySelectorAll('link[rel="stylesheet"], style'),
+  ).map((n) => n.outerHTML).join('\n')
+
+  // outerHTML (no innerHTML) para conservar la clase .ride y el atributo de
+  // scope que usan las reglas del componente.
+  w.document.write(
+    '<!doctype html><html><head><meta charset="utf-8">' +
+    '<title>Factura ' + preview.value.numero + '</title>' + estilos +
+    '<style>@page{size:A4;margin:10mm} html,body{margin:0;padding:0;background:#fff}' +
+    '.ride{width:100%}</style></head><body>' +
+    docRef.value.outerHTML +
+    '</body></html>',
+  )
   w.document.close()
-  w.focus()
-  w.print()
+
+  // Esperar a que carguen las hojas de estilo antes de abrir el diálogo de impresión.
+  const lanzar = () => { w.focus(); w.print() }
+  if (w.document.readyState === 'complete') setTimeout(lanzar, 350)
+  else w.onload = () => setTimeout(lanzar, 350)
 }
 
 // Fecha y hora de autorización, en el formato del RIDE (dd/mm/aaaa hh:mm:ss).
@@ -139,12 +157,12 @@ onMounted(load)
             <th style="width:76px">Secuencia</th>
             <th style="width:74px">Serie</th>
             <th style="width:112px">Número</th>
-            <th style="width:90px">Tipo Precio</th>
-            <th>Cliente</th>
+            <th style="width:80px">Precio</th>
+            <th class="col-cliente">Cliente</th>
             <th style="width:110px">CI/RUC</th>
             <th style="width:92px" class="der">Total</th>
             <th style="width:86px">Estado</th>
-            <th style="width:104px">Estado Electrónico</th>
+            <th style="width:112px">Estado SRI</th>
             <th style="width:82px">Vendedor</th>
             <th style="width:90px">Referencia</th>
             <th style="width:80px">Pago</th>
@@ -163,7 +181,7 @@ onMounted(load)
             <td>{{ serie(r) }}</td>
             <td><b>{{ r.numero }}</b></td>
             <td style="font-size:11px;">{{ r.tipo_precio ?? (r.items?.[0]?.tipo_precio ?? '—') }}</td>
-            <td>{{ r.contact?.razon_social }}</td>
+            <td class="col-cliente">{{ r.contact?.razon_social }}</td>
             <td style="font-family:monospace; font-size:11.5px;">{{ r.contact?.identificacion }}</td>
             <td class="der"><b>{{ money(r.importe_total) }}</b></td>
             <td>
@@ -383,9 +401,12 @@ onMounted(load)
 .invoices-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .invoices-table th {
   text-align: left; background: #f2f4f7; border-bottom: 1px solid #b9c2cc;
-  padding: 6px 8px; font-weight: 600; position: sticky; top: 0; z-index: 1;
+  padding: 9px 12px; font-weight: 600; position: sticky; top: 0; z-index: 1;
 }
-.invoices-table td { padding: 5px 8px; border-bottom: 1px solid #eef1f5; }
+.invoices-table td { padding: 9px 12px; border-bottom: 1px solid #eef1f5; vertical-align: middle; }
+/* Los datos cortos no deben partirse en dos líneas; solo el cliente puede envolver. */
+.invoices-table td, .invoices-table th { white-space: nowrap; }
+.invoices-table .col-cliente { white-space: normal; min-width: 190px; line-height: 1.35; }
 .invoices-table .der { text-align: right; }
 .invoices-table .vacio { color: #94a3b8; text-align: center; padding: 20px; }
 .invoices-row { cursor: pointer; }

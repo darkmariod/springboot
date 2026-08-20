@@ -43,29 +43,30 @@ const irInicio = () => abrir({ key: 'inicio', label: 'Inicio', icon: 'pi pi-home
   --rail-hover: rgba(255, 255, 255, 0.08); --accent: #2563eb;
   width: 232px; flex-shrink: 0;
   background: var(--rail); color: var(--rail-text);
-  padding: 14px 10px 24px; overflow-y: auto;
+  padding: 16px 12px 28px; overflow-y: auto;
   display: flex; flex-direction: column; gap: 16px;
 }
 .rail-inicio {
   display: flex; align-items: center; gap: 9px;
-  width: 100%; padding: 9px 11px; border: 0; border-radius: 8px;
+  width: 100%; padding: 10px 12px; border: 0; border-radius: 8px;
   background: transparent; color: var(--rail-text);
   font-size: 13.5px; font-weight: 600; cursor: pointer; text-align: left;
 }
 .rail-inicio:hover { background: var(--rail-hover); color: #fff; }
 .rail-inicio.active { background: var(--rail-hover); color: #fff; box-shadow: inset 3px 0 0 var(--accent); }
-.rail-nav { display: flex; flex-direction: column; gap: 16px; }
+.rail-nav { display: flex; flex-direction: column; gap: 20px; }
 .nav-sec { margin-bottom: 2px; }
+.nav-sec .nav-item + .nav-item { margin-top: 2px; }
 .nav-head {
-  margin: 0 0 4px; padding: 0 11px;
+  margin: 0 0 7px; padding: 0 12px;
   font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.8px;
   color: var(--rail-muted); font-weight: 700;
 }
 .nav-item {
   display: flex; align-items: center; gap: 9px;
-  width: 100%; padding: 7px 11px; border: 0; border-radius: 7px;
+  width: 100%; padding: 9px 12px; border: 0; border-radius: 7px;
   background: transparent; color: var(--rail-text);
-  font-size: 13px; cursor: pointer; text-align: left;
+  font-size: 13.5px; cursor: pointer; text-align: left;
 }
 .nav-item:hover { background: var(--rail-hover); color: #fff; }
 .nav-item.active { background: var(--rail-hover); color: #fff; font-weight: 600; box-shadow: inset 3px 0 0 var(--accent); }

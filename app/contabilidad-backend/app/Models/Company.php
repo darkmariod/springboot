@@ -1,11 +1,13 @@
 <?php
 
 namespace App\Models;
+use App\Models\Concerns\Auditable;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Company extends Model
 {
+    use Auditable;
     protected $fillable = ['logo','telefonos','agente_retencion','contribuyente_especial','sitio_web','nota_pie',
         'sri_usuario', 'sri_clave', 'sri_url_produccion', 'sri_url_pruebas', 'cert_emitido_desde', 'tipo_token', 'tiempo_generar', 'tiempo_firmar', 'tiempo_enviar', 'tiempo_autorizar', 'smtp_ssl', 'edoc_estado', 'modo_online',
         'ruc', 'razon_social', 'nombre_comercial', 'dir_matriz',

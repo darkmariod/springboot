@@ -1,11 +1,13 @@
 <?php
 
 namespace App\Models;
+use App\Models\Concerns\Auditable;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Warehouse extends Model
 {
+    use Auditable;
     protected $fillable = ['company_id', 'codigo', 'nombre', 'por_defecto', 'activa'];
 
     protected $casts = [

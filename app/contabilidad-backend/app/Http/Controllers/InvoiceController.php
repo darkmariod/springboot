@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Contact;
 use App\Models\Invoice;
+use App\Models\AuditLog;
 use App\Models\JournalEntry;
 use App\Models\Product;
 use App\Services\InvoiceEmitter;
@@ -63,6 +64,11 @@ class InvoiceController extends Controller
      */
     public function anular(Request $r, Invoice $invoice, RegisterInventoryMovement $inventario)
     {
+        AuditLog::create([
+            'company_id' => $invoice->company_id, 'user_id' => \Illuminate\Support\Facades\Auth::id(),
+            'accion' => 'anulo', 'modelo' => 'Invoice', 'modelo_id' => $invoice->id,
+            'descripcion' => $invoice->numero, 'ip' => $r->ip(),
+        ]);
         if ($invoice->estado === 'anulado') {
             return response()->json(['message' => 'La factura ya está anulada.'], 422);
         }

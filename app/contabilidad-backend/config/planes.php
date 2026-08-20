@@ -9,7 +9,7 @@ return [
     'negocio' => [
         'nombre' => 'Negocio',
         'precio_anual' => 99,
-        'features' => ['catalogo', 'ventas', 'compras', 'inventario', 'reportes', 'facturacion_sri', 'import_lote', 'facturacion_masiva'],
+        'features' => ['catalogo', 'ventas', 'compras', 'inventario', 'reportes', 'facturacion_sri', 'import_lote', 'facturacion_masiva', 'auditoria'],
     ],
     'profesional' => [
         'nombre' => 'Profesional',
