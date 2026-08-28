@@ -89,6 +89,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
   {
     label: 'Administración',
     items: [
+      { key: 'branches', label: 'Sucursales', icon: 'pi pi-building-columns', component: 'Branches', feature: 'sucursales' },
       { key: 'companies', label: 'Empresas', icon: 'pi pi-building', component: 'Companies' },
       { key: 'users', label: 'Usuarios y roles', icon: 'pi pi-shield', component: 'Users', feature: 'usuarios' },
       { key: 'audit', label: 'Auditoría', icon: 'pi pi-history', component: 'Audit', feature: 'auditoria' },

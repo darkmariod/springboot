@@ -16,6 +16,12 @@ class RegisterInventoryMovement
             throw new \InvalidArgumentException("Tipo de movimiento inválido: {$tipo}");
         }
 
+        // Sin bodega explícita se usa la de la empresa. Antes, las ventas no la
+        // informaban: descontaban del stock total pero no del stock por bodega,
+        // y la bodega quedaba inflada.
+        $warehouseId = $warehouseId ?: \App\Models\Warehouse::where('company_id', $p->company_id)
+            ->orderByDesc('por_defecto')->value('id');
+
         return DB::transaction(function () use ($p, $tipo, $cant, $costo, $concepto, $fecha, $warehouseId, $series, $invoiceId) {
             $p = Product::whereKey($p->id)->lockForUpdate()->firstOrFail();
 

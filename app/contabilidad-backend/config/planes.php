@@ -1,24 +1,30 @@
 <?php
 
+/*
+ * Dos planes, como se acordó para vender:
+ *   Básico   — inventario y punto de venta, SIN facturación electrónica.
+ *   Completo — todo lo anterior + facturación electrónica del SRI + medios de pago.
+ */
 return [
-    'emprendedor' => [
-        'nombre' => 'Emprendedor',
-        'precio_anual' => 49,
-        'features' => ['catalogo', 'ventas', 'compras', 'inventario', 'reportes'],
-    ],
-    'negocio' => [
-        'nombre' => 'Negocio',
+    'basico' => [
+        'nombre' => 'Básico',
         'precio_anual' => 99,
-        'features' => ['catalogo', 'ventas', 'compras', 'inventario', 'reportes', 'facturacion_sri', 'import_lote', 'facturacion_masiva', 'auditoria'],
+        'features' => [
+            'catalogo', 'ventas', 'compras', 'inventario', 'reportes',
+            'series', 'cartera', 'bancos', 'auditoria',
+        ],
     ],
-    'profesional' => [
-        'nombre' => 'Profesional',
-        'precio_anual' => 149,
-        'features' => ['catalogo', 'ventas', 'compras', 'inventario', 'reportes', 'facturacion_sri', 'import_lote', 'facturacion_masiva', 'series', 'cartera', 'bancos', 'conciliacion', 'conciliacion_tarjetas', 'conversion_articulos', 'fraccionamiento', 'reservas_stock', 'contabilidad', 'usuarios', 'auditoria'],
-    ],
-    'empresarial' => [
-        'nombre' => 'Empresarial',
-        'precio_anual' => null,
-        'features' => ['catalogo', 'ventas', 'compras', 'inventario', 'reportes', 'facturacion_sri', 'import_lote', 'facturacion_masiva', 'series', 'cartera', 'bancos', 'conciliacion', 'conciliacion_tarjetas', 'conversion_articulos', 'fraccionamiento', 'reservas_stock', 'contabilidad', 'usuarios', 'auditoria', 'nomina', 'sucursales', 'activos_fijos'],
+
+    'completo' => [
+        'nombre' => 'Completo',
+        'precio_anual' => 150,
+        'features' => [
+            'catalogo', 'ventas', 'compras', 'inventario', 'reportes',
+            'series', 'cartera', 'bancos', 'auditoria',
+            'facturacion_sri', 'import_lote', 'facturacion_masiva',
+            'conciliacion', 'conciliacion_tarjetas',
+            'conversion_articulos', 'fraccionamiento', 'reservas_stock',
+            'contabilidad', 'usuarios', 'nomina', 'sucursales',
+        ],
     ],
 ];

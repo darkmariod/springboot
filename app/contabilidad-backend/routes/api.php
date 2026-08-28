@@ -19,6 +19,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/companies', [CompanyController::class, 'index']);
     Route::get('/companies/{company}', [CompanyController::class, 'show']);
+    // Sucursales (multisede): cada una es un establecimiento ante el SRI
+    Route::middleware('feature:sucursales')->group(function () {
+        Route::get('branches', [\App\Http\Controllers\BranchController::class, 'index']);
+        Route::post('branches', [\App\Http\Controllers\BranchController::class, 'store']);
+        Route::put('branches/{branch}', [\App\Http\Controllers\BranchController::class, 'update']);
+        Route::delete('branches/{branch}', [\App\Http\Controllers\BranchController::class, 'destroy']);
+    });
     Route::post('/companies/{company}/logo', [CompanyController::class, 'logo']);
     Route::put('/companies/{company}', [CompanyController::class, 'update']);
     Route::get('/companies/{company}/plan', [CompanyController::class, 'plan']);
@@ -46,7 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("products/{product}/codes", [\App\Http\Controllers\ProductExtrasController::class, "codes"]);
     Route::post("products/{product}/codes", [\App\Http\Controllers\ProductExtrasController::class, "storeCode"]);
     Route::delete("product-codes/{code}", [\App\Http\Controllers\ProductExtrasController::class, "destroyCode"]);
-    Route::apiResource('banks', \App\Http\Controllers\BankController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::middleware('feature:bancos')->group(function () { Route::apiResource('banks', \App\Http\Controllers\BankController::class)->only(['index', 'store', 'update', 'destroy']); });
     Route::get('products/lookup', [\App\Http\Controllers\ProductController::class, 'lookup']);
 
     // Ventas
@@ -66,33 +73,33 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("inventory/reorder", [\App\Http\Controllers\InventoryController::class, "reorder"]);
 
     // Contabilidad
-    Route::get("journal", [\App\Http\Controllers\AccountingController::class, "journal"]);
-    Route::post("journal/mayorizar", [\App\Http\Controllers\AccountingController::class, "mayorizar"]);
-    Route::post("journal/{entry}/desmayorizar", [\App\Http\Controllers\AccountingController::class, "desmayorizar"]);
+    Route::middleware('feature:contabilidad')->group(function () { Route::get("journal", [\App\Http\Controllers\AccountingController::class, "journal"]); });
+    Route::middleware('feature:contabilidad')->group(function () { Route::post("journal/mayorizar", [\App\Http\Controllers\AccountingController::class, "mayorizar"]); });
+    Route::middleware('feature:contabilidad')->group(function () { Route::post("journal/{entry}/desmayorizar", [\App\Http\Controllers\AccountingController::class, "desmayorizar"]); });
     Route::get("income-statement", [\App\Http\Controllers\AccountingController::class, "incomeStatement"]);
     Route::get("balance-sheet", [\App\Http\Controllers\AccountingController::class, "balanceSheet"]);
-    Route::get("ledger", [\App\Http\Controllers\AccountingController::class, "ledger"]);
+    Route::middleware('feature:contabilidad')->group(function () { Route::get("ledger", [\App\Http\Controllers\AccountingController::class, "ledger"]); });
 
     // Caja
-    Route::get("cash/current", [\App\Http\Controllers\CashController::class, "current"]);
-    Route::post("cash/open", [\App\Http\Controllers\CashController::class, "open"]);
-    Route::post("cash/{session}/movements", [\App\Http\Controllers\CashController::class, "addMovement"]);
-    Route::post("cash/{session}/close", [\App\Http\Controllers\CashController::class, "close"]);
+    Route::middleware('feature:bancos')->group(function () { Route::get("cash/current", [\App\Http\Controllers\CashController::class, "current"]); });
+    Route::middleware('feature:bancos')->group(function () { Route::post("cash/open", [\App\Http\Controllers\CashController::class, "open"]); });
+    Route::middleware('feature:bancos')->group(function () { Route::post("cash/{session}/movements", [\App\Http\Controllers\CashController::class, "addMovement"]); });
+    Route::middleware('feature:bancos')->group(function () { Route::post("cash/{session}/close", [\App\Http\Controllers\CashController::class, "close"]); });
 
     // Cartera
-    Route::get("receivables", [\App\Http\Controllers\ReceivableController::class, "index"]);
-    Route::post("receivables/{invoice}/pay", [\App\Http\Controllers\ReceivableController::class, "pay"]);
-    Route::get("payables", [\App\Http\Controllers\PayableController::class, "index"]);
-    Route::post("payables/{purchase}/pay", [\App\Http\Controllers\PayableController::class, "pay"]);
-    Route::post("payables/pay-multiple", [\App\Http\Controllers\PayableController::class, 'payMultiple']);
+    Route::middleware('feature:cartera')->group(function () { Route::get("receivables", [\App\Http\Controllers\ReceivableController::class, "index"]); });
+    Route::middleware('feature:cartera')->group(function () { Route::post("receivables/{invoice}/pay", [\App\Http\Controllers\ReceivableController::class, "pay"]); });
+    Route::middleware('feature:cartera')->group(function () { Route::get("payables", [\App\Http\Controllers\PayableController::class, "index"]); });
+    Route::middleware('feature:cartera')->group(function () { Route::post("payables/{purchase}/pay", [\App\Http\Controllers\PayableController::class, "pay"]); });
+    Route::middleware('feature:cartera')->group(function () { Route::post("payables/pay-multiple", [\App\Http\Controllers\PayableController::class, 'payMultiple']); });
 
     // Retenciones
     Route::get("withholdings", [\App\Http\Controllers\WithholdingController::class, "index"]);
     Route::post("withholdings/import", [\App\Http\Controllers\WithholdingController::class, "import"]);
 
     // Documentos SRI
-    Route::get("sri-documents/pending", [\App\Http\Controllers\SriDocumentController::class, "pending"]);
-    Route::post("sri-documents/authorize-batch", [\App\Http\Controllers\SriDocumentController::class, "authorizeBatch"]);
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::get("sri-documents/pending", [\App\Http\Controllers\SriDocumentController::class, "pending"]); });
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::post("sri-documents/authorize-batch", [\App\Http\Controllers\SriDocumentController::class, "authorizeBatch"]); });
 
     // Cotizaciones
     Route::get("quotes", [\App\Http\Controllers\QuoteController::class, "index"]);
@@ -112,7 +119,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("emission-points", [\App\Http\Controllers\EmissionPointController::class, "index"]);
     Route::post("emission-points", [\App\Http\Controllers\EmissionPointController::class, "store"]);
     Route::delete("emission-points/{point}", [\App\Http\Controllers\EmissionPointController::class, "destroy"]);
-    Route::post("companies/{company}/certificate", [\App\Http\Controllers\CompanyController::class, "uploadCertificate"]);
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::post("companies/{company}/certificate", [\App\Http\Controllers\CompanyController::class, "uploadCertificate"]); });
     // EDocuments — configuración completa (firma + SRI + correo), como KVS
     Route::get("companies/{company}/edoc-config", [\App\Http\Controllers\EdocConfigController::class, "show"]);
     Route::post("companies/{company}/edoc-config", [\App\Http\Controllers\EdocConfigController::class, "update"]);
@@ -129,10 +136,10 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Fase 3 — Usuarios y auditoría
-    Route::get("users", [\App\Http\Controllers\UserController::class, "index"]);
-    Route::post("users", [\App\Http\Controllers\UserController::class, "store"]);
-    Route::put("users/{user}", [\App\Http\Controllers\UserController::class, "update"]);
-    Route::delete("users/{user}", [\App\Http\Controllers\UserController::class, "destroy"]);
+    Route::middleware('feature:usuarios')->group(function () { Route::get("users", [\App\Http\Controllers\UserController::class, "index"]); });
+    Route::middleware('feature:usuarios')->group(function () { Route::post("users", [\App\Http\Controllers\UserController::class, "store"]); });
+    Route::middleware('feature:usuarios')->group(function () { Route::put("users/{user}", [\App\Http\Controllers\UserController::class, "update"]); });
+    Route::middleware('feature:usuarios')->group(function () { Route::delete("users/{user}", [\App\Http\Controllers\UserController::class, "destroy"]); });
 
     Route::middleware('feature:auditoria')->group(function () {
         Route::get("audit", [\App\Http\Controllers\AuditController::class, "index"]);
@@ -141,33 +148,33 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Fase 4 — Notas de crédito, anticipos, uso de saldos
-    Route::get("advances", [\App\Http\Controllers\AdvanceController::class, "index"]);
-    Route::post("advances", [\App\Http\Controllers\AdvanceController::class, "store"]);
-    Route::get("credit-notes", [\App\Http\Controllers\CreditNoteController::class, "index"]);
-    Route::post("credit-notes", [\App\Http\Controllers\CreditNoteController::class, "store"]);
+    Route::middleware('feature:cartera')->group(function () { Route::get("advances", [\App\Http\Controllers\AdvanceController::class, "index"]); });
+    Route::middleware('feature:cartera')->group(function () { Route::post("advances", [\App\Http\Controllers\AdvanceController::class, "store"]); });
+    Route::middleware('feature:cartera')->group(function () { Route::get("credit-notes", [\App\Http\Controllers\CreditNoteController::class, "index"]); });
+    Route::middleware('feature:cartera')->group(function () { Route::post("credit-notes", [\App\Http\Controllers\CreditNoteController::class, "store"]); });
     Route::get("credits/available", [\App\Http\Controllers\CreditApplicationController::class, "available"]);
     Route::post("credits/apply/{invoice}", [\App\Http\Controllers\CreditApplicationController::class, "apply"]);
 
     // ── Liquidación de compra ──
     Route::get('liquidacion-compra', [LiquidacionCompraController::class, 'index']);
     Route::post('liquidacion-compra', [LiquidacionCompraController::class, 'store']);
-    Route::post('liquidacion-compra/{purchase}/emit', [LiquidacionCompraController::class, 'emit']);
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::post('liquidacion-compra/{purchase}/emit', [LiquidacionCompraController::class, 'emit']); });
 
     // ── Nota de débito ──
     Route::get('notas-debito', [NotaDebitoController::class, 'index']);
     Route::post('notas-debito', [NotaDebitoController::class, 'store']);
-    Route::post('notas-debito/{notaDebito}/emit', [NotaDebitoController::class, 'emit']);
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::post('notas-debito/{notaDebito}/emit', [NotaDebitoController::class, 'emit']); });
 
     // ── Guía de remisión ──
     Route::get('guias-remision', [GuiaRemisionController::class, 'index']);
     Route::post('guias-remision', [GuiaRemisionController::class, 'store']);
-    Route::post('guias-remision/{guia}/emit', [GuiaRemisionController::class, 'emit']);
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::post('guias-remision/{guia}/emit', [GuiaRemisionController::class, 'emit']); });
 
     // Fase 5 — Importación en lote
-    Route::get("pending-imports", [\App\Http\Controllers\PendingImportController::class, "index"]);
-    Route::post("pending-imports/upload-txt", [\App\Http\Controllers\PendingImportController::class, "uploadTxt"]);
-    Route::post("pending-imports/process", [\App\Http\Controllers\PendingImportController::class, "process"]);
-    Route::post("pending-imports/{pending}/process", [\App\Http\Controllers\PendingImportController::class, "processOne"]);
+    Route::middleware('feature:import_lote')->group(function () { Route::get("pending-imports", [\App\Http\Controllers\PendingImportController::class, "index"]); });
+    Route::middleware('feature:import_lote')->group(function () { Route::post("pending-imports/upload-txt", [\App\Http\Controllers\PendingImportController::class, "uploadTxt"]); });
+    Route::middleware('feature:import_lote')->group(function () { Route::post("pending-imports/process", [\App\Http\Controllers\PendingImportController::class, "process"]); });
+    Route::middleware('feature:import_lote')->group(function () { Route::post("pending-imports/{pending}/process", [\App\Http\Controllers\PendingImportController::class, "processOne"]); });
 
     // Fase 7 — Nómina
     Route::middleware('feature:nomina')->group(function () {
@@ -188,9 +195,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('warehouses', \App\Http\Controllers\WarehouseController::class)->only(['index', 'store', 'update', 'destroy']);
 
     // Fase D — Notas de crédito electrónicas + retenciones emitidas
-    Route::post("credit-notes/{creditNote}/emit", [\App\Http\Controllers\CreditNoteController::class, "emit"]);
-    Route::get("withholdings-emitted", [\App\Http\Controllers\WithholdingEmitController::class, "index"]);
-    Route::post("withholdings-emitted", [\App\Http\Controllers\WithholdingEmitController::class, "store"]);
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::post("credit-notes/{creditNote}/emit", [\App\Http\Controllers\CreditNoteController::class, "emit"]); });
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::get("withholdings-emitted", [\App\Http\Controllers\WithholdingEmitController::class, "index"]); });
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::post("withholdings-emitted", [\App\Http\Controllers\WithholdingEmitController::class, "store"]); });
 
     // Fase E — Módulo Impuestos
     Route::get("taxes/formulario104", [\App\Http\Controllers\TaxController::class, "formulario104"]);

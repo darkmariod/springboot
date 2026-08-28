@@ -20,22 +20,35 @@ class InvoiceEmitter
         private GenerateInvoiceJournalEntry $asiento,
     ) {}
 
-    public function emit(Company $company, Contact $contact, array $items, string $formaPago = 'efectivo', ?int $emissionPointId = null): Invoice
+    public function emit(Company $company, Contact $contact, array $items, string $formaPago = 'efectivo', ?int $emissionPointId = null, ?int $branchId = null): Invoice
     {
-        return \DB::transaction(function () use ($company, $contact, $items, $formaPago, $emissionPointId) {
+        return \DB::transaction(function () use ($company, $contact, $items, $formaPago, $emissionPointId, $branchId) {
             $formaPago = array_key_exists($formaPago, self::SRI_FORMA_PAGO) ? $formaPago : 'efectivo';
+            // El establecimiento sale de la sucursal; si no se indica, de la matriz.
             $estab = $company->estab;
             $ptoEmi = $company->pto_emi;
+            $branch = null;
             if ($emissionPointId) {
                 $ep = EmissionPoint::find($emissionPointId);
                 if ($ep && $ep->company_id === $company->id) {
                     $estab = $ep->estab ?? $estab;
                     $ptoEmi = $ep->punto ?? $ptoEmi;
+                    $branchId = $branchId ?: $ep->branch_id;
                 }
+            }
+            if ($branchId) {
+                $branch = \App\Models\Branch::find($branchId);
+                if ($branch && $branch->company_id === $company->id) {
+                    $estab = $branch->estab;
+                }
+            } elseif (! $emissionPointId) {
+                $branch = \App\Models\Branch::where('company_id', $company->id)
+                    ->orderByDesc('es_matriz')->first();
+                if ($branch) { $estab = $branch->estab; $branchId = $branch->id; }
             }
             $totals = $this->calculator->fromItems($items);
             $invoice = Invoice::create([
-                'company_id' => $company->id, 'contact_id' => $contact->id,
+                'company_id' => $company->id, 'contact_id' => $contact->id, 'branch_id' => $branchId,
                 'numero' => sprintf('%s-%s-%09d', $estab, $ptoEmi, $company->secuencial),
                 'items' => $items, 'total_sin_impuestos' => $totals['total_sin_impuestos'],
                 'total_impuesto' => $totals['total_impuesto'], 'importe_total' => $totals['importe_total'],
@@ -43,7 +56,7 @@ class InvoiceEmitter
                 'estado' => 'emitida', 'fecha_emision' => now(),
             ]);
             $payload = [
-                'infoTributaria' => ['codDoc' => '01'],
+                'infoTributaria' => ['codDoc' => '01', 'estab' => $estab, 'ptoEmi' => $ptoEmi],
                 'infoFactura' => [
                     'fechaEmision' => now()->format('Y-m-d'),
                     'dirEstablecimiento' => $company->dir_matriz,

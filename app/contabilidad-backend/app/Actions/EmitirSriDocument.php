@@ -63,7 +63,8 @@ class EmitirSriDocument {
             'ambiente'=>(string)$company->ambiente, 'tipoEmision'=>'1', 'razonSocial'=>$company->razon_social,
             'nombreComercial'=>$company->nombre_comercial ?? $company->razon_social, 'ruc'=>$company->ruc,
             'codigoNumerico'=>str_pad((string)random_int(0,99999999),8,'0',STR_PAD_LEFT),
-            'codDoc'=>$data['infoTributaria']['codDoc'] ?? '01', 'estab'=>$company->estab, 'ptoEmi'=>$company->pto_emi,
+            'codDoc'=>$data['infoTributaria']['codDoc'] ?? '01', 'estab'=>$data['infoTributaria']['estab'] ?? $company->estab,
+            'ptoEmi'=>$data['infoTributaria']['ptoEmi'] ?? $company->pto_emi,
             'secuencial'=>str_pad((string)$company->secuencial,9,'0',STR_PAD_LEFT), 'dirMatriz'=>$company->dir_matriz, 'regimen'=>$company->regimen,
         ];
         return array_replace_recursive($data, ['infoTributaria'=>$infoTributaria]);
