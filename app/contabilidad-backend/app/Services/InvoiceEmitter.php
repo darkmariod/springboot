@@ -55,6 +55,17 @@ class InvoiceEmitter
                 'forma_pago' => $formaPago, 'saldo_pendiente' => $formaPago === 'credito' ? $totals['importe_total'] : 0,
                 'estado' => 'emitida', 'fecha_emision' => now(),
             ]);
+            // Un cobro con tarjeta no es dinero en caja todavía: queda pendiente
+            // hasta que el procesador lo deposite (conciliación de tarjetas).
+            if ($formaPago === 'tarjeta') {
+                \App\Models\CardTransaction::create([
+                    'company_id' => $company->id,
+                    'invoice_id' => $invoice->id,
+                    'fecha'      => $invoice->fecha_emision,
+                    'monto'      => $totals['importe_total'],
+                ]);
+            }
+
             $payload = [
                 'infoTributaria' => ['codDoc' => '01', 'estab' => $estab, 'ptoEmi' => $ptoEmi],
                 'infoFactura' => [

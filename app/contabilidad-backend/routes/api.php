@@ -19,6 +19,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/companies', [CompanyController::class, 'index']);
     Route::get('/companies/{company}', [CompanyController::class, 'show']);
+    // Conciliacion de tarjetas: cobros con tarjeta vs. lo que deposita el procesador
+    Route::middleware('feature:conciliacion_tarjetas')->group(function () {
+        Route::get('card/pendientes', [\App\Http\Controllers\CardReconciliationController::class, 'pendientes']);
+        Route::get('card/resumen', [\App\Http\Controllers\CardReconciliationController::class, 'resumen']);
+        Route::get('card/settlements', [\App\Http\Controllers\CardReconciliationController::class, 'liquidaciones']);
+        Route::post('card/settlements', [\App\Http\Controllers\CardReconciliationController::class, 'crearLiquidacion']);
+        Route::post('card/settlements/{settlement}/asignar', [\App\Http\Controllers\CardReconciliationController::class, 'asignar']);
+        Route::get('card/settlements/{settlement}/sugerir', [\App\Http\Controllers\CardReconciliationController::class, 'sugerir']);
+        Route::delete('card/settlements/{settlement}', [\App\Http\Controllers\CardReconciliationController::class, 'eliminarLiquidacion']);
+    });
     // Sucursales (multisede): cada una es un establecimiento ante el SRI
     Route::middleware('feature:sucursales')->group(function () {
         Route::get('branches', [\App\Http\Controllers\BranchController::class, 'index']);
