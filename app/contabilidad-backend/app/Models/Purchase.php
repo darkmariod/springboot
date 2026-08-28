@@ -4,7 +4,7 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 class Purchase extends Model {
     use Auditable;
-    protected $fillable = ['company_id','contact_id','numero','clave_acceso','fecha_emision',
+    protected $fillable = ['cost_center_id','company_id','contact_id','numero','clave_acceso','fecha_emision',
         'establecimiento','punto_emision','autorizacion','sustento_tributario',
         'warehouse_id','observacion',
         'items','total_sin_impuestos','total_impuesto','importe_total','saldo_pendiente','xml'];

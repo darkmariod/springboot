@@ -19,6 +19,20 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/companies', [CompanyController::class, 'index']);
     Route::get('/companies/{company}', [CompanyController::class, 'show']);
+    // Centros de costo
+    Route::middleware('feature:contabilidad')->group(function () {
+        Route::get('cost-centers', [\App\Http\Controllers\CostCenterController::class, 'index']);
+        Route::post('cost-centers', [\App\Http\Controllers\CostCenterController::class, 'store']);
+        Route::put('cost-centers/{costCenter}', [\App\Http\Controllers\CostCenterController::class, 'update']);
+        Route::delete('cost-centers/{costCenter}', [\App\Http\Controllers\CostCenterController::class, 'destroy']);
+        Route::get('cost-centers/resultados', [\App\Http\Controllers\CostCenterController::class, 'resultados']);
+    });
+    // Formulario 103 y ATS (obligaciones mensuales ante el SRI)
+    Route::middleware('feature:contabilidad')->group(function () {
+        Route::get('tax/103', [\App\Http\Controllers\Form103Controller::class, 'formulario']);
+        Route::get('tax/103/catalogo', [\App\Http\Controllers\Form103Controller::class, 'catalogo']);
+        Route::get('tax/ats/xml', [\App\Http\Controllers\AtsController::class, 'xml']);
+    });
     // Conciliacion de tarjetas: cobros con tarjeta vs. lo que deposita el procesador
     Route::middleware('feature:conciliacion_tarjetas')->group(function () {
         Route::get('card/pendientes', [\App\Http\Controllers\CardReconciliationController::class, 'pendientes']);
