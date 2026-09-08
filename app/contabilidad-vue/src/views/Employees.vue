@@ -118,7 +118,7 @@ onMounted(load)
       <div class="kvs-panel-title">Detalle Empleado</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elegí un empleado del listado, o tocá <b>+</b> para crear uno nuevo.
+        Elige un empleado del listado, o toca <b>+</b> para crear uno nuevo.
       </div>
 
       <template v-else>

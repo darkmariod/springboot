@@ -128,7 +128,8 @@ const temaTexto = computed(() => (tema.value === 'auto' ? 'Auto' : tema.value ==
           <h1 class="page-title">Resumen del negocio</h1>
           <p class="page-sub">
             {{ periodo }}
-            <template v-if="empresa"> · {{ empresa.razon_social }} · RUC {{ empresa.ruc }}</template>
+            <template v-if="empresa?.razon_social"> · {{ empresa.razon_social }}</template>
+            <template v-if="empresa?.ruc"> · RUC {{ empresa.ruc }}</template>
           </p>
         </div>
         <button class="theme-btn" :title="'Tema: ' + temaTexto" @click="toggleTema">

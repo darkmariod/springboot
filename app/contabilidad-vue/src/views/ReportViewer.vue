@@ -249,7 +249,7 @@ loadBodegas()
       <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom: 12px;">{{ msg.text }}</Message>
 
       <div v-if="!showTable && !msg" style="color: #94a3b8; text-align: center; padding: 80px 20px;">
-        Configurá los parámetros y presioná <b>Generar</b>.
+        Configurá los parámetros y presiona <b>Generar</b>.
       </div>
 
       <!-- ── Reporte de Existencias ── -->

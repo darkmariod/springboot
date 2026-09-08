@@ -91,7 +91,7 @@ onMounted(load)
       </Column>
       <template #empty>
         <div style="text-align:center; color:#94a3b8; padding:20px;">
-          Sin proveedores. Tocá <b>Nuevo proveedor</b> o importá una compra del SRI.
+          Sin proveedores. Toca <b>Nuevo proveedor</b> o importa una compra del SRI.
         </div>
       </template>
     </DataTable>

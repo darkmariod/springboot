@@ -1,0 +1,202 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vista previa · 3 planes</title>
+<style>
+  :root{--bg:#fff;--ink:#0f2430;--body:#48606e;--soft:#8fa2ad;--line:#dde7ec;
+    --teal:#0f9b8e;--teal-dk:#0b7c72;--deep:#0d5c58;
+    --mint:#e7f4f2;--mint-pill:#f2faf9;--mint-line:#cfe6e2}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--mint);color:var(--ink);font-size:15px;line-height:1.6;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .w{max-width:1140px;margin:0 auto;padding:0 24px}
+  .aviso{background:#fff8e1;border-bottom:1px solid #f0e0b0;padding:10px 0;font-size:13px;color:#7a5c00}
+  .s{padding:56px 0}
+  .sh{text-align:center;margin-bottom:26px}
+  h2{font-size:27px;letter-spacing:-.6px;margin:0 0 8px;font-weight:700}
+  .lead{color:var(--body);margin:0 auto;max-width:62ch}
+  .switch{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 8px}
+  .switch span{font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
+  .switch span.on{color:var(--deep)}
+  .tg{width:52px;height:28px;border-radius:999px;background:var(--teal);border:0;cursor:pointer;position:relative;padding:0}
+  .tg::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .22s cubic-bezier(.3,.8,.4,1)}
+  .tg[data-per="semestral"]::after{transform:translateX(24px)}
+  .off{background:#fff;color:var(--deep);font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;box-shadow:0 1px 3px rgba(13,92,88,.14)}
+  .pb{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding:46px 0}
+  .pb+.pb{border-top:1px solid var(--mint-line)}
+  .pb.rev .txt{order:2}.pb.rev .art{order:1}
+  .pill{display:inline-block;background:var(--mint-pill);color:var(--deep);font-size:25px;font-weight:800;
+    padding:12px 38px;border-radius:999px;margin-bottom:20px;
+    box-shadow:7px 7px 16px rgba(13,92,88,.14),-7px -7px 16px rgba(255,255,255,.95)}
+  .pb h3{font-size:29px;line-height:1.18;letter-spacing:-.7px;margin:0 0 12px;font-weight:700;max-width:16ch}
+  .pb .desc{color:var(--body);font-size:14.5px;margin:0 0 18px;max-width:46ch}
+  .pb ul{list-style:none;padding:0;margin:0 0 22px}
+  .pb li{position:relative;padding-left:27px;margin-bottom:10px;font-size:14.5px;font-weight:600;color:var(--ink)}
+  .pb li::before{content:"";position:absolute;left:2px;top:7px;width:12px;height:7px;
+    border-left:2.2px solid var(--teal);border-bottom:2.2px solid var(--teal);transform:rotate(-45deg)}
+  .pb .pr{display:flex;align-items:baseline;gap:8px;margin:0 0 20px}
+  .pb .pr b{font-size:36px;font-weight:800;letter-spacing:-1.2px;color:var(--deep)}
+  .pb .pr b sup{font-size:18px;top:-.65em;position:relative}
+  .pb .pr i{font-style:normal;font-size:13px;color:var(--body)}
+  .go{display:inline-block;background:var(--deep);color:#fff;padding:11px 26px;border-radius:6px;
+    font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+  .art{display:grid;place-items:center}.art svg{width:100%;max-width:330px;height:auto}
+  .tag{display:inline-block;background:var(--teal);color:#fff;font-size:10px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;padding:3px 11px;border-radius:999px;margin-bottom:10px}
+  .frase{font-size:15px;color:var(--deep);font-style:italic;margin:0 0 14px;font-weight:600}
+  /* Servicios incluidos: se distinguen por tono, no por otro ícono */
+  .pb li.serv{font-weight:500;color:var(--soft)}
+  .pb li.serv::before{border-color:#a8c9c4;border-width:2px}
+  /* En el plan más alto todo se muestra con el mismo peso: es lo que justifica el precio */
+  .pb.premium li.serv{font-weight:600;color:var(--ink)}
+  .pb.premium li.serv::before{border-color:var(--teal)}
+  .pb li.serv:first-of-type{margin-top:14px;padding-top:14px;border-top:1px solid var(--mint-line)}
+  .lim{display:flex;flex-wrap:wrap;gap:6px 8px;margin:0 0 18px}
+  .lim span{background:#fff;border:1px solid var(--mint-line);border-radius:6px;padding:4px 10px;
+    font-size:12px;font-weight:600;color:var(--deep)}
+  .lim span b{font-weight:800}
+  .comp{background:var(--deep);color:#fff;border-radius:14px;padding:26px 28px;margin-top:34px;text-align:center}
+  .comp p{margin:0;font-size:19px;font-weight:700;line-height:1.4}
+  .comp small{display:block;margin-top:8px;font-size:13px;color:#a9d5cf;font-weight:400}
+  @media(max-width:900px){.pb{grid-template-columns:1fr;gap:26px}.pb.rev .txt,.pb.rev .art{order:0}}
+</style></head><body>
+
+<div class="aviso"><div class="w">Vista previa para revisión · la landing en vivo no se ha modificado</div></div>
+
+<section class="s"><div class="w">
+  <div class="sh"><h2>Planes</h2>
+    <p class="lead">Elige la forma de pago. Los módulos se activan al momento de contratar.</p></div>
+
+  <div class="switch">
+    <span id="la" class="on">Anual</span>
+    <button class="tg" id="tg" data-per="anual"></button>
+    <span id="ls">Semestral</span>
+    <span class="off">hasta 22% menos al año</span>
+  </div>
+
+  <!-- BÁSICO -->
+  <div class="pb">
+    <div class="txt">
+      <span class="pill">BÁSICO</span>
+      <p class="frase">"Ordena tus ventas y tu stock"</p>
+      <h3>Para el que todavía anota en cuaderno</h3>
+      <p class="desc">Para el negocio que todavía anota en cuaderno o en Excel y necesita control de stock y caja al día.</p>
+      <ul>
+        <li>Punto de venta y cierres de caja</li>
+        <li>Inventario, kárdex y bodegas</li>
+        <li>Garantías por número de serie</li>
+        <li>Cuentas por cobrar y bancos</li>
+        <li>Auditoría de todo lo que pasa</li>
+        <li class="serv">Implementación gratuita</li>
+        <li class="serv">Capacitación incluida</li>
+        <li class="serv">Soporte por WhatsApp</li>
+      </ul>
+      <div class="pr"><b><sup>$</sup><span class="v" data-a="85" data-s="55">85</span></b><i class="per">al año + IVA</i></div>
+      <a class="go" href="#">Consulta aquí</a>
+    </div>
+    <div class="art"><svg viewBox="0 0 300 220" fill="none">
+      <rect x="34" y="52" width="86" height="132" rx="9" fill="#dfeeeb" stroke="#0d5c58" stroke-width="2.4"/>
+      <rect x="46" y="64" width="62" height="26" rx="4" fill="#fff" stroke="#0d5c58" stroke-width="2"/>
+      <g fill="#0f9b8e"><rect x="46" y="100" width="17" height="15" rx="3"/><rect x="68" y="100" width="17" height="15" rx="3"/><rect x="91" y="100" width="17" height="15" rx="3"/>
+      <rect x="46" y="122" width="17" height="15" rx="3"/><rect x="68" y="122" width="17" height="15" rx="3"/><rect x="91" y="122" width="17" height="15" rx="3"/>
+      <rect x="46" y="144" width="17" height="15" rx="3"/><rect x="68" y="144" width="17" height="15" rx="3"/><rect x="91" y="144" width="17" height="32" rx="3"/></g>
+      <path d="M132 40h74v150l-12-9-12 9-12-9-13 9-12-9-13 9z" fill="#fff" stroke="#0d5c58" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M146 62h46M146 78h46M146 94h30M146 118h46M146 134h34" stroke="#8fb8b3" stroke-width="3" stroke-linecap="round"/>
+      <rect x="206" y="28" width="62" height="120" rx="10" fill="#0d5c58"/>
+      <rect x="213" y="42" width="48" height="92" rx="5" fill="#fff"/>
+      <path d="M222 60h30M222 74h22M222 88h30M222 102h18" stroke="#cfe0dd" stroke-width="3.4" stroke-linecap="round"/>
+    </svg></div>
+  </div>
+
+  <!-- NEGOCIO -->
+  <div class="pb rev">
+    <div class="txt">
+      <span class="tag">El más elegido</span>
+      <span class="pill">NEGOCIO</span>
+      <p class="frase">"Factura al SRI sin complicarte"</p>
+      <h3>Para el negocio que ya factura</h3>
+      <p class="desc">Emite los seis comprobantes electrónicos con tu firma y registra tus compras sin volver a digitar nada.</p>
+      <ul>
+        <li>Plan Básico +</li>
+        <li>Facturación electrónica del SRI</li>
+        <li>Los seis comprobantes autorizados</li>
+        <li>Importar compras del SRI por lote</li>
+        <li>Facturación masiva</li>
+        <li>Conciliación bancaria y de tarjetas</li>
+        <li>Usuarios con permisos por módulo</li>
+        <li class="serv">Implementación y carga de tu certificado</li>
+        <li class="serv">Capacitación incluida</li>
+        <li class="serv">Soporte por WhatsApp</li>
+      </ul>
+      <div class="pr"><b><sup>$</sup><span class="v" data-a="145" data-s="92">145</span></b><i class="per">al año + IVA</i></div>
+      <a class="go" href="#">Consulta aquí</a>
+    </div>
+    <div class="art"><svg viewBox="0 0 300 220" fill="none">
+      <rect x="40" y="26" width="112" height="168" rx="13" fill="#0d5c58"/>
+      <rect x="48" y="40" width="96" height="140" rx="6" fill="#fff"/>
+      <path d="M60 60h56M60 74h72M60 88h44" stroke="#cfe0dd" stroke-width="4" stroke-linecap="round"/>
+      <rect x="60" y="104" width="72" height="30" rx="5" fill="#e6f5f3"/>
+      <path d="M70 119h20" stroke="#0f9b8e" stroke-width="3.4" stroke-linecap="round"/>
+      <path d="M60 148h56M60 162h36" stroke="#cfe0dd" stroke-width="4" stroke-linecap="round"/>
+      <rect x="142" y="86" width="122" height="78" rx="9" fill="#0f9b8e" transform="rotate(-9 142 86)"/>
+      <path d="M141 112l120-19" stroke="#fff" stroke-width="10" opacity=".65"/>
+      <rect x="156" y="132" width="30" height="9" rx="3" fill="#fff" opacity=".85" transform="rotate(-9 156 132)"/>
+      <circle cx="236" cy="140" r="11" fill="#fff" opacity=".9" transform="rotate(-9 236 140)"/>
+      <circle cx="250" cy="138" r="11" fill="#fff" opacity=".55" transform="rotate(-9 250 138)"/>
+    </svg></div>
+  </div>
+
+  <!-- COMPLETO -->
+  <div class="pb premium">
+    <div class="txt">
+      <span class="pill">COMPLETO</span>
+      <p class="frase">"Tu empresa completa en un solo sistema"</p>
+      <h3>Para empresa con contabilidad o varios locales</h3>
+      <p class="desc">Para la empresa obligada a llevar contabilidad o con más de un local. Cada sucursal factura con su propio establecimiento ante el SRI.</p>
+      <ul>
+        <li>Plan Negocio +</li>
+        <li>Multisucursales con su establecimiento</li>
+        <li>Contabilidad, balances y mayores</li>
+        <li>Formularios 103, 104 y ATS</li>
+        <li>Nómina y rol de pagos</li>
+        <li>Centros de costo por área o local</li>
+        <li class="serv">Implementación y migración de tus datos</li>
+        <li class="serv">Capacitación personalizada</li>
+        <li class="serv">Soporte prioritario por WhatsApp</li>
+      </ul>
+      <div class="pr"><b><sup>$</sup><span class="v" data-a="225" data-s="142">225</span></b><i class="per">al año + IVA</i></div>
+      <a class="go" href="#">Consulta aquí</a>
+    </div>
+    <div class="art"><svg viewBox="0 0 300 220" fill="none">
+      <!-- tres locales conectados: multisucursal -->
+      <path d="M24 176V96l40-24 40 24v80" fill="#dfeeeb" stroke="#0d5c58" stroke-width="2.4" stroke-linejoin="round"/>
+      <rect x="44" y="116" width="16" height="16" rx="3" fill="#0f9b8e"/><rect x="68" y="116" width="16" height="16" rx="3" fill="#0f9b8e"/>
+      <rect x="52" y="146" width="24" height="30" rx="3" fill="#fff" stroke="#0d5c58" stroke-width="2"/>
+      <path d="M112 176V78l46-28 46 28v98" fill="#0d5c58"/>
+      <rect x="132" y="98" width="18" height="18" rx="3" fill="#5fd6c4"/><rect x="166" y="98" width="18" height="18" rx="3" fill="#5fd6c4"/>
+      <rect x="132" y="128" width="18" height="18" rx="3" fill="#5fd6c4"/><rect x="166" y="128" width="18" height="18" rx="3" fill="#5fd6c4"/>
+      <rect x="146" y="152" width="24" height="24" rx="3" fill="#fff"/>
+      <path d="M212 176V96l40-24 40 24v80" fill="#dfeeeb" stroke="#0d5c58" stroke-width="2.4" stroke-linejoin="round"/>
+      <rect x="232" y="116" width="16" height="16" rx="3" fill="#0f9b8e"/><rect x="256" y="116" width="16" height="16" rx="3" fill="#0f9b8e"/>
+      <rect x="240" y="146" width="24" height="30" rx="3" fill="#fff" stroke="#0d5c58" stroke-width="2"/>
+      <path d="M14 176h272" stroke="#0d5c58" stroke-width="3" stroke-linecap="round"/>
+      <path d="M84 88c14-18 34-18 46-6M170 82c14-12 34-12 46 6" stroke="#0f9b8e" stroke-width="2.2" stroke-dasharray="5 5" stroke-linecap="round"/>
+      <text x="64" y="196" font-size="11" fill="#0d5c58" text-anchor="middle" font-family="monospace">001</text>
+      <text x="158" y="196" font-size="11" fill="#0d5c58" text-anchor="middle" font-family="monospace">002</text>
+      <text x="252" y="196" font-size="11" fill="#0d5c58" text-anchor="middle" font-family="monospace">003</text>
+    </svg></div>
+  </div>
+  
+</div></section>
+
+<script>
+(function(){
+  var tg=document.getElementById('tg'),la=document.getElementById('la'),ls=document.getElementById('ls');
+  function pintar(p){
+    tg.dataset.per=p; la.classList.toggle('on',p==='anual'); ls.classList.toggle('on',p==='semestral');
+    document.querySelectorAll('.v').forEach(function(e){ e.textContent = p==='anual'? e.dataset.a : e.dataset.s; });
+    document.querySelectorAll('.per').forEach(function(e){ e.textContent = p==='anual'? 'al año + IVA' : 'cada 6 meses + IVA'; });
+  }
+  tg.addEventListener('click',function(){ pintar(tg.dataset.per==='anual'?'semestral':'anual'); });
+})();
+</script>
+</body></html>

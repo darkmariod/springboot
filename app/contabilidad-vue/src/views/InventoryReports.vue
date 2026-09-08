@@ -129,7 +129,7 @@ function exportarCsv() {
       </div>
 
       <div v-if="!generado" style="color:#94a3b8; text-align:center; padding:80px 20px;">
-        Elegí el tipo de reporte y presioná <b>Generar</b>.
+        Elige el tipo de reporte y presiona <b>Generar</b>.
       </div>
 
       <!-- Documento -->

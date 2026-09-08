@@ -109,15 +109,24 @@
   .pb h3{font-size:29px;line-height:1.18;letter-spacing:-.7px;margin:0 0 12px;font-weight:700;max-width:16ch}
   .pb .desc{color:var(--body);font-size:14.5px;margin:0 0 18px;max-width:46ch}
   .pb ul{list-style:none;padding:0;margin:0 0 22px}
-  .pb li{position:relative;padding-left:26px;margin-bottom:9px;font-size:14px;font-weight:600;color:var(--ink)}
-  .pb li::after{content:"";position:absolute;left:0;top:2px;width:15px;height:15px;border-radius:50%;background:var(--teal)}
-  .pb li::before{content:"";position:absolute;left:4.5px;top:6.5px;width:6px;height:3px;z-index:1;
-    border-left:1.6px solid #fff;border-bottom:1.6px solid #fff;transform:rotate(-45deg)}
+  .frase{font-size:15px;color:var(--deep);font-style:italic;margin:0 0 14px;font-weight:600}
+  .pb li{position:relative;padding-left:27px;margin-bottom:10px;font-size:14.5px;font-weight:600;color:var(--ink)}
+  .pb li::before{content:"";position:absolute;left:2px;top:7px;width:12px;height:7px;
+    border-left:2.2px solid var(--teal);border-bottom:2.2px solid var(--teal);transform:rotate(-45deg)}
+  /* Servicios incluidos: se distinguen por tono, no por otro ícono */
+  .pb li.serv{font-weight:500;color:var(--soft)}
+  .pb li.serv::before{border-color:#a8c9c4;border-width:2px}
+  /* En el plan más alto todo se muestra con el mismo peso: es lo que justifica el precio */
+  .pb.premium li.serv{font-weight:600;color:var(--ink)}
+  .pb.premium li.serv::before{border-color:var(--teal)}
+  .pb li.serv:first-of-type{margin-top:14px;padding-top:14px;border-top:1px solid var(--mint-line)}
   .pb .pr{display:flex;align-items:baseline;gap:8px;margin:0 0 20px}
   .pb .pr b{font-size:36px;font-weight:800;letter-spacing:-1.2px;color:var(--deep)}
   .pb .pr b sup{font-size:18px;top:-.65em;position:relative}
   .pb .pr i{font-style:normal;font-size:13px;color:var(--body)}
   .pb .aviso{font-size:12px;color:var(--soft);margin:-12px 0 18px;max-width:40ch;font-style:italic}
+  .tag{display:inline-block;background:var(--teal);color:#fff;font-size:10px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;padding:3px 11px;border-radius:999px;margin-bottom:10px}
   .pb .go{display:inline-block;background:var(--deep);color:#fff;padding:11px 26px;border-radius:6px;
     font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;transition:background .16s}
   .pb .go:hover{background:var(--teal-dk)}
@@ -245,135 +254,122 @@
     <span id="lb-anual" class="on">Anual</span>
     <button class="tg" id="tg" data-per="anual" aria-label="Cambiar entre pago anual y semestral"></button>
     <span id="lb-sem">Semestral</span>
-    <span class="off">15% menos al año</span>
+    <span class="off">hasta 22% menos al año</span>
   </div>
 
-  <!-- EMPRENDEDOR -->
+  <!-- BÁSICO -->
   <div class="pb">
     <div class="txt">
-      <span class="pill">EMPRENDEDOR</span>
-      <h3>Para quienes empiezan y necesitan orden</h3>
-      <p class="desc">¿Recién arrancas? Lleva el control de tus ventas y tu stock sin complicarte, y haz crecer tu negocio con la información al día.</p>
+      <span class="pill">BÁSICO</span>
+      <p class="frase">"Ordena tus ventas y tu stock"</p>
+      <h3>Para el que todavía anota en cuaderno</h3>
+      <p class="desc">Para el negocio que todavía anota en cuaderno o en Excel y necesita control de stock y caja al día.</p>
       <ul>
         <li>Punto de venta y cierres de caja</li>
-        <li>Inventario y kárdex por producto</li>
-        <li>Clientes, productos y reportes</li>
+        <li>Inventario, kárdex y bodegas</li>
+        <li>Garantías por número de serie</li>
+        <li>Cuentas por cobrar y bancos</li>
+        <li>Auditoría de todo lo que pasa</li>
+        <li class="serv">Implementación gratuita</li>
+        <li class="serv">Capacitación incluida</li>
+        <li class="serv">Soporte por WhatsApp</li>
       </ul>
-      <div class="pr"><b><sup>$</sup><span class="v" data-anual="49" data-sem="29">49</span></b><i class="per">al año + IVA</i></div>
+      <div class="pr"><b><sup>$</sup><span class="v" data-anual="85" data-sem="55">85</span></b><i class="per">al año + IVA</i></div>
       <a class="go" href="#contacto">Consulta aquí</a>
     </div>
-    <div class="art">
-      <svg viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="34" y="52" width="86" height="132" rx="9" fill="#dfeeeb" stroke="#0d5c58" stroke-width="2.4"/>
-        <rect x="46" y="64" width="62" height="26" rx="4" fill="#fff" stroke="#0d5c58" stroke-width="2"/>
-        <g fill="#0f9b8e"><rect x="46" y="100" width="17" height="15" rx="3"/><rect x="68" y="100" width="17" height="15" rx="3"/><rect x="91" y="100" width="17" height="15" rx="3"/>
-        <rect x="46" y="122" width="17" height="15" rx="3"/><rect x="68" y="122" width="17" height="15" rx="3"/><rect x="91" y="122" width="17" height="15" rx="3"/>
-        <rect x="46" y="144" width="17" height="15" rx="3"/><rect x="68" y="144" width="17" height="15" rx="3"/><rect x="91" y="144" width="17" height="32" rx="3"/></g>
-        <path d="M132 40h74v150l-12-9-12 9-12-9-13 9-12-9-13 9z" fill="#fff" stroke="#0d5c58" stroke-width="2.4" stroke-linejoin="round"/>
-        <path d="M146 62h46M146 78h46M146 94h30" stroke="#8fb8b3" stroke-width="3" stroke-linecap="round"/>
-        <path d="M146 118h46M146 134h34" stroke="#8fb8b3" stroke-width="3" stroke-linecap="round"/>
-        <rect x="206" y="28" width="62" height="120" rx="10" fill="#0d5c58"/>
-        <rect x="213" y="42" width="48" height="92" rx="5" fill="#fff"/>
-        <circle cx="237" cy="72" r="15" fill="none" stroke="#0f9b8e" stroke-width="3"/>
-        <path d="M231 72l4.5 4.5 9-9" stroke="#0f9b8e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M222 98h30M222 110h20" stroke="#cfe0dd" stroke-width="3.4" stroke-linecap="round"/>
-      </svg>
-    </div>
+    <div class="art"><svg viewBox="0 0 300 220" fill="none">
+      <rect x="34" y="52" width="86" height="132" rx="9" fill="#dfeeeb" stroke="#0d5c58" stroke-width="2.4"/>
+      <rect x="46" y="64" width="62" height="26" rx="4" fill="#fff" stroke="#0d5c58" stroke-width="2"/>
+      <g fill="#0f9b8e"><rect x="46" y="100" width="17" height="15" rx="3"/><rect x="68" y="100" width="17" height="15" rx="3"/><rect x="91" y="100" width="17" height="15" rx="3"/>
+      <rect x="46" y="122" width="17" height="15" rx="3"/><rect x="68" y="122" width="17" height="15" rx="3"/><rect x="91" y="122" width="17" height="15" rx="3"/>
+      <rect x="46" y="144" width="17" height="15" rx="3"/><rect x="68" y="144" width="17" height="15" rx="3"/><rect x="91" y="144" width="17" height="32" rx="3"/></g>
+      <path d="M132 40h74v150l-12-9-12 9-12-9-13 9-12-9-13 9z" fill="#fff" stroke="#0d5c58" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M146 62h46M146 78h46M146 94h30M146 118h46M146 134h34" stroke="#8fb8b3" stroke-width="3" stroke-linecap="round"/>
+      <rect x="206" y="28" width="62" height="120" rx="10" fill="#0d5c58"/>
+      <rect x="213" y="42" width="48" height="92" rx="5" fill="#fff"/>
+      <path d="M222 60h30M222 74h22M222 88h30M222 102h18" stroke="#cfe0dd" stroke-width="3.4" stroke-linecap="round"/>
+    </svg></div>
   </div>
 
   <!-- NEGOCIO -->
   <div class="pb rev">
     <div class="txt">
+      <span class="tag">El más elegido</span>
       <span class="pill">NEGOCIO</span>
-      <h3>Diseñado para ti y tu negocio que va creciendo</h3>
-      <p class="desc">Empieza a emitir tus comprobantes electrónicos al SRI con tu propia firma, y registra tus compras sin volver a digitar nada.</p>
+      <p class="frase">"Factura al SRI sin complicarte"</p>
+      <h3>Para el negocio que ya factura</h3>
+      <p class="desc">Emite los seis comprobantes electrónicos con tu firma y registra tus compras sin volver a digitar nada.</p>
       <ul>
-        <li>Plan Emprendedor +</li>
-        <li>Facturación electrónica al SRI</li>
-        <li>Compras e importación por lote</li>
-        <li>Cotizaciones y cuentas por cobrar</li>
+        <li>Plan Básico +</li>
+        <li>Facturación electrónica del SRI</li>
+        <li>Los seis comprobantes autorizados</li>
+        <li>Importar compras del SRI por lote</li>
+        <li>Facturación masiva</li>
+        <li>Conciliación bancaria y de tarjetas</li>
+        <li>Usuarios con permisos por módulo</li>
+        <li class="serv">Implementación y carga de tu certificado</li>
+        <li class="serv">Capacitación incluida</li>
+        <li class="serv">Soporte por WhatsApp</li>
       </ul>
-      <div class="pr"><b><sup>$</sup><span class="v" data-anual="99" data-sem="59">99</span></b><i class="per">al año + IVA</i></div>
+      <div class="pr"><b><sup>$</sup><span class="v" data-anual="145" data-sem="92">145</span></b><i class="per">al año + IVA</i></div>
       <a class="go" href="#contacto">Consulta aquí</a>
     </div>
-    <div class="art">
-      <svg viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="40" y="44" width="204" height="128" rx="10" fill="#0d5c58"/>
-        <rect x="50" y="54" width="184" height="108" rx="5" fill="#fff"/>
-        <path d="M24 172h236l-14 20H38z" fill="#dfeeeb" stroke="#0d5c58" stroke-width="2.4" stroke-linejoin="round"/>
-        <path d="M68 138V112M96 138V92M124 138V120M152 138V78M180 138V100M208 138V64" stroke="#0f9b8e" stroke-width="8" stroke-linecap="round"/>
-        <path d="M64 96l32-30 28 22 30-34 30 18 28-30" stroke="#0d5c58" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="212" cy="42" r="5" fill="#0d5c58"/>
-        <path d="M198 34h28v18" stroke="#0d5c58" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity=".35"/>
-      </svg>
-    </div>
+    <div class="art"><svg viewBox="0 0 300 220" fill="none">
+      <rect x="40" y="26" width="112" height="168" rx="13" fill="#0d5c58"/>
+      <rect x="48" y="40" width="96" height="140" rx="6" fill="#fff"/>
+      <path d="M60 60h56M60 74h72M60 88h44" stroke="#cfe0dd" stroke-width="4" stroke-linecap="round"/>
+      <rect x="60" y="104" width="72" height="30" rx="5" fill="#e6f5f3"/>
+      <path d="M70 119h20" stroke="#0f9b8e" stroke-width="3.4" stroke-linecap="round"/>
+      <path d="M60 148h56M60 162h36" stroke="#cfe0dd" stroke-width="4" stroke-linecap="round"/>
+      <rect x="142" y="86" width="122" height="78" rx="9" fill="#0f9b8e" transform="rotate(-9 142 86)"/>
+      <path d="M141 112l120-19" stroke="#fff" stroke-width="10" opacity=".65"/>
+      <rect x="156" y="132" width="30" height="9" rx="3" fill="#fff" opacity=".85" transform="rotate(-9 156 132)"/>
+      <circle cx="236" cy="140" r="11" fill="#fff" opacity=".9" transform="rotate(-9 236 140)"/>
+      <circle cx="250" cy="138" r="11" fill="#fff" opacity=".55" transform="rotate(-9 250 138)"/>
+    </svg></div>
   </div>
 
-  <!-- PROFESIONAL -->
-  <div class="pb">
+  <!-- COMPLETO -->
+  <div class="pb premium">
     <div class="txt">
-      <span class="pill">PROFESIONAL</span>
-      <h3>Para negocios que requieren más control</h3>
-      <p class="desc">Si ya estás obligado a llevar contabilidad, aquí tienes el sistema integrado: los seis comprobantes, series para garantías y tus libros al día.</p>
+      <span class="pill">COMPLETO</span>
+      <p class="frase">"Tu empresa completa en un solo sistema"</p>
+      <h3>Para empresa con contabilidad o varios locales</h3>
+      <p class="desc">Para la empresa obligada a llevar contabilidad o con más de un local. Cada sucursal factura con su propio establecimiento ante el SRI.</p>
       <ul>
         <li>Plan Negocio +</li>
-        <li>Los seis comprobantes del SRI</li>
-        <li>Series y garantías por unidad</li>
+        <li>Multisucursales con su establecimiento</li>
         <li>Contabilidad, balances y mayores</li>
-        <li>Bancos y conciliaciones</li>
+        <li>Formularios 103, 104 y ATS</li>
+        <li>Nómina y rol de pagos</li>
+        <li>Centros de costo por área o local</li>
+        <li class="serv">Implementación y migración de tus datos</li>
+        <li class="serv">Capacitación personalizada</li>
+        <li class="serv">Soporte prioritario por WhatsApp</li>
       </ul>
-      <div class="pr"><b><sup>$</sup><span class="v" data-anual="149" data-sem="89">149</span></b><i class="per">al año + IVA</i></div>
+      <div class="pr"><b><sup>$</sup><span class="v" data-anual="225" data-sem="142">225</span></b><i class="per">al año + IVA</i></div>
       <a class="go" href="#contacto">Consulta aquí</a>
     </div>
-    <div class="art">
-      <svg viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="40" y="26" width="112" height="168" rx="13" fill="#0d5c58"/>
-        <rect x="48" y="40" width="96" height="140" rx="6" fill="#fff"/>
-        <path d="M60 60h56M60 74h72M60 88h44" stroke="#cfe0dd" stroke-width="4" stroke-linecap="round"/>
-        <rect x="60" y="104" width="72" height="30" rx="5" fill="#e6f5f3"/>
-        <path d="M70 119h20" stroke="#0f9b8e" stroke-width="3.4" stroke-linecap="round"/>
-        <path d="M60 148h56M60 162h36" stroke="#cfe0dd" stroke-width="4" stroke-linecap="round"/>
-        <rect x="142" y="86" width="122" height="78" rx="9" fill="#0f9b8e" transform="rotate(-9 142 86)"/>
-        <path d="M141 112l120-19" stroke="#fff" stroke-width="10" opacity=".65"/>
-        <rect x="156" y="132" width="30" height="9" rx="3" fill="#fff" opacity=".85" transform="rotate(-9 156 132)"/>
-        <circle cx="236" cy="140" r="11" fill="#fff" opacity=".9" transform="rotate(-9 236 140)"/>
-        <circle cx="250" cy="138" r="11" fill="#fff" opacity=".55" transform="rotate(-9 250 138)"/>
-      </svg>
-    </div>
+    <div class="art"><svg viewBox="0 0 300 220" fill="none">
+      <!-- tres locales conectados: multisucursal -->
+      <path d="M24 176V96l40-24 40 24v80" fill="#dfeeeb" stroke="#0d5c58" stroke-width="2.4" stroke-linejoin="round"/>
+      <rect x="44" y="116" width="16" height="16" rx="3" fill="#0f9b8e"/><rect x="68" y="116" width="16" height="16" rx="3" fill="#0f9b8e"/>
+      <rect x="52" y="146" width="24" height="30" rx="3" fill="#fff" stroke="#0d5c58" stroke-width="2"/>
+      <path d="M112 176V78l46-28 46 28v98" fill="#0d5c58"/>
+      <rect x="132" y="98" width="18" height="18" rx="3" fill="#5fd6c4"/><rect x="166" y="98" width="18" height="18" rx="3" fill="#5fd6c4"/>
+      <rect x="132" y="128" width="18" height="18" rx="3" fill="#5fd6c4"/><rect x="166" y="128" width="18" height="18" rx="3" fill="#5fd6c4"/>
+      <rect x="146" y="152" width="24" height="24" rx="3" fill="#fff"/>
+      <path d="M212 176V96l40-24 40 24v80" fill="#dfeeeb" stroke="#0d5c58" stroke-width="2.4" stroke-linejoin="round"/>
+      <rect x="232" y="116" width="16" height="16" rx="3" fill="#0f9b8e"/><rect x="256" y="116" width="16" height="16" rx="3" fill="#0f9b8e"/>
+      <rect x="240" y="146" width="24" height="30" rx="3" fill="#fff" stroke="#0d5c58" stroke-width="2"/>
+      <path d="M14 176h272" stroke="#0d5c58" stroke-width="3" stroke-linecap="round"/>
+      <path d="M84 88c14-18 34-18 46-6M170 82c14-12 34-12 46 6" stroke="#0f9b8e" stroke-width="2.2" stroke-dasharray="5 5" stroke-linecap="round"/>
+      <text x="64" y="196" font-size="11" fill="#0d5c58" text-anchor="middle" font-family="monospace">001</text>
+      <text x="158" y="196" font-size="11" fill="#0d5c58" text-anchor="middle" font-family="monospace">002</text>
+      <text x="252" y="196" font-size="11" fill="#0d5c58" text-anchor="middle" font-family="monospace">003</text>
+    </svg></div>
   </div>
-
-  <!-- EMPRESARIAL -->
-  <div class="pb rev">
-    <div class="txt">
-      <span class="pill">EMPRESARIAL</span>
-      <h3>Para empresas consolidadas con varias sucursales</h3>
-      <p class="desc">Lleva tu operación al siguiente nivel: nómina, varias sucursales y los módulos que tu giro de negocio necesite.</p>
-      <ul>
-        <li>Plan Profesional +</li>
-        <li>Nómina y rol de pagos</li>
-        <li>Varias sucursales y bodegas</li>
-        <li>Módulos a la medida</li>
-        <li>Capacitación incluida</li>
-      </ul>
-      <div class="pr"><b style="font-size:26px">A convenir</b><i class="per">según tu negocio</i></div>
-      <p class="aviso">Se cotiza y se desarrolla según los requerimientos de tu empresa.</p>
-      <a class="go" href="#contacto">Cotizar</a>
-    </div>
-    <div class="art">
-      <svg viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="30" y="34" width="238" height="146" rx="11" fill="#0d5c58"/>
-        <rect x="40" y="46" width="218" height="122" rx="5" fill="#fff"/>
-        <rect x="52" y="58" width="60" height="98" rx="5" fill="#e6f5f3"/>
-        <path d="M62 74h40M62 88h30M62 102h36M62 116h26" stroke="#0f9b8e" stroke-width="3.4" stroke-linecap="round" opacity=".75"/>
-        <rect x="122" y="58" width="124" height="42" rx="5" fill="#f2faf9"/>
-        <path d="M134 88V72M152 88V64M170 88V78M188 88V68M206 88V60M224 88V74" stroke="#0f9b8e" stroke-width="6" stroke-linecap="round"/>
-        <rect x="122" y="110" width="124" height="46" rx="5" fill="#f2faf9"/>
-        <path d="M134 124h100M134 138h72" stroke="#cfe0dd" stroke-width="4.4" stroke-linecap="round"/>
-        <path d="M110 180h78v10h-78z" fill="#dfeeeb" stroke="#0d5c58" stroke-width="2.2"/>
-        <path d="M96 196h106" stroke="#0d5c58" stroke-width="3" stroke-linecap="round"/>
-      </svg>
-    </div>
-  </div>
+  
 </div></section>
 
 <!-- FAQ -->

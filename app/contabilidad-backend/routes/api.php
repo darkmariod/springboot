@@ -129,6 +129,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("quotes", [\App\Http\Controllers\QuoteController::class, "index"]);
     Route::post("quotes", [\App\Http\Controllers\QuoteController::class, "store"]);
     Route::post("quotes/{quote}/convert", [\App\Http\Controllers\QuoteController::class, "convert"]);
+    Route::put("quotes/{quote}", [\App\Http\Controllers\QuoteController::class, "update"]);
     Route::delete("quotes/{quote}", [\App\Http\Controllers\QuoteController::class, "destroy"]);
 
     // Bancos y conciliación

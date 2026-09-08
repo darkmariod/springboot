@@ -8,7 +8,7 @@ class WarehouseStock extends Model
 {
     protected $fillable = ['warehouse_id', 'product_id', 'stock'];
 
-    protected $casts = ['stock' => 'decimal:2'];
+    protected $casts = ['stock' => 'decimal:4'];
 
     public function warehouse()
     {

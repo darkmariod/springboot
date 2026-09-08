@@ -9,5 +9,10 @@ class InventoryMovement extends Model
 {
     use Auditable;
     protected $fillable = ['company_id', 'product_id', 'fecha', 'tipo', 'concepto', 'cantidad',
-        'costo_unitario', 'saldo_cantidad', 'saldo_costo_promedio', 'saldo_valor', 'warehouse_id'];
+        'costo_unitario', 'saldo_cantidad', 'saldo_costo_promedio', 'saldo_valor', 'warehouse_id', 'invoice_id'];
+
+    public function invoice()
+    {
+        return $this->belongsTo(\App\Models\Invoice::class);
+    }
 }

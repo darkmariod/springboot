@@ -121,7 +121,7 @@ onMounted(load)
       <div class="kvs-panel-title">Detalle Bodega</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elegí una bodega del listado, o tocá <b>+</b> para crear una nueva.
+        Elige una bodega del listado, o toca <b>+</b> para crear una nueva.
       </div>
 
       <template v-else>

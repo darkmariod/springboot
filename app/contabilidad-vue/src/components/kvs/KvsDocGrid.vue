@@ -299,7 +299,7 @@ function onProductSelect(index: number, product: any) {
                             size="small"
                             text
                             :severity="serieRequerida(i) ? 'warn' : 'secondary'"
-                            :title="serieRequerida(i) ? 'Producto maneja series: seleccioná la(s) serie(s)' : 'Agregar serie'"
+                            :title="serieRequerida(i) ? 'Producto maneja series: selecciona la(s) serie(s)' : 'Agregar serie'"
                             :disabled="readonly"
                             @click="emit('scan-serie', i)"
                         />
@@ -339,7 +339,7 @@ function onProductSelect(index: number, product: any) {
 
       <!-- Fila vacía -->
       <div v-if="!items.length" class="kvs-doc-grid-empty">
-        Agregá ítems con el botón <b>+</b> o escaneá un código de barras.
+        Agrega ítems con el botón <b>+</b> o escanea un código de barras.
       </div>
     </div>
 

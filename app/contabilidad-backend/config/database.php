@@ -38,10 +38,13 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
+            // Sin esto, dos cajas facturando a la vez se pisan y una recibe
+            // "database is locked": la venta se pierde. WAL deja leer mientras
+            // otro escribe, y busy_timeout hace que el segundo espere su turno.
+            'busy_timeout' => 10000,
+            'journal_mode' => 'WAL',
+            'synchronous' => 'NORMAL',
+            'transaction_mode' => 'IMMEDIATE',
         ],
 
         'mysql' => [

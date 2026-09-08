@@ -62,6 +62,20 @@ function nuevo() {
   form.value = { name: '', email: '', password: '', rol: 'cajero', activo: true, emission_point_id: null }
 }
 
+async function eliminar() {
+  if (!form.value.id) return
+  if (!confirm('¿Eliminar al usuario ' + form.value.name + '? Perderá el acceso al sistema.')) return
+  try {
+    await api.delete('/users/' + form.value.id)
+    seleccion.value = null
+    form.value = {}
+    await load()
+    msg.value = { type: 'success', text: 'Usuario eliminado.' }
+  } catch (err: any) {
+    msg.value = { type: 'error', text: err.response?.data?.message ?? 'No se pudo eliminar.' }
+  }
+}
+
 async function guardar() {
   msg.value = null
   const payload = { ...form.value, company_id: company.activeId }
@@ -133,7 +147,7 @@ onMounted(load)
       <div class="kvs-panel-title">Detalle Usuario</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elegí un usuario del listado, o tocá <b>+</b> para crear uno nuevo.
+        Elige un usuario del listado, o toca <b>+</b> para crear uno nuevo.
       </div>
 
       <template v-else>
@@ -187,6 +201,8 @@ onMounted(load)
           <Button v-if="editando" label="Cancelar" icon="pi pi-times" size="small" text @click="cancelar" />
           <Button v-if="editando" label="Guardar" icon="pi pi-save" size="small" @click="guardar" />
           <Button v-if="!editando" label="Editar" icon="pi pi-pencil" size="small" @click="editando = true" />
+          <Button v-if="!editando && form.id" label="Eliminar" icon="pi pi-trash" size="small"
+                  severity="danger" outlined @click="eliminar" />
         </div>
       </template>
     </section>

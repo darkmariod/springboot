@@ -122,7 +122,7 @@ onMounted(load)
       <div class="kvs-panel-title">Detalle Contacto</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elegí un cliente del listado, o tocá <b>+</b> para crear uno nuevo.
+        Elige un cliente del listado, o toca <b>+</b> para crear uno nuevo.
       </div>
 
       <template v-else>

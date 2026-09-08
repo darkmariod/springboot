@@ -108,7 +108,7 @@ onMounted(load)
       <div class="kvs-panel-title">Detalle Banco</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elegí un banco del listado, o tocá <b>+</b> para crear uno nuevo.
+        Elige un banco del listado, o toca <b>+</b> para crear uno nuevo.
       </div>
 
       <template v-else>

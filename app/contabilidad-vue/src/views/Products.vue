@@ -180,7 +180,7 @@ onMounted(load)
       <div class="kvs-panel-title">Detalle Artículo</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elegí un artículo del listado, o tocá <b>+</b> para crear uno nuevo.
+        Elige un artículo del listado, o toca <b>+</b> para crear uno nuevo.
       </div>
 
       <template v-else>
@@ -288,7 +288,7 @@ onMounted(load)
               <span v-if="!codigos.length" style="font-size:13px; color:#94a3b8;">Sin códigos alternos</span>
             </div>
             <div class="kvs-row">
-              <InputText v-model="nuevoCodigo" placeholder="Escaneá o escribí el código" style="flex:1"
+              <InputText v-model="nuevoCodigo" placeholder="Escanea o escribe el código" style="flex:1"
                          @keydown.enter.prevent="agregarCodigo" />
               <Button icon="pi pi-plus" size="small" :disabled="!form.id" @click="agregarCodigo" />
             </div>

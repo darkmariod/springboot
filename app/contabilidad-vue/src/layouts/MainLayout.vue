@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
@@ -56,6 +56,7 @@ import GuiaRemision from '../views/GuiaRemision.vue'
 import SideRail from '../components/SideRail.vue'
 
 const auth = useAuthStore()
+const inicial = computed(() => (auth.user?.name ?? 'U').trim().charAt(0).toUpperCase())
 const company = useCompanyStore()
 const tabs = useTabsStore()
 const plan = usePlanStore()
@@ -96,14 +97,15 @@ function onKeydown(e: KeyboardEvent) {
     <div class="main">
       <header class="topbar">
         <div class="brand">
-          <img src="/logo-has-reset.png" alt="HasReset" class="hr-logo" />
+          <img src="/logo-marca-blanca.png" alt="" class="hr-logo" />
+          <span class="hr-wordmark">HasReset</span>
         </div>
         <Button label="Módulos" icon="pi pi-th-large" text size="small"
                 @click="tabs.open({ key: 'home', label: 'Módulos', icon: 'pi pi-th-large', component: 'Home' })" />
         <Select
           v-model="company.activeId"
           :options="company.companies"
-          optionLabel="razon_social"
+          :optionLabel="(c) => c.razon_social || 'Empresa sin configurar'"
           optionValue="id"
           placeholder="Empresa"
           class="company-select"
@@ -111,8 +113,12 @@ function onKeydown(e: KeyboardEvent) {
         />
         <div class="topbar-right">
           <Tag v-if="plan.vencido" value="Plan vencido" severity="danger" />
-          <span class="user">{{ auth.user?.name ?? 'Usuario' }}</span>
-          <Button icon="pi pi-sign-out" text rounded severity="secondary" @click="auth.logout()" />
+          <span class="user">
+            <span class="avatar">{{ inicial }}</span>
+            {{ auth.user?.name ?? 'Usuario' }}
+          </span>
+          <Button icon="pi pi-sign-out" text rounded severity="secondary"
+                  v-tooltip.bottom="'Cerrar sesión'" @click="auth.logout()" />
         </div>
       </header>
 
@@ -161,17 +167,51 @@ function onKeydown(e: KeyboardEvent) {
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 /* La marca vive en la barra superior; el menú lateral global vive en .body */
 .topbar {
-  height: 52px; background: var(--hr-navy); border-bottom: 1px solid var(--hr-blue-dark); display: flex;
-  align-items: center; gap: 14px; padding: 0 16px; flex-shrink: 0;
+  height: 56px; background: var(--hr-navy); border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex; align-items: center; gap: 8px; padding: 0 18px; flex-shrink: 0;
 }
+/* La marca se separa del resto con una línea, no con aire suelto */
 .brand {
-  display: flex; align-items: center; gap: 10px; font-weight: 600; color: #fff;
-  white-space: nowrap;
+  display: flex; align-items: center; height: 28px;
+  padding-right: 16px; margin-right: 6px;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
 }
-.hr-logo { width: 40px; height: auto; object-fit: contain; }
-.company-select { min-width: 260px; margin-left: 8px; }
-.topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.topbar .user { color: #cdd5e0; }
+.brand { gap: 9px; }
+.hr-logo { height: 24px; width: auto; object-fit: contain; }
+.hr-wordmark {
+  color: #fff; font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+}
+
+/* Botón de módulos: mismo lenguaje que el resto de la barra oscura */
+.topbar :deep(.p-button-text) { color: #c8d3e2; font-weight: 500; }
+.topbar :deep(.p-button-text:hover) { background: rgba(255, 255, 255, 0.09); color: #fff; }
+
+/* El selector de empresa era una píldora blanca que partía la barra en dos.
+   Ahora es un campo oscuro que se funde con el fondo. */
+.company-select { min-width: 300px; }
+.topbar :deep(.company-select) {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px; box-shadow: none;
+}
+.topbar :deep(.company-select:hover) {
+  background: rgba(255, 255, 255, 0.11); border-color: rgba(255, 255, 255, 0.28);
+}
+.topbar :deep(.company-select.p-focus) {
+  border-color: var(--hr-green, #38bdf8);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+.topbar :deep(.company-select .p-select-label) {
+  color: #fff; font-size: 13px; font-weight: 500; padding: 7px 4px 7px 12px;
+}
+.topbar :deep(.company-select .p-select-dropdown) { color: #8fa3bd; width: 32px; }
+
+.topbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.topbar .user { display: flex; align-items: center; gap: 9px; color: #cdd5e0; font-size: 13px; }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.13); color: #fff; font-size: 12px; font-weight: 600;
+}
 .user { font-size: 13px; color: #475569; }
 .workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #eef1f5; }
 .body { flex: 1; display: flex; overflow: hidden; }

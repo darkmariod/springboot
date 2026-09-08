@@ -48,8 +48,12 @@ async function guardar() {
   msg.value = null
   const payload = { ...form.value, company_id: company.activeId }
   try {
-    const res = await api.post('/emission-points', payload)
-    form.value.id = res.data.id
+    if (form.value.id) {
+      await api.put('/emission-points/' + form.value.id, payload)
+    } else {
+      const res = await api.post('/emission-points', payload)
+      form.value.id = res.data.id
+    }
   } catch (err: any) {
     const e = err.response?.data?.errors
     msg.value = { type: 'error', text: e ? Object.values(e).flat().join(' · ') : 'No se pudo guardar.' }
@@ -105,7 +109,7 @@ onMounted(load)
       <div class="kvs-panel-title">Detalle Punto de Emisión</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elegí un punto del listado, o tocá <b>+</b> para crear uno nuevo.
+        Elige un punto del listado, o toca <b>+</b> para crear uno nuevo.
       </div>
 
       <template v-else>
@@ -136,7 +140,9 @@ onMounted(load)
         <div class="kvs-footer">
           <Button v-if="editando" label="Cancelar" icon="pi pi-times" size="small" text @click="cancelar" />
           <Button v-if="editando" label="Guardar" icon="pi pi-save" size="small" @click="guardar" />
-          <Button v-if="!editando" label="Eliminar" icon="pi pi-trash" size="small"
+          <Button v-if="!editando && form.id" label="Editar" icon="pi pi-pencil" size="small"
+                  @click="editando = true" />
+          <Button v-if="!editando && form.id" label="Eliminar" icon="pi pi-trash" size="small"
                   severity="danger" outlined @click="eliminar" />
         </div>
       </template>

@@ -34,7 +34,7 @@ const local = computed({
 const sriHintColor = computed(() => {
   if (!sriHint.value) return '#16a34a'
   if (sriHint.value.includes('Auto-completado')) return '#16a34a'
-  if (sriHint.value.includes('No está') || sriHint.value.includes('Cargá')) return '#d97706'
+  if (sriHint.value.includes('No está') || sriHint.value.includes('Carga')) return '#d97706'
   if (sriHint.value.includes('No se pudo')) return '#d93025'
   return '#d97706'
 })
@@ -61,11 +61,11 @@ async function onSriLookup() {
       sriHint.value = 'Auto-completado del SRI' + (extra ? ' — ' + extra : '')
       emit('sri-lookup', { found: true, data: res.data })
     } else if (res.data.requiere_carga_manual) {
-      sriHint.value = res.data.mensaje || 'No está en el padrón SRI. Cargá los datos a mano.'
+      sriHint.value = res.data.mensaje || 'No está en el padrón SRI. Carga los datos a mano.'
       emit('sri-lookup', { found: false })
     }
   } catch {
-    sriHint.value = 'No se pudo consultar el SRI. Cargá a mano.'
+    sriHint.value = 'No se pudo consultar el SRI. Carga a mano.'
     emit('sri-lookup', { found: false })
   } finally {
     sriLoading.value = false

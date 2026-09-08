@@ -25,8 +25,9 @@ const msg = ref<any>(null)
 const fileRef = ref<HTMLInputElement>()
 // Deben coincidir con config/planes.php (backend)
 const planes = [
-  { label: 'Básico — $99 (inventario y punto de venta)', value: 'basico' },
-  { label: 'Completo — $150 (todo + facturación electrónica SRI)', value: 'completo' },
+  { label: 'Básico — $85 (inventario y punto de venta)', value: 'basico' },
+  { label: 'Negocio — $145 (con facturación electrónica SRI)', value: 'negocio' },
+  { label: 'Completo — $225 (con contabilidad y sucursales)', value: 'completo' },
 ]
 
 async function load() {
@@ -36,7 +37,7 @@ async function load() {
 }
 async function subirCert() {
   const file = fileRef.value?.files?.[0]
-  if (!file) { msg.value = { type: 'error', text: 'Seleccioná el archivo .p12' }; return }
+  if (!file) { msg.value = { type: 'error', text: 'Selecciona el archivo .p12' }; return }
   const form = new FormData()
   form.append('certificado', file); form.append('clave', clave.value)
   try {
@@ -91,7 +92,7 @@ async function guardarEmpresa() {
 const logoRef = ref<HTMLInputElement>()
 async function subirLogo(row: any) {
   const file = logoRef.value?.files?.[0]
-  if (!file) { msg.value = { type: 'error', text: 'Elegí una imagen (PNG o JPG).' }; return }
+  if (!file) { msg.value = { type: 'error', text: 'Elige una imagen (PNG o JPG).' }; return }
   const form = new FormData()
   form.append('logo', file)
   try {

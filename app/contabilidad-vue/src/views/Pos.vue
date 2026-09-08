@@ -92,7 +92,7 @@ async function buscarClientePorId() {
   if (id.length !== 10 && id.length !== 13) {
     msg.value = {
       type: 'warn',
-      text: `Escribí el número completo para consultar al SRI: cédula = 10 dígitos, RUC = 13 (llevás ${id.length}).`,
+      text: `Escribe el número completo para consultar al SRI: cédula = 10 dígitos, RUC = 13 (llevás ${id.length}).`,
     }
     return
   }
@@ -127,14 +127,14 @@ async function buscarClientePorId() {
     } else {
       sriData.es_cliente = true
       sriData.es_proveedor = false
-      msg.value = { type: 'warn', text: res.data.mensaje ?? 'No encontrado en SRI. Cargá los datos a mano.' }
+      msg.value = { type: 'warn', text: res.data.mensaje ?? 'No encontrado en SRI. Carga los datos a mano.' }
     }
   } catch (err: any) {
     sriData.es_cliente = true
     sriData.es_proveedor = false
     msg.value = {
       type: 'warn',
-      text: err.response?.data?.error ?? 'No se pudo consultar el SRI ahora. Cargá los datos a mano.',
+      text: err.response?.data?.error ?? 'No se pudo consultar el SRI ahora. Carga los datos a mano.',
     }
   } finally {
     sriLoading.value = false
@@ -226,7 +226,7 @@ function addItem() {
 async function abrirSelectorSeries(index: number) {
   const item = items.value[index]
   if (!item?.producto_id) {
-    msg.value = { type: 'warn', text: 'Primero elegí el artículo para poder seleccionar series.' }
+    msg.value = { type: 'warn', text: 'Primero elige el artículo para poder seleccionar series.' }
     return
   }
   seriesItemIndex.value = index
@@ -265,8 +265,8 @@ function confirmarSeries() {
 
 // Emitir factura
 async function emitir() {
-  if (!items.value.length) { msg.value = { type: 'warn', text: 'Agregá al menos un producto.' }; return }
-  if (!contactId.value) { msg.value = { type: 'warn', text: 'Seleccioná un cliente.' }; return }
+  if (!items.value.length) { msg.value = { type: 'warn', text: 'Agrega al menos un producto.' }; return }
+  if (!contactId.value) { msg.value = { type: 'warn', text: 'Selecciona un cliente.' }; return }
 
   // Validación client-side: productos con maneja_series exigen serie antes de emitir
   const sinSeries = items.value.find((i: any) => {
@@ -274,7 +274,7 @@ async function emitir() {
     return prod?.maneja_series && !(i.series ?? []).length
   })
   if (sinSeries) {
-    msg.value = { type: 'warn', text: `El artículo ${sinSeries.codigo_principal} maneja series; seleccioná las series antes de emitir.` }
+    msg.value = { type: 'warn', text: `El artículo ${sinSeries.codigo_principal} maneja series; selecciona las series antes de emitir.` }
     return
   }
 

@@ -92,7 +92,7 @@ async function probarCorreo() {
     const res = await api.post('/companies/' + companyId.value + '/smtp/test', { destinatario: destino })
     msg.value = { type: 'success', text: res.data.mensaje }
   } catch (err: any) {
-    msg.value = { type: 'error', text: err.response?.data?.error ?? 'Falló el envío. Revisá servidor, puerto y clave.' }
+    msg.value = { type: 'error', text: err.response?.data?.error ?? 'Falló el envío. Revisa servidor, puerto y clave.' }
   } finally { probando.value = false }
 }
 onMounted(load)
@@ -162,7 +162,7 @@ onMounted(load)
           <div class="kvs-row">
             <label class="kvs-lbl"><span class="req">*</span> Tipo Token:</label>
             <Select v-model="cfg.tipo_token" :options="tokens" optionLabel="label" optionValue="value"
-                    class="kvs-in" placeholder="Elegí el proveedor de la firma" />
+                    class="kvs-in" placeholder="Elige el proveedor de la firma" />
           </div>
         </fieldset>
 

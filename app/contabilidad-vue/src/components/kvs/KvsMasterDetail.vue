@@ -87,7 +87,7 @@ const emit = defineEmits<{
       <div class="kvs-panel-title">{{ detailTitle ?? 'Detalle' }}</div>
 
       <div v-if="!selected && !emptyMessage === false" class="kvs-empty">
-        {{ emptyMessage ?? 'Elegí un registro del listado, o tocá + para crear uno nuevo.' }}
+        {{ emptyMessage ?? 'Elige un registro del listado, o toca + para crear uno nuevo.' }}
       </div>
 
       <template v-else>

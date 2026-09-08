@@ -32,6 +32,29 @@ class QuoteController extends Controller {
         return ['invoice'=>$invoice];
     }
 
+    /** Una cotizacion se edita mientras no se haya facturado: el cliente pide cambios. */
+    public function update(Request $r, Quote $quote, DocumentCalculator $calc) {
+        if ($quote->estado === 'facturada') {
+            abort(422, 'No se puede editar: esta cotizacion ya se convirtio en factura.');
+        }
+        $d = $r->validate([
+            'contact_id'=>['sometimes','exists:contacts,id'],
+            'items'=>['sometimes','array','min:1'],
+            'items.*.codigo_principal'=>['required_with:items','string'],
+            'items.*.descripcion'=>['required_with:items','string'],
+            'items.*.cantidad'=>['required_with:items','numeric','min:0.01'],
+            'items.*.precio_unitario'=>['required_with:items','numeric','min:0'],
+            'items.*.tarifa'=>['sometimes','numeric'],
+        ]);
+        if (isset($d['items'])) {
+            $t = $calc->fromItems($d['items']);
+            $d = $d + ['total_sin_impuestos'=>$t['total_sin_impuestos'],
+                       'total_impuesto'=>$t['total_impuesto'],'importe_total'=>$t['importe_total']];
+        }
+        $quote->update($d);
+        return $quote->fresh();
+    }
+
     /** Solo se puede borrar una cotizacion que todavia no se facturo. */
     public function destroy(Quote $quote)
     {

@@ -136,11 +136,11 @@ function updateItems(newItems: any[]) {
 async function guardar() {
   msg.value = null
   if (!form.value.contact_id) {
-    msg.value = { type: 'warn', text: 'Seleccioná un proveedor.' }
+    msg.value = { type: 'warn', text: 'Selecciona un proveedor.' }
     return
   }
   if (!items.value.length) {
-    msg.value = { type: 'warn', text: 'Agregá al menos un ítem.' }
+    msg.value = { type: 'warn', text: 'Agrega al menos un ítem.' }
     return
   }
 
@@ -266,7 +266,7 @@ onMounted(load)
       <div class="kvs-panel-title">Detalle de Compra</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elegí una compra del listado, o tocá <b>+</b> para registrar una nueva.
+        Elige una compra del listado, o toca <b>+</b> para registrar una nueva.
       </div>
 
       <template v-else>

@@ -62,18 +62,32 @@ function elegirProducto(fila: any, codigo: string) {
   fila.precio_unitario = Number(p.precio) || 0
   fila.tarifa = Number(p.tarifa_iva) || 15
 }
+function editar(q: any) {
+  form.value = {
+    id: q.id,
+    contact_id: q.contact_id,
+    items: (q.items ?? []).map((i: any) => ({ ...i })),
+  }
+  msg.value = null
+  dialog.value = true
+}
+
 async function guardar() {
   msg.value = null
   const items = form.value.items.filter((i: any) => i.codigo_principal && i.cantidad > 0)
-  if (!form.value.contact_id) { msg.value = { type: 'error', text: 'Elegí el cliente.' }; return }
-  if (!items.length) { msg.value = { type: 'error', text: 'Agregá al menos un artículo.' }; return }
+  if (!form.value.contact_id) { msg.value = { type: 'error', text: 'Elige el cliente.' }; return }
+  if (!items.length) { msg.value = { type: 'error', text: 'Agrega al menos un artículo.' }; return }
   guardando.value = true
   try {
-    await api.post('/quotes', {
-      company_id: company.activeId,
-      contact_id: form.value.contact_id,
-      items,
-    })
+    if (form.value.id) {
+      await api.put('/quotes/' + form.value.id, { contact_id: form.value.contact_id, items })
+    } else {
+      await api.post('/quotes', {
+        company_id: company.activeId,
+        contact_id: form.value.contact_id,
+        items,
+      })
+    }
     dialog.value = false
     load()
   } catch (err: any) {
@@ -130,26 +144,28 @@ onMounted(load)
           <Button icon="pi pi-eye" text size="small" title="Ver detalle" @click="detalle = data" />
           <Button v-if="data.estado === 'pendiente'" label="Convertir en factura" size="small"
                   @click="convertir(data)" />
+          <Button v-if="data.estado === 'pendiente'" icon="pi pi-pencil" text size="small"
+                  title="Editar" @click="editar(data)" />
           <Button v-if="data.estado === 'pendiente'" icon="pi pi-trash" text size="small"
                   severity="danger" title="Eliminar" @click="eliminar(data)" />
         </template>
       </Column>
       <template #empty>
         <div style="text-align:center; color:#94a3b8; padding:20px;">
-          Sin cotizaciones. Tocá <b>Nueva cotización</b> para crear la primera.
+          Sin cotizaciones. Toca <b>Nueva cotización</b> para crear la primera.
         </div>
       </template>
     </DataTable>
 
     <!-- Alta de cotización -->
-    <Dialog v-model:visible="dialog" modal header="Nueva cotización" style="width:820px">
+    <Dialog v-model:visible="dialog" modal :header="form.id ? 'Editar cotización #' + form.id : 'Nueva cotización'" style="width:820px">
       <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom:12px;">{{ msg.text }}</Message>
 
       <div class="kvs-row" style="margin-bottom:14px;">
         <label class="kvs-lbl" style="min-width:60px;"><span class="req">*</span> Cliente:</label>
         <Select v-model="form.contact_id" :options="contacts" optionValue="id"
                 :optionLabel="(c) => c.identificacion + ' — ' + c.razon_social"
-                filter placeholder="Elegí el cliente" class="kvs-in" />
+                filter placeholder="Elige el cliente" class="kvs-in" />
       </div>
 
       <DataTable :value="form.items" size="small">

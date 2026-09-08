@@ -110,7 +110,7 @@ onMounted(load)
       </Column>
       <template #empty>
         <div style="padding:26px; text-align:center; color:#94a3b8; font-size:13px;">
-          Todavía no hay sucursales. Creá la matriz con el establecimiento 001.
+          Todavía no hay sucursales. Crea la matriz con el establecimiento 001.
         </div>
       </template>
     </DataTable>

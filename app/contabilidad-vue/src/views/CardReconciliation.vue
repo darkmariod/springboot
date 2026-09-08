@@ -81,7 +81,7 @@ async function sugerir() {
   seleccion.value = pendientes.value.filter((t) => data.transaction_ids.includes(t.id))
   msg.value = data.cuadra
     ? { type: 'success', text: `Se encontraron ${data.transaction_ids.length} cobros que suman exactamente ${money(data.suma)}.` }
-    : { type: 'warn', text: `Lo más cercano suma ${money(data.suma)} de ${money(data.objetivo)}. Revisá manualmente.` }
+    : { type: 'warn', text: `Lo más cercano suma ${money(data.suma)} de ${money(data.objetivo)}. Revisa manualmente.` }
 }
 
 async function confirmar() {

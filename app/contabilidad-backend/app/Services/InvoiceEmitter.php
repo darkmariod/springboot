@@ -22,6 +22,25 @@ class InvoiceEmitter
 
     public function emit(Company $company, Contact $contact, array $items, string $formaPago = 'efectivo', ?int $emissionPointId = null, ?int $branchId = null): Invoice
     {
+        // Sin los datos de la empresa no se puede armar la clave de acceso.
+        // Vale más un aviso claro que un error de PHP a mitad de una venta.
+        $faltan = [];
+        if (strlen((string) $company->ruc) !== 13) {
+            $faltan[] = 'el RUC (13 dígitos)';
+        }
+        if (trim((string) $company->razon_social) === '') {
+            $faltan[] = 'la razón social';
+        }
+        if (trim((string) $company->dir_matriz) === '') {
+            $faltan[] = 'la dirección de la matriz';
+        }
+        if ($faltan) {
+            throw new \RuntimeException(
+                'Antes de facturar completa los datos de tu empresa en Administración → Empresas. Falta '
+                .implode(', ', $faltan).'.'
+            );
+        }
+
         return \DB::transaction(function () use ($company, $contact, $items, $formaPago, $emissionPointId, $branchId) {
             $formaPago = array_key_exists($formaPago, self::SRI_FORMA_PAGO) ? $formaPago : 'efectivo';
             // El establecimiento sale de la sucursal; si no se indica, de la matriz.
@@ -106,7 +125,8 @@ class InvoiceEmitter
                         $parte = $c->component;
                         if ($parte && $parte->tipo !== 'servicio') {
                             $this->inventario->handle($parte, 'egreso', $cant * (float) $c->cantidad,
-                                (float) $parte->costo_promedio, 'Venta combo '.$invoice->numero, $invoice->fecha_emision->toDateString());
+                                (float) $parte->costo_promedio, 'Venta combo '.$invoice->numero,
+                                $invoice->fecha_emision->toDateString(), null, [], $invoice->id);
                         }
                     }
                 } elseif ($product->tipo !== 'servicio') {

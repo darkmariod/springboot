@@ -146,7 +146,7 @@ onMounted(load)
     </TreeTable>
 
     <p v-if="!loading && !nodes.length" class="empty">
-      Sin cuentas todavía. Tocá <b>Nueva cuenta</b>, o se crean solas al facturar.
+      Sin cuentas todavía. Toca <b>Nueva cuenta</b>, o se crean solas al facturar.
     </p>
 
     <Dialog v-model:visible="dialog" modal :header="form.id ? 'Editar cuenta' : 'Nueva cuenta'"

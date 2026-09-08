@@ -96,17 +96,6 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'reports', label: 'Reportes', icon: 'pi pi-chart-bar', component: 'ReportViewer', feature: 'reportes' },
     ],
   },
-  {
-    label: 'Corporativo',
-    items: [
-      { key: 'c-fixed-assets', label: 'Activos Fijos', icon: 'pi pi-calculator', component: '', disabled: true },
-      { key: 'c-production', label: 'Producción', icon: 'pi pi-wrench', component: '', disabled: true },
-      { key: 'c-online-sales', label: 'Ventas Online', icon: 'pi pi-globe', component: '', disabled: true },
-      { key: 'c-academic', label: 'Académico', icon: 'pi pi-book', component: '', disabled: true },
-      { key: 'c-budgets', label: 'Presupuestos', icon: 'pi pi-chart-pie', component: '', disabled: true },
-      { key: 'c-cost-center', label: 'Centro Costo', icon: 'pi pi-sitemap', component: '', disabled: true },
-    ],
-  },
 ]
 
 export function modulesPara(tiene: (f?: string) => boolean) {
