@@ -11,6 +11,7 @@ import Message from 'primevue/message'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import ClienteForm from '../components/ClienteForm.vue'
+import { onShortcut } from '../composables/useShortcuts'
 
 const company = useCompanyStore()
 const rows = ref<any[]>([])
@@ -89,6 +90,13 @@ function cancelar() {
 }
 
 onMounted(load)
+
+// Atajos de teclado (ver composables/useShortcuts): solo actúan con esta pestaña al frente.
+onShortcut('nuevo', () => nuevo())
+onShortcut('guardar', () => { if (editando.value) guardar() })
+onShortcut('cancelar', () => { if (editando.value) cancelar() })
+onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search input')?.focus())
+
 </script>
 
 <template>

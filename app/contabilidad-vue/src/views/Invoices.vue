@@ -13,6 +13,7 @@ import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { useTabsStore } from '../stores/tabs'
 import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
+import { onShortcut } from '../composables/useShortcuts'
 
 const company = useCompanyStore()
 const tabs = useTabsStore()
@@ -123,6 +124,11 @@ async function confirmarAnular() {
 }
 
 onMounted(load)
+
+onShortcut('nuevo', () => nuevo())
+onShortcut('imprimir', () => { if (preview.value) imprimir() })
+onShortcut('cancelar', () => { if (preview.value) preview.value = null })
+
 </script>
 
 <template>

@@ -4,6 +4,12 @@ export type ModuleItem = WorkTab & { feature?: string; disabled?: boolean }
 
 export const modules: { label: string; items: ModuleItem[] }[] = [
   {
+    label: 'Inicio',
+    items: [
+      { key: 'inicio', label: 'Resumen del negocio', icon: 'pi pi-home', component: 'Dashboard' },
+    ],
+  },
+  {
     label: 'Catálogo',
     items: [
       { key: 'contacts', label: 'Clientes', icon: 'pi pi-users', component: 'Contacts', feature: 'catalogo' },

@@ -10,6 +10,7 @@ import Select from 'primevue/select'
 import Message from 'primevue/message'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import { onShortcut } from '../composables/useShortcuts'
 
 interface Account {
   id: number; codigo: string; nombre: string; tipo: string;
@@ -106,6 +107,10 @@ async function eliminar(a: Account) {
   }
 }
 onMounted(load)
+
+onShortcut('nuevo', () => nueva())
+onShortcut('guardar', () => guardar())
+
 </script>
 
 <template>

@@ -9,6 +9,7 @@ import Select from 'primevue/select'
 import Message from 'primevue/message'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import { onShortcut } from '../composables/useShortcuts'
 
 const company = useCompanyStore()
 const rows = ref<any[]>([])
@@ -65,6 +66,10 @@ async function eliminar(r: any) {
   }
 }
 onMounted(load)
+
+onShortcut('nuevo', () => nuevo())
+onShortcut('guardar', () => guardar())
+
 </script>
 
 <template>

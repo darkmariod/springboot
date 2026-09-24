@@ -16,6 +16,7 @@ import KvsDocGrid from '../components/kvs/KvsDocGrid.vue'
 import KvsToolbar from '../components/kvs/KvsToolbar.vue'
 import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 import ClienteForm from '../components/ClienteForm.vue'
+import { onShortcut } from '../composables/useShortcuts'
 
 const company = useCompanyStore()
 const products = ref<any[]>([])
@@ -334,6 +335,9 @@ function onAction(action: string) {
 }
 
 onMounted(load)
+
+onShortcut('buscar', () => document.querySelector<HTMLInputElement>('input[placeholder^="Escanear"]')?.focus())
+
 </script>
 
 <template>

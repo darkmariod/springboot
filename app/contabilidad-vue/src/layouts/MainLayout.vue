@@ -54,12 +54,17 @@ import LiquidacionCompra from '../views/LiquidacionCompra.vue'
 import NotaDebito from '../views/NotaDebito.vue'
 import GuiaRemision from '../views/GuiaRemision.vue'
 import SideRail from '../components/SideRail.vue'
+import { useUiStore } from '../stores/ui'
+import { actionFor, emitShortcut, LAYOUT_ACTIONS } from '../composables/useShortcuts'
 
 const auth = useAuthStore()
 const inicial = computed(() => (auth.user?.name ?? 'U').trim().charAt(0).toUpperCase())
 const company = useCompanyStore()
 const tabs = useTabsStore()
 const plan = usePlanStore()
+const ui = useUiStore()
+
+const HOME = { key: 'home', label: 'Módulos', icon: 'pi pi-th-large', component: 'Home' }
 
 const maximized = ref(false)
 
@@ -76,19 +81,43 @@ onMounted(async () => {
   await auth.fetchUser()
   await company.load()
   if (company.activeId) await plan.load(company.activeId)
-  // Al entrar se abre el resumen ejecutivo (Inicio); el lanzador sigue en "Módulos".
-  tabs.open({ key: 'inicio', label: 'Inicio', icon: 'pi pi-home', component: 'Dashboard' })
+  // Al entrar se abre el lanzador de módulos, como el escritorio de un sistema
+  // de ventanas. El resumen del negocio es un módulo más dentro del lanzador.
+  tabs.open(HOME)
   window.addEventListener('keydown', onKeydown)
 })
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && maximized.value) { maximized.value = false; return }
-  if (!(e.ctrlKey || e.metaKey)) return
-  const k = e.key.toLowerCase()
-  if (k === 'w' && tabs.activeKey) { e.preventDefault(); tabs.close(tabs.activeKey) }
-  else if (k === 'p') { e.preventDefault(); window.print() }
-  else if (k === 'f') { e.preventDefault(); document.querySelector<HTMLInputElement>('.p-datatable input')?.focus() }
+
+  const hit = actionFor(e)
+  if (!hit) return
+
+  // Esc dentro de un campo lo maneja el campo (cierra listas desplegables),
+  // no la pantalla: nadie quiere perder el formulario por cerrar un combo.
+  const t = e.target as HTMLElement | null
+  const escribiendo = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
+  if (hit.action === 'cancelar' && escribiendo) return
+
+  if (LAYOUT_ACTIONS.includes(hit.action)) {
+    e.preventDefault()
+    atajoDeLayout(hit.action, hit.payload)
+    return
+  }
+
+  // Solo se le quita el atajo al navegador si alguna pantalla lo está escuchando.
+  if (emitShortcut(hit.action, hit.payload)) e.preventDefault()
+}
+
+function atajoDeLayout(action: string, payload?: unknown) {
+  if (action === 'modulos') tabs.open(HOME)
+  else if (action === 'cerrar-pestana' && tabs.activeKey) tabs.close(tabs.activeKey)
+  else if (action === 'menu-lateral') ui.toggleSidebar()
+  else if (action === 'pestana') {
+    const t = tabs.tabs[payload as number]
+    if (t) tabs.activeKey = t.key
+  }
 }
 </script>
 
@@ -101,7 +130,7 @@ function onKeydown(e: KeyboardEvent) {
           <span class="hr-wordmark">HasReset</span>
         </div>
         <Button label="Módulos" icon="pi pi-th-large" text size="small"
-                @click="tabs.open({ key: 'home', label: 'Módulos', icon: 'pi pi-th-large', component: 'Home' })" />
+                @click="tabs.open(HOME)" />
         <Select
           v-model="company.activeId"
           :options="company.companies"
@@ -123,7 +152,7 @@ function onKeydown(e: KeyboardEvent) {
       </header>
 
       <div class="body">
-        <SideRail />
+        <SideRail v-if="ui.sidebar" />
         <div class="workspace">
         <div v-if="tabs.tabs.length" class="tabbar">
           <button

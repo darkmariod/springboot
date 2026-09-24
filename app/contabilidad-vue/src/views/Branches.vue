@@ -14,6 +14,7 @@ import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import { onShortcut } from '../composables/useShortcuts'
 
 const company = useCompanyStore()
 const rows = ref<any[]>([])
@@ -63,6 +64,10 @@ async function eliminar(r: any) {
 
 watch(() => company.activeId, load)
 onMounted(load)
+
+onShortcut('nuevo', () => nueva())
+onShortcut('guardar', () => guardar())
+
 </script>
 
 <template>
