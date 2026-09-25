@@ -209,6 +209,20 @@ function editar() {
   editando.value = true
 }
 
+async function eliminar() {
+  if (!form.value.id) return
+  if (!confirm('¿Eliminar la compra ' + (form.value.numero ?? '') + '? Esto revierte el stock que ingresó.')) return
+  try {
+    await api.delete('/purchases/' + form.value.id)
+    seleccion.value = null
+    form.value = {}
+    items.value = []
+    await load()
+  } catch (err: any) {
+    alert(err.response?.data?.message ?? 'No se pudo eliminar la compra.')
+  }
+}
+
 function cancelar() {
   editando.value = false
   if (seleccion.value) seleccionar(seleccion.value)
@@ -350,9 +364,11 @@ onMounted(load)
             { icon: 'pi pi-times', label: 'Cancelar', action: 'cancelar', visible: editando },
             { icon: 'pi pi-save', label: 'Guardar', action: 'guardar', disabled: !editando },
             { icon: 'pi pi-pencil', label: 'Editar', action: 'editar', disabled: editando || !seleccion },
+            { icon: 'pi pi-trash', label: 'Eliminar', action: 'eliminar', severity: 'danger',
+              visible: !editando, disabled: !seleccion },
           ]"
           align="end"
-          @action="(a: string) => { if (a === 'cancelar') cancelar(); else if (a === 'guardar') guardar(); else if (a === 'editar') editar() }"
+          @action="(a: string) => { if (a === 'cancelar') cancelar(); else if (a === 'guardar') guardar(); else if (a === 'editar') editar(); else if (a === 'eliminar') eliminar() }"
         />
       </template>
     </section>

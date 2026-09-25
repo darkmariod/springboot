@@ -20,6 +20,9 @@ class InvoiceController extends Controller
     {
         return Invoice::with('contact:id,razon_social,identificacion,direccion,email,telefono', 'sriDocument:id,documentable_id,estado,clave_acceso,numero_autorizacion,updated_at')
             ->withCount('journalEntries')
+            // Las notas de débito reusan esta misma tabla; sin este filtro
+            // aparecían mezcladas en el listado de facturas normales.
+            ->where(fn ($q) => $q->whereNull('tipo_comprobante')->orWhere('tipo_comprobante', 'factura'))
             ->when($r->company_id, fn ($q, $id) => $q->where('company_id', $id))->latest('fecha_emision')->get();
     }
 

@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use App\Models\Contact;
+use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Services\ParseSriPurchaseXml;
@@ -14,6 +15,9 @@ use InvalidArgumentException;
 class PurchaseController extends Controller {
     public function index(Request $r) {
         return Purchase::with('contact:id,razon_social')
+            // La liquidación de compra reusa esta misma tabla; sin este filtro
+            // aparecía mezclada en el registro de compras normal.
+            ->where(fn ($q) => $q->whereNull('tipo_comprobante')->orWhere('tipo_comprobante', '!=', 'liquidacion_compra'))
             ->when($r->company_id, fn($q,$id)=>$q->where('company_id',$id))->latest('fecha_emision')->get();
     }
 
@@ -54,7 +58,10 @@ class PurchaseController extends Controller {
                 'establecimiento' => $r->establecimiento ?? '001',
                 'punto_emision' => $r->punto_emision ?? '001',
                 'autorizacion' => $r->autorizacion ?? '',
-                'clave_acceso' => $r->clave_acceso ?? '',
+                // '' y null son NULOS a efectos del índice único de abajo, pero SQLite
+                // trata dos cadenas vacías como iguales: sin esto, la SEGUNDA compra
+                // manual sin clave de acceso (o sea, casi todas) chocaba con la primera.
+                'clave_acceso' => $r->clave_acceso ?: null,
                 'sustento_tributario' => $r->sustento_tributario ?? '01',
                 'warehouse_id' => $r->warehouse_id,
                 'observacion' => $r->observacion ?? '',
@@ -77,7 +84,8 @@ class PurchaseController extends Controller {
                 );
                 if ($product->tipo !== 'servicio')
                     $inv->handle($product, 'ingreso', $cant, $item['precio_unitario'],
-                        'Compra ' . $purchase->numero, $purchase->fecha_emision->toDateString());
+                        'Compra ' . $purchase->numero, $purchase->fecha_emision->toDateString(),
+                        $purchase->warehouse_id, [], null, $purchase->id);
 
                 // Series: registrar números de serie comprados (garantías)
                 foreach (($item['series'] ?? []) as $serieNum) {
@@ -123,9 +131,61 @@ class PurchaseController extends Controller {
         return $purchase->load('contact');
     }
 
-    /** Anular compra (soft-delete lógico). */
-    public function destroy(Purchase $purchase) {
-        $purchase->delete();
+    /**
+     * Elimina una compra que todavía no generó consecuencias irreversibles.
+     *
+     * Antes esto era un $purchase->delete() a secas: dejaba el stock inflado
+     * para siempre (nada revertía el ingreso al kárdex), el asiento contable
+     * huérfano apuntando a una compra que ya no existe, y si algún pago ya
+     * se había registrado, se borraba en cascada sin que nadie se enterara.
+     */
+    public function destroy(Purchase $purchase, RegisterInventoryMovement $inv) {
+        if (\App\Models\PurchasePayment::where('purchase_id', $purchase->id)->exists()) {
+            return response()->json([
+                'message' => 'No se puede eliminar: esta compra ya tiene pagos registrados. Elimine antes los pagos.',
+            ], 422);
+        }
+
+        $entry = \App\Models\JournalEntry::where('origen_type', $purchase->getMorphClass())
+            ->where('origen_id', $purchase->id)->first();
+        if ($entry && $entry->estado === 'mayorizado') {
+            return response()->json([
+                'message' => 'No se puede eliminar: el asiento de esta compra ya está mayorizado.',
+            ], 422);
+        }
+
+        $vendidas = \App\Models\ProductSerie::where('purchase_id', $purchase->id)
+            ->where('estado', '!=', 'disponible')->exists();
+        if ($vendidas) {
+            return response()->json([
+                'message' => 'No se puede eliminar: ya se vendieron unidades que entraron con esta compra.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($purchase, $inv, $entry) {
+            // Se borran las líneas que esta compra escribió en el kárdex y se
+            // reconstruye: como nada de lo que trajo se vendió (ya se validó
+            // arriba), no hace falta un egreso de reversión, alcanza con que
+            // el kárdex vuelva a quedar como si esta compra no hubiera pasado.
+            $productos = \App\Models\Product::whereIn('id',
+                InventoryMovement::where('purchase_id', $purchase->id)->pluck('product_id')->unique()
+            )->get();
+            InventoryMovement::where('purchase_id', $purchase->id)->delete();
+            foreach ($productos as $p) {
+                $inv->reconstruirKardex($p);
+            }
+
+            \App\Models\ProductSerie::where('purchase_id', $purchase->id)
+                ->where('estado', 'disponible')->delete();
+
+            if ($entry) {
+                $entry->lines()->delete();
+                $entry->delete();
+            }
+
+            $purchase->delete();
+        });
+
         return response()->json(['ok' => true]);
     }
 

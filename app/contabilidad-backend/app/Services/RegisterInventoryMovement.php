@@ -34,7 +34,8 @@ class RegisterInventoryMovement
         string $fecha,
         ?int $warehouseId = null,
         array $series = [],
-        ?int $invoiceId = null
+        ?int $invoiceId = null,
+        ?int $purchaseId = null
     ): InventoryMovement {
         if (! in_array($tipo, ['ingreso', 'egreso'], true)) {
             throw new \InvalidArgumentException("Tipo de movimiento inválido: {$tipo}");
@@ -50,7 +51,7 @@ class RegisterInventoryMovement
         $warehouseId = $warehouseId ?: \App\Models\Warehouse::where('company_id', $p->company_id)
             ->orderByDesc('por_defecto')->value('id');
 
-        return $this->conReintentos(fn () => DB::transaction(function () use ($p, $tipo, $cant, $costo, $concepto, $fecha, $warehouseId, $series, $invoiceId) {
+        return $this->conReintentos(fn () => DB::transaction(function () use ($p, $tipo, $cant, $costo, $concepto, $fecha, $warehouseId, $series, $invoiceId, $purchaseId) {
             $p = Product::whereKey($p->id)->lockForUpdate()->firstOrFail();
 
             if ($tipo === 'egreso' && round((float) $p->stock - $cant, self::DEC_CANTIDAD) < 0) {
@@ -75,6 +76,7 @@ class RegisterInventoryMovement
                 'saldo_valor'          => 0,
                 'warehouse_id'         => $warehouseId,
                 'invoice_id'           => $invoiceId,
+                'purchase_id'          => $purchaseId,
             ]);
 
             // reconstruirKardex también rehace el stock por bodega desde el kárdex,

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<title>HasReset — Chuleta</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { font: 9pt/1.35 -apple-system, "Segoe UI", Roboto, sans-serif; color: #17202e; margin: 0; }
+  h1 { font-size: 16pt; margin: 0 0 2px; letter-spacing: -0.02em; }
+  .sub { color: #64748b; font-size: 8.5pt; margin-bottom: 10px; }
+  h2 { font-size: 10.5pt; color: #1e5bb8; margin: 0 0 6px; padding-bottom: 3px;
+       border-bottom: 2px solid #1e5bb8; }
+  .truco { background: #eef4ff; border: 1px solid #c3d6f5; border-radius: 8px;
+           padding: 9px 13px; margin-bottom: 11px; }
+  .truco b { font-size: 11pt; }
+  .cols { display: flex; gap: 14px; }
+  .col { flex: 1; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 11px; }
+  td, th { padding: 2.5px 5px; border-bottom: 1px solid #e6ebf2; text-align: left;
+           vertical-align: top; font-size: 8.8pt; }
+  th { background: #f4f7fb; font-size: 8pt; text-transform: uppercase;
+       letter-spacing: .3px; color: #52657d; }
+  kbd { background: #17202e; color: #fff; border-radius: 3px; padding: 1px 5px;
+        font: 600 8pt inherit; white-space: nowrap; }
+  code { background: #eef2f7; border-radius: 3px; padding: 1px 4px; font-size: 8.5pt; }
+  .pasos { counter-reset: p; padding: 0; margin: 0 0 10px; list-style: none; }
+  .pasos li { counter-increment: p; position: relative; padding-left: 22px; margin-bottom: 5px; }
+  .pasos li::before { counter(p); content: counter(p); position: absolute; left: 0; top: 1px;
+    background: #1e5bb8; color: #fff; width: 15px; height: 15px; border-radius: 50%;
+    font-size: 7.5pt; font-weight: 700; display: grid; place-items: center; }
+  .nota { background: #fff8e8; border-left: 3px solid #e0a83a; padding: 6px 9px;
+          font-size: 8.5pt; margin-bottom: 10px; }
+  .orden { background: #17202e; color: #dde5ef; border-radius: 8px; padding: 9px 13px;
+           font-size: 8.5pt; line-height: 1.55; }
+  .orden b { color: #fff; }
+  .orden code { background: rgba(255,255,255,.16); color: #fff; }
+</style></head>
+<body>
+
+<h1>HasReset — chuleta de la demo</h1>
+<div class="sub">Ten esto al lado. No hay que memorizar nada.</div>
+
+<div class="truco">
+  <b>El único truco: <kbd>F4</kbd> y tres letras.</b><br>
+  <kbd>F4</kbd> vuelve al escritorio y deja el cursor listo. Escribe tres letras del nombre
+  y aparece la pantalla. <kbd>Enter</kbd> la abre. Nunca busques en menús delante del cliente.
+</div>
+
+<div class="cols">
+<div class="col">
+
+<h2>Quiero… → escribo</h2>
+<table>
+<tr><th>Quiero</th><th>Escribo</th></tr>
+<tr><td>Registrar un cliente o paciente</td><td><code>clien</code></td></tr>
+<tr><td>Crear un producto o examen</td><td><code>produ</code></td></tr>
+<tr><td>Que <b>suba</b> el stock</td><td><code>regis</code></td></tr>
+<tr><td>Que <b>baje</b> el stock (vender)</td><td><code>punto</code></td></tr>
+<tr><td>Corregir el stock</td><td><code>ajuste</code></td></tr>
+<tr><td>Ver stock y kárdex</td><td><code>inven</code></td></tr>
+<tr><td>Lotes y series</td><td><code>garan</code></td></tr>
+<tr><td>Ver / imprimir / anular facturas</td><td><code>factu</code></td></tr>
+<tr><td>Proveedores</td><td><code>provee</code></td></tr>
+<tr><td>Bodegas</td><td><code>bodeg</code></td></tr>
+<tr><td>Sucursales</td><td><code>sucur</code></td></tr>
+<tr><td>Usuarios y roles</td><td><code>usuar</code></td></tr>
+<tr><td>Datos de la empresa</td><td><code>empre</code></td></tr>
+<tr><td>Subir el certificado .p12</td><td><code>firma</code></td></tr>
+<tr><td>Libro diario</td><td><code>libro</code></td></tr>
+<tr><td>Quién hizo qué</td><td><code>audit</code></td></tr>
+</table>
+
+<h2>Teclas</h2>
+<table>
+<tr><td><kbd>F2</kbd></td><td>Nuevo registro</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Guardar</td></tr>
+<tr><td><kbd>F3</kbd></td><td>Buscar en la pantalla</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>Cancelar</td></tr>
+<tr><td><kbd>F4</kbd></td><td>Volver a Módulos</td></tr>
+<tr><td><kbd>F8</kbd></td><td>Cerrar pestaña</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Imprimir el comprobante abierto</td></tr>
+</table>
+
+<h2>Si te preguntan</h2>
+<table>
+<tr><td><b>¿Por qué no puedo editar el stock?</b></td></tr>
+<tr><td>Porque sale de los movimientos. Una compra lo sube, una venta lo baja,
+un ajuste lo corrige. Si se pudiera teclear, el kárdex no serviría.</td></tr>
+<tr><td><b>¿Por qué no puedo editar una factura?</b></td></tr>
+<tr><td>Una factura no se edita: se anula, y queda el rastro. Un sistema que deja
+borrar facturas deja un hueco que después nadie explica.</td></tr>
+</table>
+
+</div>
+<div class="col">
+
+<h2>Registrar un producto — paso a paso</h2>
+<ol class="pasos">
+  <li><kbd>F4</kbd> → escribe <code>produ</code> → <kbd>Enter</kbd></li>
+  <li><kbd>F2</kbd> (o el botón <b>+</b>) abre la ficha en blanco</li>
+  <li>Pestaña <b>General</b>, y llena en este orden:</li>
+</ol>
+
+<table>
+<tr><th>Campo</th><th>Qué pongo</th></tr>
+<tr><td><b>Código</b></td><td>Como lo llaman ellos: <code>LLA-110</code>, <code>EX-001</code></td></tr>
+<tr><td><b>Nombre</b></td><td>La descripción que sale en la factura</td></tr>
+<tr><td><b>Tipo</b> ⚠</td><td><b>Bien</b> = físico, lleva stock<br><b>Servicio</b> = mano de obra, no lleva</td></tr>
+<tr><td><b>Aplica Serie/Lote</b></td><td><b>Serie</b> si cada unidad tiene número (llanta, reactivo).<br><b>Ninguno</b> para pernos, tornillos</td></tr>
+<tr><td><b>% IVA</b></td><td><b>15%</b> normal · <b>0%</b> exámenes de salud</td></tr>
+<tr><td><b>Precio venta</b></td><td>A cuánto lo vende</td></tr>
+<tr><td><b>Stock mínimo</b></td><td>Cuándo avisar que se acaba</td></tr>
+</table>
+
+<ol class="pasos" style="counter-reset: p 3">
+  <li><kbd>Ctrl</kbd>+<kbd>S</kbd> → sale <b>“Artículo guardado.”</b></li>
+</ol>
+
+<div class="nota">
+  <b>El campo Tipo es el que más se equivoca.</b> Si pones la mano de obra como
+  <i>bien</i>, el sistema va a querer descontarla de bodega y te frena la venta.
+  <br><br>
+  Abajo dice <code>Stock: 0</code>. Es correcto: <b>nada entra por esta pantalla.</b>
+</div>
+
+<h2>Que entre el stock</h2>
+<ol class="pasos">
+  <li><kbd>F4</kbd> → <code>regis</code> → <kbd>Enter</kbd> (Registro de Compras)</li>
+  <li><kbd>F2</kbd> · proveedor, fecha, número de la factura del proveedor, bodega</li>
+  <li>En la grilla: escribe el <b>código</b>, la <b>cantidad</b> y el <b>costo sin IVA</b></li>
+  <li><kbd>Ctrl</kbd>+<kbd>S</kbd>. El stock sube solo.</li>
+</ol>
+
+<h2>Si lleva lote</h2>
+<ol class="pasos">
+  <li><kbd>F4</kbd> → <code>garan</code> → <kbd>Enter</kbd></li>
+  <li>Arriba elige el producto</li>
+  <li>Pega los lotes en el cuadro, <b>uno por línea</b></li>
+  <li><b>Registrar series</b></li>
+</ol>
+
+<h2>Orden de la demo</h2>
+<div class="orden">
+<b>1</b> Cliente <code>clien</code> &nbsp;·&nbsp; <b>2</b> Producto <code>produ</code><br>
+<b>3</b> Compra <code>regis</code> ← sube el stock<br>
+<b>4</b> Lotes <code>garan</code> &nbsp;·&nbsp; <b>5</b> <b>Kárdex</b> <code>inven</code> ← la que vende<br>
+<b>6</b> Facturar <code>punto</code> ← baja el stock<br>
+<b>7</b> Imprimir <code>factu</code> → el ojito &nbsp;·&nbsp; <b>8</b> Anular ← vuelve<br>
+<b>9</b> Roles ← entra con <code>doctor@demo.com</code>
+</div>
+
+</div>
+</div>
+
+</body></html>
