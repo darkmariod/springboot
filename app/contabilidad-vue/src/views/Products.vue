@@ -322,7 +322,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
           <!-- Componentes del combo -->
           <div v-show="tab === 'combo'">
             <p class="kvs-hint">
-              Si el artículo es un combo, acá se arma con sus partes. Al venderlo, el sistema
+              Si el artículo es un combo, aquí se arma con sus partes. Al venderlo, el sistema
               descarga del stock cada componente.
             </p>
             <Message v-if="!form.es_combo" severity="info" :closable="false">

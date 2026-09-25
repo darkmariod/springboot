@@ -79,7 +79,7 @@ onShortcut('guardar', () => guardar())
       <Button label="Nuevo proveedor" icon="pi pi-plus" @click="nuevo" />
     </div>
     <p style="color:#94a3b8; font-size:13px; margin:0 0 14px;">
-      Cargalos acá, o se crean solos al importar compras del SRI.
+      Cárgalos aquí, o se crean solos al importar compras del SRI.
     </p>
 
     <DataTable :value="rows" :loading="loading" size="small" stripedRows paginator :rows="15">

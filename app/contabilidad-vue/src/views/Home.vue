@@ -4,14 +4,16 @@ import { modulesPara } from '../modules'
 import { useTabsStore } from '../stores/tabs'
 import { usePlanStore } from '../stores/plan'
 import { onShortcut, SHORTCUTS } from '../composables/useShortcuts'
+import { useAuthStore } from '../stores/auth'
 
 // Module launcher styled after KVS: teal square tiles with white icons.
 // First level: module groups. Clicking a group drills into its items.
 const tabs = useTabsStore()
 const plan = usePlanStore()
+const auth = useAuthStore()
 const grupoActivo = ref<any>(null)
 
-const grupos = computed(() => modulesPara(plan.tiene))
+const grupos = computed(() => modulesPara(plan.tiene, auth.user?.rol))
 
 // One representative icon per group (matches the KVS launcher look)
 const iconoGrupo: Record<string, string> = {
@@ -86,13 +88,17 @@ onShortcut('cancelar', () => {
 })
 onShortcut('buscar', enfocarBusqueda)
 
-// Volver a Módulos es volver al escritorio: siempre al primer nivel y sin filtro.
-onActivated(() => {
-  grupoActivo.value = null
+// Al volver a Módulos se conserva el grupo donde se estaba: quien abre Clientes
+// desde Catálogo casi siempre vuelve a abrir otra pantalla del mismo grupo.
+// Solo se limpia la búsqueda, que es de un momento.
+function alVolver() {
   busqueda.value = ''
   marcado.value = 0
   enfocarBusqueda()
-})
+}
+
+watch(() => tabs.activeKey, (k) => { if (k === 'home') alVolver() })
+onActivated(alVolver)
 </script>
 
 <template>
@@ -114,6 +120,7 @@ onActivated(() => {
           spellcheck="false"
           autocomplete="off"
           @keydown.enter.prevent="activarMarcado"
+          @keydown.esc.stop.prevent="busqueda = ''"
         />
         <button v-if="busqueda" class="limpiar" title="Limpiar (Esc)" @click="busqueda = ''">
           <i class="pi pi-times" />

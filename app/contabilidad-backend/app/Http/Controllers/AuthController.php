@@ -43,7 +43,16 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        return ['name' => $request->user()->name, 'email' => $request->user()->email];
+        $u = $request->user();
+
+        // El rol viaja al frontend para que el menú muestre solo lo que le toca.
+        // No es el control de acceso: cada ruta sensible lo vuelve a revisar.
+        return [
+            'name' => $u->name,
+            'email' => $u->email,
+            'rol' => $u->rol,
+            'company_id' => $u->company_id,
+        ];
     }
 
     public function logout(Request $request)

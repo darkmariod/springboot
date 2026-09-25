@@ -3,10 +3,12 @@ import { computed } from 'vue'
 import { usePlanStore } from '../stores/plan'
 import { useTabsStore } from '../stores/tabs'
 import { modulesPara } from '../modules'
+import { useAuthStore } from '../stores/auth'
 
 const plan = usePlanStore()
+const auth = useAuthStore()
 const tabs = useTabsStore()
-const grupos = computed(() => modulesPara(plan.tiene))
+const grupos = computed(() => modulesPara(plan.tiene, auth.user?.rol))
 
 function abrir(tab: { key: string; label: string; icon: string; component: string }) {
   tabs.open(tab)

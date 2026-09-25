@@ -79,7 +79,7 @@ class EdocConfigController extends Controller
         if ($request->hasFile('certificado')) {
             if (empty($d['clave_firma'])) {
                 throw ValidationException::withMessages([
-                    'clave_firma' => ['Para cargar la firma necesitás su clave.'],
+                    'clave_firma' => ['Para cargar la firma necesitas su clave.'],
                 ]);
             }
             $contenido = file_get_contents($request->file('certificado')->getRealPath());

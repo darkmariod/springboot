@@ -31,8 +31,8 @@ const tabs = [
 
 const roles = [
   { label: 'Administrador (todo)', value: 'admin' },
-  { label: 'Contador (contabilidad y reportes)', value: 'contador' },
-  { label: 'Cajero (solo vende en su punto)', value: 'cajero' },
+  { label: 'Contador (todo menos administración)', value: 'contador' },
+  { label: 'Cajero / Recepción (solo vende)', value: 'cajero' },
 ]
 const sevRol: Record<string, string> = { admin: 'danger', contador: 'info', cajero: 'secondary' }
 

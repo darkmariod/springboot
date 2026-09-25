@@ -4,7 +4,7 @@ import api from '../lib/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token'))
-  const user = ref<{ name: string; email: string } | null>(null)
+  const user = ref<{ name: string; email: string; rol?: string; company_id?: number } | null>(null)
 
   async function login(email: string, password: string) {
     const res = await api.post('/login', { email, password })

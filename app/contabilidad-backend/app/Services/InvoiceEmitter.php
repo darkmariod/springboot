@@ -11,6 +11,8 @@ use App\Models\Product;
 
 class InvoiceEmitter
 {
+    use \App\Support\RetryOnLock;
+
     private const SRI_FORMA_PAGO = ['efectivo' => '01', 'transferencia' => '20', 'tarjeta' => '19', 'credito' => '20'];
 
     public function __construct(
@@ -41,7 +43,7 @@ class InvoiceEmitter
             );
         }
 
-        return \DB::transaction(function () use ($company, $contact, $items, $formaPago, $emissionPointId, $branchId) {
+        return $this->conReintentos(fn () => \DB::transaction(function () use ($company, $contact, $items, $formaPago, $emissionPointId, $branchId) {
             $formaPago = array_key_exists($formaPago, self::SRI_FORMA_PAGO) ? $formaPago : 'efectivo';
             // El establecimiento sale de la sucursal; si no se indica, de la matriz.
             $estab = $company->estab;
@@ -136,6 +138,6 @@ class InvoiceEmitter
             }
 
             return $invoice->load('sriDocument');
-        });
+        }));
     }
 }

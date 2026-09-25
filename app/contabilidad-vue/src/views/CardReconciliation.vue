@@ -2,7 +2,7 @@
 /**
  * Conciliación de tarjetas.
  * Un cobro con tarjeta no entra el mismo día: el procesador deposita después,
- * en lotes y descontando comisión. Acá se cruza cada voucher contra ese depósito.
+ * en lotes y descontando comisión. Aquí se cruza cada voucher contra ese depósito.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import DataTable from 'primevue/datatable'

@@ -125,7 +125,7 @@ onMounted(load)
       <Button label="Nueva cotización" icon="pi pi-plus" @click="nueva" />
     </div>
     <p style="color:#94a3b8; font-size:13px; margin:0 0 14px;">
-      Creala acá o desde el Punto de Venta con "Guardar cotización". Si el cliente aprueba,
+      Créala aquí o desde el Punto de Venta con "Guardar cotización". Si el cliente aprueba,
       se convierte en factura con un clic.
     </p>
 

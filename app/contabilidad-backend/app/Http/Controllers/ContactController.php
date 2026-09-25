@@ -31,7 +31,7 @@ class ContactController extends Controller {
     /**
      * El SRI rechaza la factura si el tipo no coincide con la longitud:
      * 04 = RUC (13 dígitos) · 05 = cédula (10) · 06 = pasaporte · 07 = consumidor final.
-     * Se valida acá para no descubrirlo recién cuando el SRI devuelve el error.
+     * Se valida aquí para no descubrirlo recién cuando el SRI devuelve el error.
      */
     private function validarIdentificacion(string $tipo, string $numero): void {
         $n = preg_replace('/\D/', '', $numero);

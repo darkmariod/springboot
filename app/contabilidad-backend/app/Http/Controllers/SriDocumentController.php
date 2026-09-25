@@ -29,6 +29,6 @@ class SriDocumentController extends Controller {
         }
         return ['procesados'=>count($docs),'autorizados'=>$ok,'fallidos'=>$fallidos,
             'sin_firma'=>$sinFirma,
-            'mensaje'=>$sinFirma>0 ? "$sinFirma comprobantes sin firmar: cargá el certificado .p12 de la empresa para poder firmarlos y enviarlos." : null];
+            'mensaje'=>$sinFirma>0 ? "$sinFirma comprobantes sin firmar: carga el certificado .p12 de la empresa para poder firmarlos y enviarlos." : null];
     }
 }

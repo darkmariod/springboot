@@ -36,7 +36,7 @@ class TestEmisionSri extends Command
 
         if (! $company->certificado_p12) {
             $this->warn('  ⚠️  Sin .p12 la factura queda en "generado" y NO llega a AUTORIZADO.');
-            $this->warn('     Cargá la firma en EDocuments → Configuración de firma y reintentá.');
+            $this->warn('     Carga la firma en EDocuments → Configuración de firma y reinténtalo.');
             $this->newLine();
         }
 
@@ -79,9 +79,9 @@ class TestEmisionSri extends Command
         if ($estado === 'AUTORIZADO') {
             $this->info('  ✅ AUTORIZADO — la emisión al SRI funciona perfecto.');
         } elseif ($doc->estado === 'generado') {
-            $this->warn('  ⚠️  Quedó en "generado" — falta cargar el .p12. Cargalo y volvé a correr esto.');
+            $this->warn('  ⚠️  Quedó en "generado" — falta cargar el .p12. Cárgalo y volvé a correr esto.');
         } else {
-            $this->error('  ✗ No llegó a AUTORIZADO. Mirá los mensajes del SRI arriba para el motivo.');
+            $this->error('  ✗ No llegó a AUTORIZADO. Mira los mensajes del SRI arriba para el motivo.');
             $this->line('     Motivos comunes: certificado vencido, ambiente equivocado (pruebas vs producción),');
             $this->line('     secuencial repetido, fecha/clave de acceso, o el RUC no habilitado para facturar.');
         }

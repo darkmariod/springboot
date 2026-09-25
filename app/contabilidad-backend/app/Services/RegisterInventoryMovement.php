@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\DB;
  */
 class RegisterInventoryMovement
 {
+    use \App\Support\RetryOnLock;
+
     /** Decimales fijos en todo el módulo: mezclarlos hace que el saldo se desvíe. */
     public const DEC_CANTIDAD = 4;   // permite kilos, metros, litros
     public const DEC_COSTO    = 4;
@@ -76,30 +78,11 @@ class RegisterInventoryMovement
             ]);
 
             // reconstruirKardex también rehace el stock por bodega desde el kárdex,
-            // así que acá no se vuelve a sumar el delta.
+            // así que aquí no se vuelve a sumar el delta.
             $this->reconstruirKardex($p);
 
             return $mov->fresh();
         }));
-    }
-
-    /**
-     * Dos cajas facturando al mismo tiempo chocan contra el bloqueo de SQLite,
-     * que responde al instante en vez de esperar. Sin esto la segunda venta se
-     * pierde, así que se reintenta con una espera que va creciendo.
-     */
-    private function conReintentos(callable $fn, int $intentos = 8)
-    {
-        for ($i = 1; ; $i++) {
-            try {
-                return $fn();
-            } catch (\Illuminate\Database\QueryException $e) {
-                if ($i >= $intentos || ! str_contains($e->getMessage(), 'database is locked')) {
-                    throw $e;
-                }
-                usleep(random_int(20_000, 120_000) * $i);
-            }
-        }
     }
 
     /**

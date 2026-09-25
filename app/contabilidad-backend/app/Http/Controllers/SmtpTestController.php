@@ -25,7 +25,7 @@ class SmtpTestController extends Controller
         // La clave viene desencriptada por el cast 'encrypted' del modelo.
         if (! $company->smtp_host || ! $company->smtp_user || ! $company->smtp_password) {
             return response()->json([
-                'error' => 'Configurá el servidor de correo primero (servidor, usuario y clave) y guardá antes de probar.',
+                'error' => 'Configura el servidor de correo primero (servidor, usuario y clave) y guarda antes de probar.',
             ], 422);
         }
 
@@ -54,12 +54,12 @@ class SmtpTestController extends Controller
         } catch (Throwable $e) {
             return response()->json([
                 'error' => 'No se pudo enviar: ' . $e->getMessage()
-                    . ' — revisá servidor, puerto, usuario y la clave de aplicación.',
+                    . ' — revisa servidor, puerto, usuario y la clave de aplicación.',
             ], 422);
         }
 
         return response()->json([
-            'mensaje' => "Correo de prueba enviado a {$data['destinatario']}. Revisá la bandeja (y spam).",
+            'mensaje' => "Correo de prueba enviado a {$data['destinatario']}. Revisa la bandeja (y spam).",
         ]);
     }
 }

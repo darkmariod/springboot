@@ -46,14 +46,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sucursales (multisede): cada una es un establecimiento ante el SRI
     Route::middleware('feature:sucursales')->group(function () {
         Route::get('branches', [\App\Http\Controllers\BranchController::class, 'index']);
-        Route::post('branches', [\App\Http\Controllers\BranchController::class, 'store']);
-        Route::put('branches/{branch}', [\App\Http\Controllers\BranchController::class, 'update']);
-        Route::delete('branches/{branch}', [\App\Http\Controllers\BranchController::class, 'destroy']);
+        Route::post('branches', [\App\Http\Controllers\BranchController::class, 'store'])->middleware('rol:admin');
+        Route::put('branches/{branch}', [\App\Http\Controllers\BranchController::class, 'update'])->middleware('rol:admin');
+        Route::delete('branches/{branch}', [\App\Http\Controllers\BranchController::class, 'destroy'])->middleware('rol:admin');
     });
-    Route::post('/companies/{company}/logo', [CompanyController::class, 'logo']);
-    Route::put('/companies/{company}', [CompanyController::class, 'update']);
+    Route::post('/companies/{company}/logo', [CompanyController::class, 'logo'])->middleware('rol:admin');
+    Route::put('/companies/{company}', [CompanyController::class, 'update'])->middleware('rol:admin');
     Route::get('/companies/{company}/plan', [CompanyController::class, 'plan']);
-    Route::post('/companies/{company}/plan', [CompanyController::class, 'cambiarPlan']);
+    Route::post('/companies/{company}/plan', [CompanyController::class, 'cambiarPlan'])->middleware('rol:admin');
 
     Route::get('/accounts', [AccountController::class, 'index']);
     Route::post('/accounts', [AccountController::class, 'store']);
@@ -142,13 +142,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Puntos de emisión + certificado
     Route::get("emission-points", [\App\Http\Controllers\EmissionPointController::class, "index"]);
-    Route::post("emission-points", [\App\Http\Controllers\EmissionPointController::class, "store"]);
-    Route::delete("emission-points/{point}", [\App\Http\Controllers\EmissionPointController::class, "destroy"]);
+    Route::post("emission-points", [\App\Http\Controllers\EmissionPointController::class, "store"])->middleware('rol:admin');
+    Route::delete("emission-points/{point}", [\App\Http\Controllers\EmissionPointController::class, "destroy"])->middleware('rol:admin');
     Route::middleware('feature:facturacion_sri')->group(function () { Route::post("companies/{company}/certificate", [\App\Http\Controllers\CompanyController::class, "uploadCertificate"]); });
     // EDocuments — configuración completa (firma + SRI + correo), como KVS
     Route::get("companies/{company}/edoc-config", [\App\Http\Controllers\EdocConfigController::class, "show"]);
-    Route::post("companies/{company}/edoc-config", [\App\Http\Controllers\EdocConfigController::class, "update"]);
-    Route::post("companies/{company}/smtp/test", [\App\Http\Controllers\SmtpTestController::class, "send"]);
+    Route::post("companies/{company}/edoc-config", [\App\Http\Controllers\EdocConfigController::class, "update"])->middleware('rol:admin');
+    Route::post("companies/{company}/smtp/test", [\App\Http\Controllers\SmtpTestController::class, "send"])->middleware('rol:admin');
 
     // Fase 2 — Series (garantías)
     Route::middleware('feature:series')->group(function () {
@@ -163,8 +163,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Fase 3 — Usuarios y auditoría
     Route::middleware('feature:usuarios')->group(function () { Route::get("users", [\App\Http\Controllers\UserController::class, "index"]); });
     Route::middleware('feature:usuarios')->group(function () { Route::post("users", [\App\Http\Controllers\UserController::class, "store"]); });
-    Route::middleware('feature:usuarios')->group(function () { Route::put("users/{user}", [\App\Http\Controllers\UserController::class, "update"]); });
-    Route::middleware('feature:usuarios')->group(function () { Route::delete("users/{user}", [\App\Http\Controllers\UserController::class, "destroy"]); });
+    Route::middleware('feature:usuarios')->group(function () { Route::put("users/{user}", [\App\Http\Controllers\UserController::class, "update"])->middleware('rol:admin'); });
+    Route::middleware('feature:usuarios')->group(function () { Route::delete("users/{user}", [\App\Http\Controllers\UserController::class, "destroy"])->middleware('rol:admin'); });
 
     Route::middleware('feature:auditoria')->group(function () {
         Route::get("audit", [\App\Http\Controllers\AuditController::class, "index"]);
@@ -267,7 +267,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put("advances/{advance}", [\App\Http\Controllers\AdvanceController::class, "update"]);
     Route::delete("advances/{advance}", [\App\Http\Controllers\AdvanceController::class, "destroy"]);
     Route::post("credit-notes/{creditNote}/anular", [\App\Http\Controllers\CreditNoteController::class, "anular"]);
-    Route::put("emission-points/{point}", [\App\Http\Controllers\EmissionPointController::class, "update"]);
+    Route::put("emission-points/{point}", [\App\Http\Controllers\EmissionPointController::class, "update"])->middleware('rol:admin');
 
     // Fase 2b — Importación SRI pluggable
     Route::post("sri/importar", [\App\Http\Controllers\SriImportController::class, "importar"]);

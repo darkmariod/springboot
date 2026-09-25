@@ -188,7 +188,7 @@ onMounted(load)
           <legend>Servidor de correo</legend>
           <p style="margin:0 0 10px; font-size:12px; color:#64748b;">
             Con esto la factura llega sola al correo del cliente (XML + PDF). El SRI lo exige.
-            Con Gmail usá una <b>contraseña de aplicación</b>, no la clave normal de la cuenta.
+            Con Gmail usa una <b>contraseña de aplicación</b>, no la clave normal de la cuenta.
           </p>
           <div class="kvs-row">
             <label class="kvs-lbl">Servidor correo:</label>

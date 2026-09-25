@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
@@ -53,6 +53,8 @@ import MassInvoicing from '../views/MassInvoicing.vue'
 import LiquidacionCompra from '../views/LiquidacionCompra.vue'
 import NotaDebito from '../views/NotaDebito.vue'
 import GuiaRemision from '../views/GuiaRemision.vue'
+import Fractionation from '../views/Fractionation.vue'
+import StockReservations from '../views/StockReservations.vue'
 import SideRail from '../components/SideRail.vue'
 import { useUiStore } from '../stores/ui'
 import { actionFor, emitShortcut, LAYOUT_ACTIONS } from '../composables/useShortcuts'
@@ -75,6 +77,7 @@ const componentMap: Record<string, any> = {
   Series, Users, Audit, Advances, CreditNotes, BatchImport, Employees, Payroll, Warehouses,
   Taxes, InventoryAdjustment, InventoryTransfer, ReportViewer, ArticleConversion,
   CardReconciliation, MassInvoicing, LiquidacionCompra, NotaDebito, GuiaRemision,
+  Fractionation, StockReservations,
 }
 
 onMounted(async () => {
@@ -110,8 +113,27 @@ function onKeydown(e: KeyboardEvent) {
   if (emitShortcut(hit.action, hit.payload)) e.preventDefault()
 }
 
+/**
+ * Cambiar de empresa tiene que recargar el plan: cada una tiene el suyo, y si no
+ * se recarga quedan a la vista módulos que esa empresa no contrató.
+ * Las pestañas abiertas son de la empresa anterior, así que se cierran.
+ */
+async function cambiarEmpresa(id: number) {
+  company.setActive(id)
+  await plan.load(id)
+  tabs.tabs.splice(0)
+  tabs.activeKey = null
+  tabs.open(HOME)
+  nextTick(() => emitShortcut('buscar'))
+}
+
 function atajoDeLayout(action: string, payload?: unknown) {
-  if (action === 'modulos') tabs.open(HOME)
+  if (action === 'modulos') {
+    tabs.open(HOME)
+    // Si ya se estaba en Módulos, abrirlo no reactiva el componente: hay que
+    // pedirle el foco del buscador a mano, o las teclas se pierden.
+    nextTick(() => emitShortcut('buscar'))
+  }
   else if (action === 'cerrar-pestana' && tabs.activeKey) tabs.close(tabs.activeKey)
   else if (action === 'menu-lateral') ui.toggleSidebar()
   else if (action === 'pestana') {
@@ -138,7 +160,7 @@ function atajoDeLayout(action: string, payload?: unknown) {
           optionValue="id"
           placeholder="Empresa"
           class="company-select"
-          @change="(e) => company.setActive(e.value)"
+          @change="(e) => cambiarEmpresa(e.value)"
         />
         <div class="topbar-right">
           <Tag v-if="plan.vencido" value="Plan vencido" severity="danger" />
@@ -178,7 +200,8 @@ function atajoDeLayout(action: string, payload?: unknown) {
         <div class="tabcontent">
           <template v-for="t in tabs.tabs" :key="t.key">
             <KeepAlive>
-              <component v-if="tabs.activeKey === t.key" :is="componentMap[t.component]" />
+              <component v-if="tabs.activeKey === t.key" :is="componentMap[t.component] ?? Placeholder"
+                         :titulo="t.label" />
             </KeepAlive>
           </template>
           <div v-if="!tabs.tabs.length" class="empty">

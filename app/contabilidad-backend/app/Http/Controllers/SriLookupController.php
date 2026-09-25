@@ -35,7 +35,7 @@ class SriLookupController extends Controller
 
         try {
             // El SRI BLOQUEA requests sin User-Agent de navegador (responde vacío/timeout).
-            // Sin este header, el autocompletar nunca llena y cae siempre en "cargá a mano".
+            // Sin este header, el autocompletar nunca llena y cae siempre en "carga a mano".
             $res = Http::acceptJson()
                 ->withHeaders(['User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'])
                 ->timeout(8)
@@ -67,7 +67,7 @@ class SriLookupController extends Controller
             return response()->json([
                 'encontrado' => false,
                 'requiere_carga_manual' => true,
-                'mensaje' => 'No se pudo consultar el SRI ahora. Cargá los datos a mano.',
+                'mensaje' => 'No se pudo consultar el SRI ahora. Carga los datos a mano.',
             ]);
         }
 
@@ -75,7 +75,7 @@ class SriLookupController extends Controller
         return response()->json([
             'encontrado' => false,
             'requiere_carga_manual' => true,
-            'mensaje' => 'No está en el padrón del SRI. Verificá el número o cargá los datos a mano.',
+            'mensaje' => 'No está en el padrón del SRI. Verifica el número o carga los datos a mano.',
         ]);
     }
 }

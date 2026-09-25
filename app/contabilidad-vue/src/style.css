@@ -85,7 +85,7 @@ body { background: #eef1f5; }
   padding: 10px 14px !important;
 }
 
-/* Labels con asterisco rojo — usá class="req" en el label */
+/* Labels con asterisco rojo — usa class="req" en el label */
 .req::after { content: " *"; color: #d93025; font-weight: 700; }
 label .req-star { color: #d93025; font-weight: 700; }
 

@@ -84,7 +84,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
   },
   {
     // EDocuments (como KVS): la configuración de la firma y los comprobantes electrónicos.
-    // Acá vive "la magia": firma, clave, correo, websites del SRI.
+    // Aquí vive "la magia": firma, clave, correo, websites del SRI.
     label: 'EDocuments',
     items: [
       { key: 'signature', label: 'Configuración de firma', icon: 'pi pi-shield', component: 'SignatureConfig', feature: 'facturacion_sri' },
@@ -104,8 +104,48 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
   },
 ]
 
-export function modulesPara(tiene: (f?: string) => boolean) {
+/**
+ * Qué pantallas ve cada rol.
+ *
+ * Esto es lo que se muestra; el backend vuelve a revisar el rol en cada ruta
+ * sensible. Ocultar un menú no es seguridad: es comodidad. La puerta está atrás.
+ *
+ * '*' = ve todo.
+ */
+export const PERMISOS: Record<string, '*' | string[]> = {
+  admin: '*',
+
+  // Lleva la contabilidad y declara. No toca empresas, usuarios ni la firma.
+  contador: [
+    'inicio',
+    'contacts', 'products', 'accounts',
+    'pos', 'invoices', 'quotes', 'advances', 'credit-notes', 'receivables',
+    'sales-ret', 'notas-debito', 'guias-remision', 'mass-invoicing',
+    'purchases', 'purchase-entry', 'batch-import', 'suppliers',
+    'liquidacion-compra', 'payables',
+    'inventory', 'warehouses', 'series', 'inventory-reports',
+    'inventory-adjustment', 'inventory-transfer',
+    'cash', 'banks', 'reconciliation', 'card-reconciliation',
+    'journal', 'ledger', 'statements', 'taxes',
+    'employees', 'payroll',
+    'documents',
+    'audit', 'reports',
+  ],
+
+  // Atiende y factura, nada más. En un laboratorio, el rol del doctor o de
+  // recepción: registra el examen del paciente y emite la factura.
+  cajero: ['pos', 'invoices', 'quotes', 'contacts'],
+}
+
+function puedeVer(rol: string | undefined, key: string) {
+  const permisos = PERMISOS[rol ?? '']
+  if (permisos === '*') return true
+  if (!permisos) return false        // rol desconocido: no ve nada
+  return permisos.includes(key)
+}
+
+export function modulesPara(tiene: (f?: string) => boolean, rol?: string) {
   return modules
-    .map((g) => ({ ...g, items: g.items.filter((i) => tiene(i.feature)) }))
+    .map((g) => ({ ...g, items: g.items.filter((i) => tiene(i.feature) && puedeVer(rol, i.key)) }))
     .filter((g) => g.items.length > 0)
 }

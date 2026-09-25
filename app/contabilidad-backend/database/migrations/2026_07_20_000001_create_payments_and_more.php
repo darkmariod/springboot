@@ -62,7 +62,7 @@ return new class extends Migration {
             $t->boolean('conciliado')->default(false);
             $t->timestamps();
         });
-        // Las compras llevan saldo pendiente (lo que le debés al proveedor)
+        // Las compras llevan saldo pendiente (lo que le debes al proveedor)
         Schema::table('purchases', fn(Blueprint $t)=>$t->decimal('saldo_pendiente',12,2)->default(0));
     }
     public function down(): void {

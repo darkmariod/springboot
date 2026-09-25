@@ -6,7 +6,7 @@
  *   1. Registrar y administrar las series de un producto (alta, baja, cambio de estado).
  *   2. Consultar una serie: a quién se la compró y a quién se la vendió.
  *
- * Las series se crean acá o al registrar una compra. El stock sigue viniendo
+ * Las series se crean aquí o al registrar una compra. El stock sigue viniendo
  * del kárdex: si las series disponibles no coinciden con el stock, se avisa.
  */
 import { computed, onMounted, ref, watch } from 'vue'

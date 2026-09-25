@@ -1,0 +1,102 @@
+[
+  {
+    "n": 1,
+    "file": "01-escritorio.png",
+    "titulo": "El escritorio de módulos"
+  },
+  {
+    "n": 2,
+    "file": "02-buscador.png",
+    "titulo": "El buscador: escribir en vez de dar clics"
+  },
+  {
+    "n": 3,
+    "file": "03-empresa.png",
+    "titulo": "Datos de la empresa y certificado .p12"
+  },
+  {
+    "n": 4,
+    "file": "04-sucursales.png",
+    "titulo": "Las 5 sucursales, cada una un establecimiento del SRI"
+  },
+  {
+    "n": 5,
+    "file": "05-bodegas.png",
+    "titulo": "La bodega central, compartida por las 5"
+  },
+  {
+    "n": 6,
+    "file": "06-usuarios.png",
+    "titulo": "Usuarios y roles"
+  },
+  {
+    "n": 7,
+    "file": "07-productos.png",
+    "titulo": "Catálogo: exámenes (servicio) y reactivos (bien)"
+  },
+  {
+    "n": 8,
+    "file": "08-lotes.png",
+    "titulo": "Lotes: cada frasco con su número y su factura"
+  },
+  {
+    "n": 9,
+    "file": "09-inventario.png",
+    "titulo": "Inventario valorizado al costo promedio"
+  },
+  {
+    "n": 10,
+    "file": "10-kardex.png",
+    "titulo": "EL KÁRDEX: promedio ponderado y las 5 sucursales"
+  },
+  {
+    "n": 11,
+    "file": "11-clientes.png",
+    "titulo": "Pacientes y empresas con convenio"
+  },
+  {
+    "n": 12,
+    "file": "12-pos.png",
+    "titulo": "Punto de Venta"
+  },
+  {
+    "n": 13,
+    "file": "13-facturas.png",
+    "titulo": "Facturas: se ven los números de las 5 sucursales"
+  },
+  {
+    "n": 14,
+    "file": "14-ride.png",
+    "titulo": "El RIDE que recibe el paciente"
+  },
+  {
+    "n": 15,
+    "file": "15-libro-diario.png",
+    "titulo": "Libro diario: los asientos se escriben solos"
+  },
+  {
+    "n": 16,
+    "file": "16-auditoria.png",
+    "titulo": "Auditoría: quién hizo qué y cuándo"
+  },
+  {
+    "n": 17,
+    "file": "17-rol-doctor.png",
+    "titulo": "El doctor entra: SOLO ve Catálogo y Ventas"
+  },
+  {
+    "n": 18,
+    "file": "18-rol-doctor-ventas.png",
+    "titulo": "Dentro de Ventas: solo lo que necesita para atender"
+  },
+  {
+    "n": 19,
+    "file": "19-rol-contadora.png",
+    "titulo": "La contadora entra: ve los diez módulos"
+  },
+  {
+    "n": 20,
+    "file": "20-rol-contadora-admin.png",
+    "titulo": "Pero en Administración: solo Auditoría y Reportes"
+  }
+]

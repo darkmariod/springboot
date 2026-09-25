@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Warehouse extends Model
 {
     use Auditable;
-    protected $fillable = ['company_id', 'codigo', 'nombre', 'por_defecto', 'activa'];
+    protected $fillable = ['company_id', 'codigo', 'nombre', 'por_defecto', 'activa', 'branch_id'];
 
     protected $casts = [
         'por_defecto' => 'boolean',
