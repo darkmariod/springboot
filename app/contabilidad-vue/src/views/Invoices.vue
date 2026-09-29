@@ -396,12 +396,12 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
 .invoices-layout { display: flex; flex-direction: column; height: 100%; background: #eef1f5; }
 
 .invoices-toolbar {
-  background: var(--hr-gradient); padding: 8px 12px; flex-shrink: 0;
+  background: #fff; border-bottom: 1px solid #dde2ea; padding: 8px 12px; flex-shrink: 0;
 }
 .invoices-filters {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
-.invoices-title { color: #fff; font-weight: 600; font-size: 13px; margin-right: 12px; }
+.invoices-title { color: var(--hr-text-on-card); font-weight: 600; font-size: 13px; margin-right: 12px; }
 
 .invoices-grid-wrap { flex: 1; overflow: auto; padding: 0; }
 .invoices-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
