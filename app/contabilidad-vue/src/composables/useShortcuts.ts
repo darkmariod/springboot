@@ -24,7 +24,6 @@ export type ShortcutAction =
   | 'cancelar'
   | 'modulos'
   | 'cerrar-pestana'
-  | 'menu-lateral'
   | 'pestana'
 
 type Handler = (payload?: unknown) => void
@@ -41,7 +40,6 @@ export const SHORTCUTS: { keys: string; action: ShortcutAction; label: string }[
   { keys: 'F4', action: 'modulos', label: 'Volver a Módulos' },
   { keys: 'F8', action: 'cerrar-pestana', label: 'Cerrar pestaña' },
   { keys: 'Alt + 1…9', action: 'pestana', label: 'Ir a la pestaña N' },
-  { keys: 'Ctrl + B', action: 'menu-lateral', label: 'Mostrar / ocultar menú lateral' },
 ]
 
 function subscribe(action: ShortcutAction, fn: Handler) {
@@ -95,10 +93,9 @@ export function actionFor(e: KeyboardEvent): { action: ShortcutAction; payload?:
   if (key === 's') return { action: 'guardar' }
   if (key === 'p') return { action: 'imprimir' }
   if (key === 'f') return { action: 'buscar' }
-  if (key === 'b') return { action: 'menu-lateral' }
 
   return null
 }
 
 /** Actions the layout itself owns; they always take precedence over the browser. */
-export const LAYOUT_ACTIONS: ShortcutAction[] = ['modulos', 'cerrar-pestana', 'menu-lateral', 'pestana']
+export const LAYOUT_ACTIONS: ShortcutAction[] = ['modulos', 'cerrar-pestana', 'pestana']

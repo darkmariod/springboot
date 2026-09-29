@@ -55,8 +55,6 @@ import NotaDebito from '../views/NotaDebito.vue'
 import GuiaRemision from '../views/GuiaRemision.vue'
 import Fractionation from '../views/Fractionation.vue'
 import StockReservations from '../views/StockReservations.vue'
-import SideRail from '../components/SideRail.vue'
-import { useUiStore } from '../stores/ui'
 import { actionFor, emitShortcut, LAYOUT_ACTIONS } from '../composables/useShortcuts'
 
 const auth = useAuthStore()
@@ -64,7 +62,6 @@ const inicial = computed(() => (auth.user?.name ?? 'U').trim().charAt(0).toUpper
 const company = useCompanyStore()
 const tabs = useTabsStore()
 const plan = usePlanStore()
-const ui = useUiStore()
 
 const HOME = { key: 'home', label: 'Módulos', icon: 'pi pi-th-large', component: 'Home' }
 
@@ -135,7 +132,6 @@ function atajoDeLayout(action: string, payload?: unknown) {
     nextTick(() => emitShortcut('buscar'))
   }
   else if (action === 'cerrar-pestana' && tabs.activeKey) tabs.close(tabs.activeKey)
-  else if (action === 'menu-lateral') ui.toggleSidebar()
   else if (action === 'pestana') {
     const t = tabs.tabs[payload as number]
     if (t) tabs.activeKey = t.key
@@ -174,7 +170,6 @@ function atajoDeLayout(action: string, payload?: unknown) {
       </header>
 
       <div class="body">
-        <SideRail v-if="ui.sidebar" />
         <div class="workspace">
         <div v-if="tabs.tabs.length" class="tabbar">
           <button
