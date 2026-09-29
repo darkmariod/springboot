@@ -233,13 +233,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post("inventory/transferencia", [\App\Http\Controllers\InventoryTransactionController::class, "transferencia"]);
     Route::get("inventory/kardex/{product}/bodega", [\App\Http\Controllers\InventoryTransactionController::class, "kardexBodega"]);
 
-    // Fase 5 — Reportes
-    Route::get("reports/stock", [\App\Http\Controllers\ReportController::class, "stockReport"]);
-    Route::get("reports/kardex/{product}", [\App\Http\Controllers\ReportController::class, "kardexReport"]);
-    Route::post("reports/pdf", [\App\Http\Controllers\ReportController::class, "generatePdf"]);
-    Route::get("reports/csv", [\App\Http\Controllers\ReportController::class, "exportCsv"]);
-    Route::get("reports/series", [\App\Http\Controllers\ReportController::class, "seriesReport"]);
-    Route::get("reports/series-csv", [\App\Http\Controllers\ReportController::class, "exportSeriesCsv"]);
+    // Reportes de ventas y compras (Excel/PDF por tipo)
+    Route::get("reportes/comprobantes", [\App\Http\Controllers\ReportesController::class, "comprobantes"]);
+    Route::get("reportes/ventas", [\App\Http\Controllers\ReportesController::class, "ventas"]);
+    Route::get("reportes/ventas-detalle", [\App\Http\Controllers\ReportesController::class, "ventasDetalle"]);
+    Route::get("reportes/compras", [\App\Http\Controllers\ReportesController::class, "compras"]);
 
     // Fase 6 — Conversión de artículos
     Route::middleware('feature:conversion_articulos')->group(function () {

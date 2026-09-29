@@ -71,7 +71,6 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
     items: [
       { key: 'journal', label: 'Libro diario', icon: 'pi pi-book', component: 'Accounting', feature: 'contabilidad' },
       { key: 'ledger', label: 'Libro mayor', icon: 'pi pi-list', component: 'Ledger', feature: 'contabilidad' },
-      { key: 'statements', label: 'Estados financieros', icon: 'pi pi-chart-line', component: 'Accounting', feature: 'contabilidad' },
       { key: 'taxes', label: 'Impuestos', icon: 'pi pi-percentage', component: 'Taxes', feature: 'contabilidad' },
     ],
   },
@@ -99,7 +98,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'companies', label: 'Empresas', icon: 'pi pi-building', component: 'Companies' },
       { key: 'users', label: 'Usuarios y roles', icon: 'pi pi-shield', component: 'Users', feature: 'usuarios' },
       { key: 'audit', label: 'Auditoría', icon: 'pi pi-history', component: 'Audit', feature: 'auditoria' },
-      { key: 'reports', label: 'Reportes', icon: 'pi pi-chart-bar', component: 'ReportViewer', feature: 'reportes' },
+      { key: 'sales-reports', label: 'Reportes de ventas y compras', icon: 'pi pi-file-export', component: 'SalesReports', feature: 'reportes' },
     ],
   },
 ]
@@ -126,10 +125,10 @@ export const PERMISOS: Record<string, '*' | string[]> = {
     'inventory', 'warehouses', 'series', 'inventory-reports',
     'inventory-adjustment', 'inventory-transfer',
     'cash', 'banks', 'reconciliation', 'card-reconciliation',
-    'journal', 'ledger', 'statements', 'taxes',
+    'journal', 'ledger', 'taxes',
     'employees', 'payroll',
     'documents',
-    'audit', 'reports',
+    'audit', 'sales-reports',
   ],
 
   // Atiende y factura, nada más. En un laboratorio, el rol del doctor o de

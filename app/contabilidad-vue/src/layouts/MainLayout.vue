@@ -46,7 +46,7 @@ import Taxes from '../views/Taxes.vue'
 import InventoryAdjustment from '../views/InventoryAdjustment.vue'
 import InventoryTransfer from '../views/InventoryTransfer.vue'
 import PurchaseEntry from '../views/PurchaseEntry.vue'
-import ReportViewer from '../views/ReportViewer.vue'
+import SalesReports from '../views/SalesReports.vue'
 import ArticleConversion from '../views/ArticleConversion.vue'
 import CardReconciliation from '../views/CardReconciliation.vue'
 import MassInvoicing from '../views/MassInvoicing.vue'
@@ -75,7 +75,7 @@ const componentMap: Record<string, any> = {
   Branches, Invoices, Purchases, PurchaseEntry, Inventory, Accounting, Cash, Receivables, Payables, Withholdings,
   SriDocuments, Quotes, Reconciliation, Ledger, Companies, EmissionPoints, Suppliers, InventoryReports,
   Series, Users, Audit, Advances, CreditNotes, BatchImport, Employees, Payroll, Warehouses,
-  Taxes, InventoryAdjustment, InventoryTransfer, ReportViewer, ArticleConversion,
+  Taxes, InventoryAdjustment, InventoryTransfer, SalesReports, ArticleConversion,
   CardReconciliation, MassInvoicing, LiquidacionCompra, NotaDebito, GuiaRemision,
   Fractionation, StockReservations,
 }
