@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Models\WarehouseStock;
+use App\Services\GenerateAdjustmentJournalEntry;
 use App\Services\RegisterInventoryMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,15 +46,23 @@ class InventoryTransactionController extends Controller
         $tipo = $diferencia > 0 ? 'ingreso' : 'egreso';
         $cant = abs($diferencia);
 
-        $movimiento = app(RegisterInventoryMovement::class)->handle(
-            $product,
-            $tipo,
-            $cant,
-            (float)$product->costo_promedio,
-            'Ajuste inventario: ' . $d['motivo'],
-            now()->toDateString(),
-            $d['warehouse_id']
-        );
+        // Movimiento y asiento van en la misma transacción: si el asiento falla,
+        // el kárdex no se mueve solo — es justo lo que la contadora pidió evitar.
+        [$movimiento, $asiento] = DB::transaction(function () use ($product, $tipo, $cant, $d) {
+            $mov = app(RegisterInventoryMovement::class)->handle(
+                $product,
+                $tipo,
+                $cant,
+                (float)$product->costo_promedio,
+                'Ajuste inventario: ' . $d['motivo'],
+                now()->toDateString(),
+                $d['warehouse_id']
+            );
+
+            $as = app(GenerateAdjustmentJournalEntry::class)->handle($mov);
+
+            return [$mov, $as];
+        });
 
         return response()->json([
             'ok' => true,
@@ -64,6 +73,7 @@ class InventoryTransactionController extends Controller
             'tipo_movimiento' => $tipo,
             'cantidad' => $cant,
             'movimiento_id' => $movimiento->id,
+            'asiento' => $asiento->numero,
         ]);
     }
 
