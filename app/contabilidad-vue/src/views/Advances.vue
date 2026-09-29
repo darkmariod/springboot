@@ -64,7 +64,7 @@ onMounted(load)
         </div>
         <div class="kvs-row">
           <label class="kvs-lbl">Monto:</label>
-          <InputNumber v-model="form.monto" mode="currency" currency="USD" class="kvs-in" />
+          <InputNumber v-model="form.monto" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
         </div>
         <div class="kvs-row">
           <label class="kvs-lbl">Forma de pago:</label>

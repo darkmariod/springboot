@@ -68,7 +68,7 @@ onMounted(load)
           <p style="margin: 0 0 10px; font-size: 12px; color: #64748b;">No hay caja abierta. Defina el saldo inicial (fondo de caja).</p>
           <div class="kvs-row">
             <label class="kvs-lbl"><span class="req">*</span> Saldo inicial:</label>
-            <InputNumber v-model="saldoInicial" mode="currency" currency="USD" class="kvs-in" />
+            <InputNumber v-model="saldoInicial" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
           </div>
         </fieldset>
       </div>
@@ -106,7 +106,7 @@ onMounted(load)
               <label class="kvs-lbl"><span class="req">*</span> Tipo:</label>
               <Select v-model="mov.tipo" :options="tipos" optionLabel="label" optionValue="value" class="kvs-in" />
               <label class="kvs-lbl" style="margin-left: 12px;"><span class="req">*</span> Monto:</label>
-              <InputNumber v-model="mov.monto" mode="currency" currency="USD" class="kvs-in" />
+              <InputNumber v-model="mov.monto" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
             </div>
             <div class="kvs-row">
               <label class="kvs-lbl"><span class="req">*</span> Concepto:</label>
@@ -143,7 +143,7 @@ onMounted(load)
             <legend>Cerrar Caja</legend>
             <div class="kvs-row">
               <label class="kvs-lbl"><span class="req">*</span> Arqueo (contado físico):</label>
-              <InputNumber v-model="arqueo" mode="currency" currency="USD" class="kvs-in" />
+              <InputNumber v-model="arqueo" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
             </div>
           </fieldset>
         </div>

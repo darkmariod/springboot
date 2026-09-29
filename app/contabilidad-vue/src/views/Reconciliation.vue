@@ -54,7 +54,7 @@ onMounted(loadBanks)
     </Message>
     <div style="display:flex; gap:8px; align-items:flex-end; margin-bottom:14px; background:#fff; border:1px solid #e2e5ea; border-radius:10px; padding:12px;">
       <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">Tipo<Select v-model="nuevo.tipo" :options="tipos" optionLabel="label" optionValue="value" /></label>
-      <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">Monto<InputNumber v-model="nuevo.monto" mode="currency" currency="USD" /></label>
+      <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">Monto<InputNumber v-model="nuevo.monto" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" /></label>
       <label style="flex:1; display:flex; flex-direction:column; gap:4px; font-size:12px;">Concepto<InputText v-model="nuevo.concepto" /></label>
       <Button label="Agregar" @click="agregar" />
     </div>

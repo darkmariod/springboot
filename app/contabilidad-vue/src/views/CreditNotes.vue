@@ -74,7 +74,7 @@ onMounted(load)
         </div>
         <div class="kvs-row">
           <label class="kvs-lbl">Importe total:</label>
-          <InputNumber v-model="form.importe_total" mode="currency" currency="USD" class="kvs-in" />
+          <InputNumber v-model="form.importe_total" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
         </div>
       </fieldset>
       <template #footer>

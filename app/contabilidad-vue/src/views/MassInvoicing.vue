@@ -173,7 +173,7 @@ onMounted(load)
               </td>
               <td>{{ item.descripcion }}</td>
               <td><InputNumber v-model="item.cantidad" :min="0.01" :useGrouping="false" style="width: 100%;" /></td>
-              <td><InputNumber v-model="item.precio_unitario" mode="currency" currency="USD" style="width: 100%;" /></td>
+              <td><InputNumber v-model="item.precio_unitario" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" style="width: 100%;" /></td>
               <td><InputNumber v-model="item.tarifa" :useGrouping="false" style="width: 100%;" /></td>
               <td class="der">{{ money((item.cantidad * item.precio_unitario) * (1 + item.tarifa / 100)) }}</td>
               <td><Button icon="pi pi-times" text size="small" severity="danger" @click="removeItem(idx, iIdx)" /></td>

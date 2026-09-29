@@ -212,10 +212,10 @@ onMounted(cargar)
           </div>
           <div class="kvs-row">
             <label class="kvs-lbl"><span class="req">*</span> Monto bruto:</label>
-            <InputNumber v-model="dialog.monto_bruto" mode="currency" currency="USD" locale="en-US"
+            <InputNumber v-model="dialog.monto_bruto" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" locale="en-US"
                          class="kvs-in" style="max-width:170px" />
             <label class="kvs-lbl" style="margin-left:14px;">Comisión:</label>
-            <InputNumber v-model="dialog.comision" mode="currency" currency="USD" locale="en-US"
+            <InputNumber v-model="dialog.comision" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" locale="en-US"
                          class="kvs-in" style="max-width:170px" />
           </div>
           <div class="kvs-row">

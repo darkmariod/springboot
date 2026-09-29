@@ -185,7 +185,7 @@ onMounted(load)
         </Column>
         <Column header="P. Unit." style="width:130px">
           <template #body="{ data }">
-            <InputNumber v-model="data.precio_unitario" mode="currency" currency="USD" fluid /></template>
+            <InputNumber v-model="data.precio_unitario" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" fluid /></template>
         </Column>
         <Column header="IVA%" style="width:80px">
           <template #body="{ data }"><InputNumber v-model="data.tarifa" :useGrouping="false" fluid /></template>

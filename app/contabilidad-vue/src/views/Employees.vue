@@ -162,7 +162,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
             </div>
             <div class="kvs-row">
               <label class="kvs-lbl"><span class="req">*</span> Sueldo:</label>
-              <InputNumber v-model="form.sueldo" mode="currency" currency="USD" :disabled="!editando" class="kvs-in" style="max-width:160px" />
+              <InputNumber v-model="form.sueldo" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" :disabled="!editando" class="kvs-in" style="max-width:160px" />
             </div>
             <div class="kvs-row">
               <label style="display:flex; align-items:center; gap:8px;">

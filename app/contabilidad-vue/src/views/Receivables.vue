@@ -104,7 +104,7 @@ onMounted(load)
         </DataTable>
         <div v-if="usarDialog.seleccion" class="kvs-row">
           <label class="kvs-lbl"><span class="req">*</span> Monto a cruzar:</label>
-          <InputNumber v-model="usarDialog.monto" mode="currency" currency="USD" class="kvs-in" />
+          <InputNumber v-model="usarDialog.monto" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
         </div>
       </div>
       <template #footer>

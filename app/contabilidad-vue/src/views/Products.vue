@@ -244,7 +244,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
               <Select v-model="form.tarifa_iva" :options="ivas" optionLabel="label" optionValue="value"
                       :disabled="!editando" class="kvs-in" style="max-width:120px" />
               <label class="kvs-lbl" style="margin-left:16px;"><span class="req">*</span> Precio venta:</label>
-              <InputNumber v-model="form.precio" mode="currency" currency="USD"
+              <InputNumber v-model="form.precio" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()"
                            :disabled="!editando" class="kvs-in" style="max-width:160px" />
             </div>
             <div class="kvs-row">
@@ -280,7 +280,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
             </table>
             <div class="kvs-row" style="margin-top:8px;">
               <InputText v-model="nuevoPrecio.nombre" placeholder="PRECIO VENTA AL PUBLICO" style="flex:1" />
-              <InputNumber v-model="nuevoPrecio.precio" mode="currency" currency="USD" style="width:140px" />
+              <InputNumber v-model="nuevoPrecio.precio" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" style="width:140px" />
               <Button icon="pi pi-plus" size="small" :disabled="!form.id" @click="agregarPrecio" />
             </div>
           </div>
