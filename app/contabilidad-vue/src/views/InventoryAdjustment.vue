@@ -7,8 +7,10 @@ import Select from 'primevue/select'
 import Message from 'primevue/message'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import { useQuickActionStore } from '../stores/quickAction'
 
 const company = useCompanyStore()
+const quickAction = useQuickActionStore()
 
 const products = ref<any[]>([])
 const warehouses = ref<any[]>([])
@@ -45,6 +47,9 @@ async function load() {
   ])
   products.value = pRes.data
   warehouses.value = wRes.data
+  // Llegó desde "Ajustar stock" en Productos: ese producto ya viene elegido.
+  const pendiente = quickAction.consumeAdjust()
+  if (pendiente) form.value.product_id = pendiente
   loading.value = false
 }
 

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import DataTable from 'primevue/datatable'
+import { useTabsStore } from '../stores/tabs'
+import { useQuickActionStore } from '../stores/quickAction'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -76,6 +78,16 @@ async function seleccionar(r: any) {
     stock_minimo: Number(r.stock_minimo ?? 0), stock_maximo: Number(r.stock_maximo ?? 0) }
   await cargarExtras()
 }
+const tabsStore = useTabsStore()
+const quickAction = useQuickActionStore()
+
+/** Atajo desde la fila: salta directo a Ajuste de Inventario con este producto. */
+function ajustarStock(row: any) {
+  quickAction.requestAdjust(row.id)
+  tabsStore.open({ key: 'inventory-adjustment', label: 'Ajuste Inventario',
+                   icon: 'pi pi-sliders-h', component: 'InventoryAdjustment' })
+}
+
 function nuevo() {
   seleccion.value = null
   editando.value = true
@@ -178,6 +190,12 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
         <Column field="descripcion" header="Nombre" />
         <Column header="Stock" style="width:70px">
           <template #body="{ data }">{{ Number(data.stock ?? 0) }}</template>
+        </Column>
+        <Column header="" style="width:36px">
+          <template #body="{ data }">
+            <Button v-if="data.tipo !== 'servicio'" icon="pi pi-sliders-h" text rounded size="small"
+                    title="Ajustar stock" @click.stop="ajustarStock(data)" />
+          </template>
         </Column>
       </DataTable>
       <div class="kvs-panel-foot">Mostrando {{ filtrados.length }} de {{ rows.length }}</div>
