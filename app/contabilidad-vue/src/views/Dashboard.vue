@@ -285,7 +285,7 @@ const temaTexto = computed(() => (tema.value === 'auto' ? 'Auto' : tema.value ==
   --good: #16a34a; --good-bg: #eaf7ee;
   --warn: #d97706; --warn-bg: #fff6e6;
   --crit: #d93025; --crit-bg: #fdeceb;
-  --info: #2563eb; --info-bg: #eaf1fe;
+  --info: var(--hr-blue); --info-bg: #eaf1ef;
   display: grid;
   grid-template-columns: 1fr;
   min-height: 100%;

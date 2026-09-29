@@ -175,37 +175,7 @@ onActivated(alVolver)
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  background:
-    linear-gradient(rgba(10, 25, 41, 0.82), rgba(10, 25, 41, 0.92)),
-    url('/fondo-tech.jpg') center / cover no-repeat fixed,
-    linear-gradient(135deg, var(--hr-navy) 0%, var(--hr-navy-light) 100%);
-}
-.launcher::before,
-.launcher::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.launcher::before {
-  background:
-    radial-gradient(1.5px 1.5px at 8% 15%, rgba(255,255,255,0.45) 50%, transparent 50%),
-    radial-gradient(1px 1px at 25% 55%, rgba(255,255,255,0.3) 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 50% 10%, rgba(255,255,255,0.35) 50%, transparent 50%),
-    radial-gradient(1px 1px at 68% 75%, rgba(255,255,255,0.25) 50%, transparent 50%),
-    radial-gradient(2px 2px at 82% 25%, rgba(255,255,255,0.4) 50%, transparent 50%),
-    radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.2) 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 42% 45%, rgba(255,255,255,0.3) 50%, transparent 50%),
-    radial-gradient(1px 1px at 88% 60%, rgba(255,255,255,0.25) 50%, transparent 50%);
-}
-.launcher::after {
-  background:
-    radial-gradient(1px 1px at 12% 40%, rgba(255,255,255,0.25) 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 38% 80%, rgba(255,255,255,0.3) 50%, transparent 50%),
-    radial-gradient(1px 1px at 58% 30%, rgba(255,255,255,0.2) 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 72% 8%, rgba(255,255,255,0.35) 50%, transparent 50%),
-    radial-gradient(1px 1px at 48% 65%, rgba(255,255,255,0.18) 50%, transparent 50%),
-    radial-gradient(1px 1px at 92% 70%, rgba(255,255,255,0.25) 50%, transparent 50%);
+  background: var(--hr-navy);
 }
 .launcher-header {
   display: flex;
@@ -221,33 +191,32 @@ onActivated(alVolver)
 /* Buscador: con 49 pantallas, teclear es más rápido que dar clics. */
 .buscador {
   flex: 1; max-width: 480px; display: flex; align-items: center; gap: 10px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--hr-navy-light);
+  border: 1px solid rgba(211, 212, 192, 0.25);
   border-radius: 10px; padding: 0 12px; height: 42px;
-  transition: border-color 0.12s ease, background 0.12s ease;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .buscador:focus-within {
-  background: rgba(255, 255, 255, 0.11);
-  border-color: rgba(120, 180, 255, 0.55);
-  box-shadow: 0 0 0 3px rgba(56, 130, 246, 0.16);
+  border-color: var(--hr-blue);
+  box-shadow: 0 0 0 3px rgba(101, 146, 135, 0.18);
 }
-.buscador > i { color: #8fa3bd; font-size: 15px; }
+.buscador > i { color: var(--hr-silver); font-size: 15px; }
 .buscador input {
   flex: 1; min-width: 0; background: transparent; border: 0; outline: none;
   color: #fff; font-size: 14px; font-family: inherit;
 }
-.buscador input::placeholder { color: #7e90a8; }
+.buscador input::placeholder { color: #7c8a95; }
 .limpiar {
-  border: 0; background: transparent; color: #8fa3bd; cursor: pointer;
+  border: 0; background: transparent; color: var(--hr-silver); cursor: pointer;
   display: grid; place-items: center; padding: 4px; border-radius: 6px;
 }
-.limpiar:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.limpiar:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 
 .migas {
   display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
   position: relative; z-index: 1;
 }
-.migas-sep { color: #56708f; }
+.migas-sep { color: #5b7183; }
 .migas-actual { color: #fff; font-weight: 600; font-size: 15px; }
 
 .sin-resultados {
@@ -286,7 +255,7 @@ onActivated(alVolver)
 .tile--marcado {
   transform: translateY(-3px);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
-  border-color: rgba(255, 255, 255, 0.35);
+  border-color: var(--hr-cream);
 }
 /* En los resultados de búsqueda se muestra de qué grupo viene cada pantalla. */
 .tile-grupo {
@@ -308,12 +277,12 @@ onActivated(alVolver)
 }
 .atajos {
   margin-top: auto; padding-top: 28px; display: flex; flex-wrap: wrap; gap: 6px 18px;
-  font-size: 11.5px; color: var(--hr-silver); position: relative; z-index: 1;
+  font-size: 11.5px; color: #8fa3bd; position: relative; z-index: 1;
 }
 .atajo { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .atajo kbd {
-  font-family: inherit; font-size: 10.5px; font-weight: 600; color: #fff;
-  background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.18);
+  font-family: inherit; font-size: 10.5px; font-weight: 700; color: var(--hr-cream);
+  background: rgba(139, 94, 60, 0.35); border: 1px solid var(--hr-brown);
   border-radius: 5px; padding: 1px 6px;
 }
 .volver {
@@ -321,4 +290,5 @@ onActivated(alVolver)
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0;
   position: relative; z-index: 1;
 }
+.volver:hover { color: #fff; }
 </style>

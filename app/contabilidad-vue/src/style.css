@@ -4,15 +4,17 @@
   line-height: 1.5;
   color: #1f2733;
   color-scheme: light;
-  --hr-navy: #0a1929;
-  --hr-navy-light: #12385c;
-  --hr-blue: #1e5bb8;
-  --hr-blue-hover: #2563eb;
-  --hr-blue-dark: #1a4a8c;
-  --hr-silver: #c7ccd1;
+  --hr-navy: #0a2947;
+  --hr-navy-light: #163a5c;
+  --hr-blue: #659287;
+  --hr-blue-hover: #75a297;
+  --hr-blue-dark: #4f7469;
+  --hr-silver: #d3d4c0;
   --hr-text-on-navy: #ffffff;
   --hr-text-on-card: #1f2733;
-  --hr-gradient: linear-gradient(#1e5bb8, #1a4a8c);
+  --hr-gradient: linear-gradient(#659287, #4f7469);
+  --hr-cream: #f3e4c9;
+  --hr-brown: #8b5e3c;
 }
 
 * { box-sizing: border-box; }
