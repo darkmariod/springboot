@@ -9,6 +9,8 @@ import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import Dialog from 'primevue/dialog'
+import ClienteForm from '../components/ClienteForm.vue'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import KvsDocGrid from '../components/kvs/KvsDocGrid.vue'
@@ -35,6 +37,29 @@ const form = ref<any>({})
 const items = ref<any[]>([])
 
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
+
+// Crear proveedor sin salir de esta pantalla: si al comprar no existe,
+// antes había que ir a Compras → Proveedores, crearlo y volver.
+const nuevoProveedorDialog = ref(false)
+const nuevoProveedorForm = ref<any>({ tipo_identificacion: '04', es_proveedor: true, es_cliente: false })
+
+function nuevoProveedor() {
+  nuevoProveedorForm.value = { tipo_identificacion: '04', es_proveedor: true, es_cliente: false }
+  nuevoProveedorDialog.value = true
+}
+
+async function guardarNuevoProveedor() {
+  try {
+    const res = await api.post('/contacts', { ...nuevoProveedorForm.value, company_id: company.activeId })
+    contacts.value.push(res.data)
+    form.value.contact_id = res.data.id
+    nuevoProveedorDialog.value = false
+    msg.value = { type: 'success', text: 'Proveedor creado: ' + res.data.razon_social }
+  } catch (err: any) {
+    const e = err.response?.data?.errors
+    msg.value = { type: 'error', text: e ? Object.values(e).flat().join(' · ') : 'No se pudo guardar.' }
+  }
+}
 
 const tabs = [
   { key: 'datos', label: 'Datos del Comprobante' },
@@ -296,7 +321,9 @@ onMounted(load)
               <label class="kvs-lbl"><span class="req">*</span> Proveedor:</label>
               <Select v-model="form.contact_id" :options="contacts" optionValue="id"
                       optionLabel="razon_social" placeholder="Buscar proveedor..." filter
-                      :disabled="!editando" class="kvs-in" />
+                      :disabled="!editando" class="kvs-in" style="flex:1" />
+              <Button v-if="editando" icon="pi pi-plus" size="small" text
+                      title="Proveedor nuevo" @click="nuevoProveedor" />
             </div>
             <div class="kvs-row">
               <label class="kvs-lbl"><span class="req">*</span> No. Comprobante:</label>
@@ -374,6 +401,16 @@ onMounted(load)
     </section>
     </div>
   </div>
+
+  <Dialog v-model:visible="nuevoProveedorDialog" modal header="Nuevo Proveedor" style="width:520px;">
+    <ClienteForm v-model="nuevoProveedorForm" />
+    <template #footer>
+      <div class="kvs-footer">
+        <Button label="Cancelar" text @click="nuevoProveedorDialog=false" />
+        <Button label="Guardar proveedor" @click="guardarNuevoProveedor" />
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>
