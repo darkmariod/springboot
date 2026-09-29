@@ -30,5 +30,12 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
-  return { tabs, activeKey, open, close }
+  /** Cierra todo menos la pestaña dada (por defecto, todo). Para "demasiadas pestañas abiertas". */
+  function closeAll(exceptKey?: string) {
+    const keep = exceptKey ? tabs.value.find((t) => t.key === exceptKey) : undefined
+    tabs.value = keep ? [keep] : []
+    activeKey.value = keep?.key ?? null
+  }
+
+  return { tabs, activeKey, open, close, closeAll }
 })

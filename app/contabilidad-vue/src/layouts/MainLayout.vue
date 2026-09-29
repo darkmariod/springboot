@@ -143,10 +143,10 @@ function atajoDeLayout(action: string, payload?: unknown) {
   <div class="layout" :class="{ maximized }">
     <div class="main">
       <header class="topbar">
-        <div class="brand">
+        <button class="brand" title="Ir al inicio" @click="tabs.open({ key: 'inicio', label: 'Resumen del negocio', icon: 'pi pi-home', component: 'Dashboard' })">
           <img src="/logo-marca-blanca.png" alt="" class="hr-logo" />
           <span class="hr-wordmark">HasReset</span>
-        </div>
+        </button>
         <Button label="Módulos" icon="pi pi-th-large" text size="small"
                 @click="tabs.open(HOME)" />
         <Select
@@ -182,6 +182,14 @@ function atajoDeLayout(action: string, payload?: unknown) {
             <i :class="t.icon" />
             <span>{{ t.label }}</span>
             <i class="pi pi-times close" @click.stop="tabs.close(t.key)" />
+          </button>
+          <button
+            v-if="tabs.tabs.length > 1"
+            class="cerrar-todas"
+            title="Cerrar todas las pestañas"
+            @click="tabs.closeAll()"
+          >
+            <i class="pi pi-trash" /> Cerrar todas
           </button>
           <button
             class="maximizar"
@@ -220,10 +228,12 @@ function atajoDeLayout(action: string, payload?: unknown) {
 /* La marca se separa del resto con una línea, no con aire suelto */
 .brand {
   display: flex; align-items: center; height: 28px;
-  padding-right: 16px; margin-right: 6px;
-  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  padding-right: 16px; margin-right: 6px; padding-left: 0;
+  border: 0; border-right: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent; cursor: pointer;
 }
 .brand { gap: 9px; }
+.brand:hover .hr-wordmark { color: var(--hr-blue-hover); }
 .hr-logo { height: 24px; width: auto; object-fit: contain; }
 .hr-wordmark {
   color: #fff; font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
@@ -263,7 +273,7 @@ function atajoDeLayout(action: string, payload?: unknown) {
 .workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #eef1f5; }
 .body { flex: 1; display: flex; overflow: hidden; }
 .tabbar {
-  --tab-accent: #1e5bb8;
+  --tab-accent: var(--hr-blue);
   display: flex; gap: 3px; background: #e4e9f1; padding: 7px 10px 0;
   flex-shrink: 0; align-items: stretch; min-height: 42px;
   /* overflow-y hidden: sin esto, la barra de scroll corta las pestañas por la mitad */
@@ -297,6 +307,13 @@ function atajoDeLayout(action: string, payload?: unknown) {
 }
 .worktab:hover .close, .worktab.active .close { opacity: 0.5; }
 .worktab .close:hover { opacity: 1 !important; color: #d93025; background: #fbe3e1; }
+.cerrar-todas {
+  flex-shrink: 0; align-self: center; margin-left: 6px; border: 0;
+  color: #8a95a3; cursor: pointer; padding: 6px 9px; border-radius: 6px;
+  font-size: 12px; display: flex; align-items: center; gap: 5px;
+  background: transparent; white-space: nowrap;
+}
+.cerrar-todas:hover { background: #fbe3e1; color: #d93025; }
 .tabcontent { flex: 1; overflow: auto; background: #fff; }
 .empty { padding: 60px; text-align: center; color: #94a3b8; }
 
