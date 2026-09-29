@@ -15,6 +15,7 @@ interface Resumen {
   facturas_por_cobrar: number
   ventas_serie: { fecha: string; total: number }[]
   documentos: { tipo: string; numero: string; cliente: string; valor: number; estado_sri: { label: string; chip: string }; fecha: string }[]
+  stock_bajo: { id: number; codigo: string; descripcion: string; stock: number; stock_minimo: number }[]
   acciones: { key: string; etiqueta: string; cantidad: number }[]
   actividad: { tipo: string; texto: string; detalle: string; cuando: string; usuario: string }[]
 }
@@ -186,6 +187,22 @@ const temaTexto = computed(() => (tema.value === 'auto' ? 'Auto' : tema.value ==
         </section>
 
         <div class="grid-2">
+          <section v-if="resumen?.stock_bajo?.length" class="panel panel-alerta" style="grid-column: 1 / -1;">
+            <div class="panel-head">
+              <h3><i class="pi pi-box" /> Stock bajo</h3>
+              <button class="link-btn" @click="abrir({ key: 'products', label: 'Productos y servicios', icon: 'pi pi-box', component: 'Products' })">
+                Ver catálogo
+              </button>
+            </div>
+            <div class="stock-bajo-lista">
+              <button v-for="p in resumen.stock_bajo" :key="p.id" class="stock-bajo-item">
+                <span class="sb-codigo">{{ p.codigo }}</span>
+                <span class="sb-nombre">{{ p.descripcion }}</span>
+                <span class="sb-cifras">{{ p.stock }} / mín. {{ p.stock_minimo }}</span>
+              </button>
+            </div>
+          </section>
+
           <section class="panel">
             <div class="panel-head">
               <h3><i class="pi pi-file" /> Documentos recientes</h3>
@@ -397,6 +414,23 @@ const temaTexto = computed(() => (tema.value === 'auto' ? 'Auto' : tema.value ==
 .doc-table .num { font-variant-numeric: tabular-nums; font-weight: 600; }
 .cell-cliente { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .muted { color: var(--muted); }
+
+/* ── Stock bajo ──────────────────────────────────── */
+.panel-alerta { border-color: var(--warn-bg); }
+.stock-bajo-lista {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px;
+}
+.stock-bajo-item {
+  display: flex; flex-direction: column; gap: 2px; text-align: left;
+  border: 1px solid var(--warn-bg); background: var(--warn-bg); border-radius: 9px;
+  padding: 8px 11px; cursor: pointer; color: var(--ink);
+}
+.stock-bajo-item:hover { filter: brightness(0.98); }
+.sb-codigo { font-size: 11px; font-weight: 700; color: var(--warn); letter-spacing: 0.3px; }
+.sb-nombre {
+  font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sb-cifras { font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
 
 /* ── Acciones pendientes ─────────────────────────── */
 .acciones { display: flex; flex-direction: column; gap: 6px; }

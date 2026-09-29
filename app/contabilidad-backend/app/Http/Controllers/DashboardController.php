@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\BankMovement;
 use App\Models\InventoryMovement;
 use App\Models\Invoice;
+use App\Models\Product;
 use App\Models\InvoicePayment;
 use App\Models\SriDocument;
 use Illuminate\Http\Request;
@@ -94,6 +95,16 @@ class DashboardController extends Controller {
             'facturas_por_cobrar' => $facturasPorCobrar,
             'ventas_serie' => $ventasSerie,
             'documentos' => $docs->values(),
+            // Productos por debajo de su stock mínimo: sin esto, la falta de
+            // mercadería se nota recién cuando alguien intenta vender y no hay.
+            'stock_bajo' => Product::where('company_id', $companyId)
+                ->where('tipo', 'bien')
+                ->where('stock_minimo', '>', 0)
+                ->whereColumn('stock', '<', 'stock_minimo')
+                ->orderBy('stock')
+                ->limit(8)
+                ->get(['id', 'codigo', 'descripcion', 'stock', 'stock_minimo'])
+                ->values(),
             'acciones' => [
                 ['key' => 'sri', 'etiqueta' => 'Documentos SRI por autorizar', 'cantidad' => $sriPendientes],
                 ['key' => 'conciliaciones', 'etiqueta' => 'Movimientos bancarios sin conciliar', 'cantidad' => $conciliaciones],
