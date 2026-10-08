@@ -20,13 +20,13 @@ class DashboardController extends Controller {
         $mesAntIni = $inicioMes->copy()->subMonth();
         $mesAntFin = $inicioMes->copy()->subSecond();
 
-        // ── Ventas del mes vs mes anterior (sin anuladas) ──
-        $ventasMes = (float) Invoice::where('company_id', $companyId)
-            ->where('estado', '!=', 'anulado')
+        // ── Ventas del mes vs mes anterior ──
+        // Solo facturas vigentes (ventasVigentes): una nota de débito (SRI o interna) comparte la tabla pero no es una venta;
+        // se excluyen las anuladas y las que el SRI rechazó. Con o sin certificado: una factura "generada" también es venta.
+        $ventasMes = (float) Invoice::ventasVigentes()->where('company_id', $companyId)
             ->whereBetween('fecha_emision', [$inicioMes, $finHoy])
             ->sum('importe_total');
-        $ventasMesAnterior = (float) Invoice::where('company_id', $companyId)
-            ->where('estado', '!=', 'anulado')
+        $ventasMesAnterior = (float) Invoice::ventasVigentes()->where('company_id', $companyId)
             ->whereBetween('fecha_emision', [$mesAntIni, $mesAntFin])
             ->sum('importe_total');
         $ventasVariacion = $ventasMesAnterior > 0
@@ -47,7 +47,7 @@ class DashboardController extends Controller {
             ->where('estado', '!=', 'anulado')->where('saldo_pendiente', '>', 0)->count();
 
         // ── Documentos recientes (5 últimas facturas) ──
-        $docs = Invoice::with('contact:id,razon_social', 'sriDocument:id,documentable_id,estado')
+        $docs = Invoice::soloFacturas()->with('contact:id,razon_social', 'sriDocument:id,documentable_id,estado')
             ->where('company_id', $companyId)
             ->orderByDesc('fecha_emision')->limit(5)->get()
             ->map(fn ($i) => [
@@ -60,8 +60,10 @@ class DashboardController extends Controller {
             ]);
 
         // ── Acciones pendientes ──
-        $sriPendientes = SriDocument::where('company_id', $companyId)
-            ->where('estado', '!=', 'AUTORIZADO')->count();
+        // Lo mismo que lista "Documentos SRI": lo anulado en el sistema no es "por autorizar"
+        $sriPendientes = SriDocument::with('documentable')->where('company_id', $companyId)
+            ->whereRaw("UPPER(estado) != 'AUTORIZADO'")->get()
+            ->reject(fn (SriDocument $d) => $d->documentoAnulado())->count();
         $conciliaciones = BankMovement::where('company_id', $companyId)
             ->where('conciliado', false)->count();
         $facturasVencidas = Invoice::where('company_id', $companyId)
@@ -77,8 +79,7 @@ class DashboardController extends Controller {
             $dia = $hoy->copy()->subDays($i);
             $ventasSerie[] = [
                 'fecha' => $dia->toDateString(),
-                'total' => (float) Invoice::where('company_id', $companyId)
-                    ->where('estado', '!=', 'anulado')
+                'total' => (float) Invoice::ventasVigentes()->where('company_id', $companyId)
                     ->whereBetween('fecha_emision', [$dia->copy()->startOfDay(), $dia->copy()->endOfDay()])
                     ->sum('importe_total'),
             ];
@@ -115,6 +116,8 @@ class DashboardController extends Controller {
     }
 
     private function estadoSri(?string $estado): array {
+        // Lo que el SRI rechazó no es "en proceso": se marca en rojo
+        if (SriDocument::esRechazado($estado)) return ['label' => strtoupper((string) $estado), 'chip' => 'crit'];
         return match (strtoupper((string) $estado)) {
             'AUTORIZADO' => ['label' => 'AUTORIZADO', 'chip' => 'good'],
             'ENVIADO', 'FIRMADO', 'GENERADO' => ['label' => 'EN PROCESO', 'chip' => 'warn'],

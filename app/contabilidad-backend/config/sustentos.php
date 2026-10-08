@@ -12,5 +12,8 @@ return [
     '08' => 'Valor pagado para solicitar Reembolso de Gasto',
     '09' => 'Reembolso por Siniestros',
     '10' => 'Distribución de Dividendos, Beneficios o Utilidades',
+    '11' => "Convenios de débito o recaudación para IFI's",
+    '12' => 'Impuestos y retenciones presuntivos',
+    '13' => 'Valores reconocidos por entidades del sector público a favor de sujetos pasivos',
     '00' => 'Casos especiales cuyo sustento no aplica',
 ];

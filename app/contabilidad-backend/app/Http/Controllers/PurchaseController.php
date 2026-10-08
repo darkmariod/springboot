@@ -7,8 +7,12 @@ use App\Models\Purchase;
 use App\Services\ParseSriPurchaseXml;
 use App\Services\RegisterInventoryMovement;
 use App\Services\GeneratePurchaseJournalEntry;
+use App\Support\ComprobantesCompra;
+use App\Support\CostosInventario;
+use App\Support\Sustentos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -28,6 +32,8 @@ class PurchaseController extends Controller {
             'contact_id' => ['required','exists:contacts,id'],
             'numero' => ['required','string'],
             'fecha_emision' => ['required','date'],
+            'sustento_tributario' => ['nullable', Rule::in(Sustentos::codigos())],
+            'tipo_comprobante' => ['nullable', Rule::in(ComprobantesCompra::ELEGIBLES)],
             'items' => ['required','array','min:1'],
             'items.*.codigo_principal' => ['required','string'],
             'items.*.cantidad' => ['required','numeric','gt:0'],
@@ -63,6 +69,7 @@ class PurchaseController extends Controller {
                 // manual sin clave de acceso (o sea, casi todas) chocaba con la primera.
                 'clave_acceso' => $r->clave_acceso ?: null,
                 'sustento_tributario' => $r->sustento_tributario ?? '01',
+                'tipo_comprobante' => $r->tipo_comprobante ?: 'factura',
                 'warehouse_id' => $r->warehouse_id,
                 'observacion' => $r->observacion ?? '',
                 'items' => $items,
@@ -82,8 +89,9 @@ class PurchaseController extends Controller {
                     ['descripcion' => $item['descripcion'] ?? $codigo, 'tipo' => 'bien',
                      'precio' => $item['precio_unitario'], 'tarifa_iva' => $item['tarifa']]
                 );
+                // Al kárdex entra el costo NETO (con el descuento de la línea): es el mismo valor que va a 1.1.05.
                 if ($product->tipo !== 'servicio')
-                    $inv->handle($product, 'ingreso', $cant, $item['precio_unitario'],
+                    $inv->handle($product, 'ingreso', $cant, CostosInventario::costoUnitarioCompra($item),
                         'Compra ' . $purchase->numero, $purchase->fecha_emision->toDateString(),
                         $purchase->warehouse_id, [], null, $purchase->id);
 
@@ -112,6 +120,8 @@ class PurchaseController extends Controller {
             'contact_id' => ['required','exists:contacts,id'],
             'numero' => ['required','string'],
             'fecha_emision' => ['required','date'],
+            'sustento_tributario' => ['nullable', Rule::in(Sustentos::codigos())],
+            'tipo_comprobante' => ['nullable', Rule::in(ComprobantesCompra::ELEGIBLES)],
         ]);
 
         DB::transaction(function () use ($r, $purchase, $inv) {
@@ -123,6 +133,10 @@ class PurchaseController extends Controller {
                 'punto_emision' => $r->punto_emision ?? $purchase->punto_emision,
                 'autorizacion' => $r->autorizacion ?? $purchase->autorizacion,
                 'sustento_tributario' => $r->sustento_tributario ?? $purchase->sustento_tributario,
+                // Las liquidaciones y demás tipos propios no se cambian desde esta pantalla
+                'tipo_comprobante' => in_array($purchase->tipo_comprobante, [null, 'compra', ...ComprobantesCompra::ELEGIBLES], true)
+                    ? ($r->tipo_comprobante ?: $purchase->tipo_comprobante)
+                    : $purchase->tipo_comprobante,
                 'warehouse_id' => $r->warehouse_id ?? $purchase->warehouse_id,
                 'observacion' => $r->observacion ?? $purchase->observacion,
             ]);
@@ -190,7 +204,12 @@ class PurchaseController extends Controller {
     }
 
     public function import(Request $r, ParseSriPurchaseXml $parser, RegisterInventoryMovement $inv, GeneratePurchaseJournalEntry $asiento) {
-        $r->validate(['company_id'=>['required','exists:companies,id'],'xml'=>['required','file','max:2048']]);
+        $r->validate([
+            'company_id'=>['required','exists:companies,id'],
+            'xml'=>['required','file','max:2048'],
+            // El que elige la persona manda; sin elegir, se deduce de lo que trae la factura
+            'sustento_tributario'=>['nullable', Rule::in(Sustentos::codigos())],
+        ]);
         $companyId = (int)$r->company_id;
         try { $d = $parser->parse(file_get_contents($r->file('xml')->getRealPath())); }
         catch (InvalidArgumentException $e) { throw ValidationException::withMessages(['xml'=>[$e->getMessage()]]); }
@@ -199,7 +218,9 @@ class PurchaseController extends Controller {
             Purchase::where('company_id',$companyId)->where('clave_acceso',$d['comprobante']['clave_acceso'])->exists())
             throw ValidationException::withMessages(['xml'=>['Esta factura de compra ya fue importada.']]);
 
-        $purchase = DB::transaction(function() use ($companyId,$d,$inv,$asiento) {
+        $sustento = $r->input('sustento_tributario') ?: Sustentos::predeterminado($companyId, $d['items']);
+
+        $purchase = DB::transaction(function() use ($companyId,$d,$inv,$asiento,$sustento) {
             $proveedor = Contact::firstOrCreate(
                 ['company_id'=>$companyId,'identificacion'=>$d['proveedor']['identificacion']],
                 $d['proveedor'] + ['company_id'=>$companyId,'es_proveedor'=>true,'es_cliente'=>false]);
@@ -207,6 +228,7 @@ class PurchaseController extends Controller {
                 'company_id'=>$companyId,'contact_id'=>$proveedor->id,
                 'numero'=>$d['comprobante']['numero'],'clave_acceso'=>$d['comprobante']['clave_acceso'],
                 'fecha_emision'=>$d['comprobante']['fecha_emision'],'items'=>$d['items'],
+                'sustento_tributario'=>$sustento,'tipo_comprobante'=>'factura',
                 'total_sin_impuestos'=>$d['totales']['total_sin_impuestos'],'total_impuesto'=>$d['totales']['total_impuesto'],
                 'importe_total'=>$d['totales']['importe_total'],'saldo_pendiente'=>$d['totales']['importe_total'],'xml'=>$d['xml'],
             ]);
@@ -219,7 +241,8 @@ class PurchaseController extends Controller {
                     ['company_id'=>$companyId,'codigo'=>$codigo],
                     ['descripcion'=>$item['descripcion'] ?? $codigo,'tipo'=>'bien','precio'=>$item['precio_unitario'] ?? 0,'tarifa_iva'=>$item['tarifa'] ?? 15]);
                 if ($product->tipo !== 'servicio')
-                    $inv->handle($product,'ingreso',$cant,(float)($item['precio_unitario'] ?? 0),'Compra '.$purchase->numero,$purchase->fecha_emision->toDateString());
+                    $inv->handle($product,'ingreso',$cant,CostosInventario::costoUnitarioCompra($item),'Compra '.$purchase->numero,$purchase->fecha_emision->toDateString(),
+                        null,[],null,$purchase->id);
             }
             // Asiento contable (Fase 6)
             $asiento->handle($purchase);

@@ -31,7 +31,8 @@ class TaxController extends Controller
         $hasta = Carbon::parse($r->hasta)->endOfDay();
 
         // === VENTAS ===
-        $ventas = Invoice::where('company_id', $companyId)
+        // Solo facturas: una nota de débito (SRI o interna) no es una venta
+        $ventas = Invoice::soloFacturas()->where('company_id', $companyId)
             ->whereBetween('fecha_emision', [$desde, $hasta])
             ->get();
 
@@ -112,7 +113,7 @@ class TaxController extends Controller
             $desde = Carbon::create($anio, $mes, 1)->startOfMonth();
             $hasta = Carbon::create($anio, $mes, 1)->endOfMonth();
 
-            $ventasMes = Invoice::where('company_id', $companyId)
+            $ventasMes = Invoice::soloFacturas()->where('company_id', $companyId)
                 ->whereBetween('fecha_emision', [$desde, $hasta])->get();
 
             $comprasMes = Purchase::where('company_id', $companyId)

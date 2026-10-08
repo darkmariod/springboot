@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Contact;
+use App\Services\DocumentCalculator;
 use App\Services\InvoiceEmitter;
 use Illuminate\Http\Request;
 
@@ -20,6 +21,8 @@ class MassInvoiceController extends Controller
             'invoices.*.items.*.cantidad' => ['required', 'numeric', 'min:0.01'],
             'invoices.*.items.*.precio_unitario' => ['required', 'numeric', 'min:0'],
             'invoices.*.items.*.tarifa' => ['sometimes', 'numeric'],
+            'invoices.*.items.*.descuento' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'invoices.*.items.*.codigo_porcentaje' => ['sometimes', 'nullable', 'string', 'in:'.implode(',', array_keys(DocumentCalculator::TARIFA_POR_CODIGO))],
             'invoices.*.forma_pago' => ['sometimes', 'in:efectivo,transferencia,tarjeta,credito'],
         ]);
 

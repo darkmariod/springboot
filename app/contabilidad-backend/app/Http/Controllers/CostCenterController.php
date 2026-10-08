@@ -44,13 +44,14 @@ class CostCenterController extends Controller
             'desde' => ['nullable', 'date'], 'hasta' => ['nullable', 'date'],
         ]);
 
+        // Solo facturas: una nota de débito (SRI o interna) comparte la tabla pero no es un ingreso del centro
         $rango = fn ($q) => $q
             ->when($d['desde'] ?? null, fn ($q, $x) => $q->whereDate('fecha_emision', '>=', $x))
             ->when($d['hasta'] ?? null, fn ($q, $x) => $q->whereDate('fecha_emision', '<=', $x));
 
         $filas = CostCenter::where('company_id', $d['company_id'])->orderBy('codigo')->get()
             ->map(function ($c) use ($rango) {
-                $ing = (float) $rango(Invoice::where('cost_center_id', $c->id)->where('estado', '!=', 'anulado'))->sum('importe_total');
+                $ing = (float) $rango(Invoice::soloFacturas()->where('cost_center_id', $c->id)->where('estado', '!=', 'anulado'))->sum('importe_total');
                 $gas = (float) $rango(Purchase::where('cost_center_id', $c->id))->sum('importe_total');
 
                 return ['codigo' => $c->codigo, 'nombre' => $c->nombre,
@@ -59,7 +60,7 @@ class CostCenterController extends Controller
             });
 
         // Lo que no se imputó a ningún centro
-        $sinIng = (float) $rango(Invoice::where('company_id', $d['company_id'])->whereNull('cost_center_id')->where('estado', '!=', 'anulado'))->sum('importe_total');
+        $sinIng = (float) $rango(Invoice::soloFacturas()->where('company_id', $d['company_id'])->whereNull('cost_center_id')->where('estado', '!=', 'anulado'))->sum('importe_total');
         $sinGas = (float) $rango(Purchase::where('company_id', $d['company_id'])->whereNull('cost_center_id'))->sum('importe_total');
 
         return [

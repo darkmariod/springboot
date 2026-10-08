@@ -35,7 +35,8 @@ class RegisterInventoryMovement
         ?int $warehouseId = null,
         array $series = [],
         ?int $invoiceId = null,
-        ?int $purchaseId = null
+        ?int $purchaseId = null,
+        string $estadoSerieSalida = 'vendida'
     ): InventoryMovement {
         if (! in_array($tipo, ['ingreso', 'egreso'], true)) {
             throw new \InvalidArgumentException("Tipo de movimiento inválido: {$tipo}");
@@ -51,7 +52,7 @@ class RegisterInventoryMovement
         $warehouseId = $warehouseId ?: \App\Models\Warehouse::where('company_id', $p->company_id)
             ->orderByDesc('por_defecto')->value('id');
 
-        return $this->conReintentos(fn () => DB::transaction(function () use ($p, $tipo, $cant, $costo, $concepto, $fecha, $warehouseId, $series, $invoiceId, $purchaseId) {
+        return $this->conReintentos(fn () => DB::transaction(function () use ($p, $tipo, $cant, $costo, $concepto, $fecha, $warehouseId, $series, $invoiceId, $purchaseId, $estadoSerieSalida) {
             $p = Product::whereKey($p->id)->lockForUpdate()->firstOrFail();
 
             if ($tipo === 'egreso' && round((float) $p->stock - $cant, self::DEC_CANTIDAD) < 0) {
@@ -60,7 +61,7 @@ class RegisterInventoryMovement
                 );
             }
 
-            $this->moverSeries($p, $tipo, $series, $invoiceId);
+            $this->moverSeries($p, $tipo, $series, $invoiceId, $estadoSerieSalida);
 
             // Los saldos se escriben en la reconstrucción de abajo.
             $mov = InventoryMovement::create([
@@ -151,7 +152,35 @@ class RegisterInventoryMovement
         }
     }
 
-    private function moverSeries(Product $p, string $tipo, array $series, ?int $invoiceId): void
+    /**
+     * Da de alta series NUEVAS de un producto que ya entró por el kárdex (p. ej. el sobrante de un
+     * ajuste). Es el complemento del ingreso: el stock lo mueve handle(), aquí solo se crean las series
+     * para que stock y series disponibles no se separen. Si alguna ya existe, no se crea ninguna.
+     */
+    public function registrarSeriesNuevas(Product $p, array $series, ?int $purchaseId = null): void
+    {
+        $series = array_values(array_filter(array_map('trim', $series), fn ($s) => $s !== ''));
+
+        $existentes = ProductSerie::where('company_id', $p->company_id)->whereIn('serie', $series)->pluck('serie')->all();
+        if ($existentes) {
+            throw new \RuntimeException('Estas series ya existen en el sistema: '.implode(', ', $existentes).'.');
+        }
+        foreach ($series as $serie) {
+            ProductSerie::create([
+                'company_id'  => $p->company_id,
+                'product_id'  => $p->id,
+                'serie'       => $serie,
+                'estado'      => 'disponible',
+                'purchase_id' => $purchaseId,
+            ]);
+        }
+    }
+
+    /**
+     * Egreso: las series salen del inventario. Por defecto se marcan 'vendida' (con la factura);
+     * un ajuste las da de baja con otro estado ('danado') porque no se vendieron.
+     */
+    private function moverSeries(Product $p, string $tipo, array $series, ?int $invoiceId, string $estadoSalida = 'vendida'): void
     {
         if (! $p->maneja_series) {
             return;
@@ -173,7 +202,7 @@ class RegisterInventoryMovement
                 ProductSerie::where('company_id', $p->company_id)
                     ->where('product_id', $p->id)->where('serie', trim($serie))
                     ->where('estado', 'disponible')
-                    ->update(['estado' => 'vendida', 'invoice_id' => $invoiceId]);
+                    ->update(['estado' => $estadoSalida, 'invoice_id' => $invoiceId]);
             }
 
             return;

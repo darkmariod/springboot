@@ -1,7 +1,9 @@
 <?php
 namespace App\Http\Controllers;
 use App\Models\Contact;
+use App\Support\ClaseContribuyente;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 class ContactController extends Controller {
     public function index(Request $r) {
         return Contact::when($r->company_id, fn($q,$id)=>$q->where('company_id',$id))->orderBy('razon_social')->get();
@@ -16,7 +18,7 @@ class ContactController extends Controller {
             'nombre_comercial'=>['nullable','string'],'direccion'=>['nullable','string'],
             'telefono'=>['nullable','string'],'email'=>['nullable','email'],
             'email2'=>['nullable','email'],'parte_relacionada'=>['boolean'],
-        ]);
+        ] + $this->reglasTributarias((int)$r->company_id), $this->mensajesTributarios());
         $this->validarIdentificacion($data['tipo_identificacion'], $data['identificacion']);
         return response()->json(Contact::create($data), 201);
     }
@@ -24,8 +26,28 @@ class ContactController extends Controller {
         if ($r->filled('tipo_identificacion') && $r->filled('identificacion')) {
             $this->validarIdentificacion($r->tipo_identificacion, $r->identificacion);
         }
+        $r->validate(['parte_relacionada'=>['sometimes','boolean']]
+            + $this->reglasTributarias((int)$contact->company_id), $this->mensajesTributarios());
         $contact->update($r->all());
         return $contact;
+    }
+
+    /**
+     * Datos tributarios y contables: clase de contribuyente (RISE, emprendedor, negocio popular, otros) y,
+     * para proveedores, la cuenta contable por defecto (debe ser de la misma empresa).
+     */
+    private function reglasTributarias(int $companyId): array {
+        return [
+            'clase_contribuyente'=>['nullable','string',Rule::in(ClaseContribuyente::claves())],
+            'cuenta_contable_id'=>['nullable','integer',Rule::exists('accounts','id')->where('company_id',$companyId)],
+        ];
+    }
+
+    private function mensajesTributarios(): array {
+        return [
+            'clase_contribuyente.in'=>'La clase de contribuyente no es válida. Elige RISE, Emprendedor, Negocio popular u Otros.',
+            'cuenta_contable_id.exists'=>'La cuenta contable no pertenece a esta empresa.',
+        ];
     }
 
     /**

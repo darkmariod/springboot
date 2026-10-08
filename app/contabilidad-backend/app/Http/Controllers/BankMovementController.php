@@ -16,7 +16,8 @@ class BankMovementController extends Controller {
     public function store(Request $r) {
         $d = $r->validate(['company_id'=>['required','exists:companies,id'],'bank_id'=>['required','exists:banks,id'],
             'fecha'=>['required','date'],'tipo'=>['required','in:debito,credito'],
-            'monto'=>['required','numeric','min:0.01'],'concepto'=>['required','string']]);
+            'monto'=>['required','numeric','min:0.01'],'concepto'=>['required','string'],
+            'documento'=>['nullable','string','max:100']]);
         return response()->json(BankMovement::create($d), 201);
     }
     public function toggle(BankMovement $movement) {

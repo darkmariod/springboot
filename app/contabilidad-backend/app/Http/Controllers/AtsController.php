@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Purchase;
+use App\Support\ComprobantesCompra;
+use App\Support\Sustentos;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -44,7 +46,8 @@ class AtsController extends Controller
         $add($iva, 'Mes', $mes);
         $add($iva, 'numEstabRuc', str_pad((string) \App\Models\Branch::where('company_id', $company->id)->count() ?: 1, 3, '0', STR_PAD_LEFT));
 
-        $ventas = Invoice::with('contact')->where('company_id', $company->id)
+        // Solo facturas: una nota de débito (SRI o interna) no es una venta ni va en el ATS
+        $ventas = Invoice::soloFacturas()->with('contact')->where('company_id', $company->id)
             ->whereBetween('fecha_emision', [$desde, $hasta])->get();
         $compras = Purchase::with('contact')->where('company_id', $company->id)
             ->whereBetween('fecha_emision', [$desde, $hasta])->get();
@@ -56,10 +59,12 @@ class AtsController extends Controller
         $nodoCompras = $add($iva, 'compras');
         foreach ($compras as $c) {
             $det = $add($nodoCompras, 'detalleCompras');
-            $add($det, 'codSustento', '01');
+            // El sustento y el tipo de comprobante de la compra; sin dato válido se mantiene 01 (factura)
+            $add($det, 'codSustento', Sustentos::existe($c->sustento_tributario) ? $c->sustento_tributario : '01');
             $add($det, 'tpIdProv', $this->tipoId($c->contact?->tipo_identificacion));
             $add($det, 'idProv', $c->contact?->identificacion);
-            $add($det, 'tipoComprobante', '01');
+            $add($det, 'tipoComprobante', ComprobantesCompra::codigo($c->tipo_comprobante));
+            $add($det, 'parteRel', $c->contact?->parte_relacionada ? 'SI' : 'NO');
             $add($det, 'fechaRegistro', Carbon::parse($c->fecha_emision)->format('d/m/Y'));
             $add($det, 'establecimiento', substr((string) $c->numero, 0, 3));
             $add($det, 'puntoEmision', substr((string) $c->numero, 4, 3));
@@ -89,7 +94,7 @@ class AtsController extends Controller
             $det = $add($nodoVentas, 'detalleVentas');
             $add($det, 'tpIdCliente', $this->tipoId($v->contact?->tipo_identificacion));
             $add($det, 'idCliente', $v->contact?->identificacion);
-            $add($det, 'parteRelVtas', 'NO');
+            $add($det, 'parteRelVtas', $v->contact?->parte_relacionada ? 'SI' : 'NO');
             $add($det, 'tipoComprobante', '18');   // 18 = factura
             $add($det, 'tipoEmision', 'F');
             $add($det, 'numeroComprobantes', '1');

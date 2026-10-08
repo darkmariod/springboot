@@ -13,7 +13,8 @@ class InvoiceEmitter
 {
     use \App\Support\RetryOnLock;
 
-    private const SRI_FORMA_PAGO = ['efectivo' => '01', 'transferencia' => '20', 'tarjeta' => '19', 'credito' => '20'];
+    /** Forma de pago del sistema → código del SRI. Público: el RIDE imprime la misma forma que se mandó. */
+    public const SRI_FORMA_PAGO = ['efectivo' => '01', 'transferencia' => '20', 'tarjeta' => '19', 'credito' => '20'];
 
     public function __construct(
         private DocumentCalculator $calculator,
@@ -91,7 +92,8 @@ class InvoiceEmitter
                 'infoTributaria' => ['codDoc' => '01', 'estab' => $estab, 'ptoEmi' => $ptoEmi],
                 'infoFactura' => [
                     'fechaEmision' => now()->format('Y-m-d'),
-                    'dirEstablecimiento' => $company->dir_matriz,
+                    // Dirección del establecimiento que emite (la de su sucursal) o, si no tiene, la matriz: el RIDE imprime la misma
+                    'dirEstablecimiento' => trim((string) $branch?->direccion) !== '' ? $branch->direccion : $company->dir_matriz,
                     'obligadoContabilidad' => $company->obligado_contabilidad ? 'SI' : 'NO',
                     'tipoIdentificacionComprador' => $contact->tipo_identificacion,
                     'razonSocialComprador' => $contact->razon_social, 'identificacionComprador' => $contact->identificacion,
@@ -109,7 +111,6 @@ class InvoiceEmitter
             ];
             $this->emitir->execute($invoice, 'factura', $company, $payload);
             $company->increment('secuencial');
-            $this->asiento->handle($invoice);
 
             // Inventario: cada item baja stock (soporta combos)
             foreach ($items as $item) {
@@ -136,6 +137,10 @@ class InvoiceEmitter
                         $invoice->fecha_emision->toDateString(), null, $item['series'] ?? [], $invoice->id);
                 }
             }
+
+            // El asiento va DESPUÉS de las salidas de inventario: el costo de ventas sale de ellas
+            // y queda en el mismo asiento de la factura.
+            $this->asiento->handle($invoice);
 
             return $invoice->load('sriDocument');
         }));

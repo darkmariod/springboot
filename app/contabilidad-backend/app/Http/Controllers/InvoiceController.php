@@ -8,8 +8,11 @@ use App\Models\Invoice;
 use App\Models\AuditLog;
 use App\Models\JournalEntry;
 use App\Models\Product;
+use App\Services\DocumentCalculator;
 use App\Services\InvoiceEmitter;
 use App\Services\RegisterInventoryMovement;
+use App\Support\AnulacionSri;
+use App\Support\CostosInventario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -23,7 +26,10 @@ class InvoiceController extends Controller
             // Las notas de débito reusan esta misma tabla; sin este filtro
             // aparecían mezcladas en el listado de facturas normales.
             ->where(fn ($q) => $q->whereNull('tipo_comprobante')->orWhere('tipo_comprobante', 'factura'))
-            ->when($r->company_id, fn ($q, $id) => $q->where('company_id', $id))->latest('fecha_emision')->get();
+            ->when($r->company_id, fn ($q, $id) => $q->where('company_id', $id))
+            // Las notas de crédito y débito piden las facturas de UN cliente para elegir la que corrigen
+            ->when($r->contact_id, fn ($q, $id) => $q->where('contact_id', $id))
+            ->latest('fecha_emision')->get();
     }
 
     public function store(Request $r, InvoiceEmitter $emitter)
@@ -39,6 +45,10 @@ class InvoiceController extends Controller
             'items.*.cantidad' => ['required', 'numeric', 'min:0.01'],
             'items.*.precio_unitario' => ['required', 'numeric', 'min:0'],
             'items.*.tarifa' => ['sometimes', 'numeric'],
+            // Descuento de la línea en dólares y código de porcentaje del IVA (tabla del SRI): sin estas reglas la validación
+            // los descartaba y el descuento del punto de venta nunca llegaba al comprobante.
+            'items.*.descuento' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'items.*.codigo_porcentaje' => ['sometimes', 'nullable', 'string', 'in:'.implode(',', array_keys(DocumentCalculator::TARIFA_POR_CODIGO))],
             'items.*.series' => ['sometimes', 'array'],
         ]);
         $company = Company::findOrFail($data['company_id']);
@@ -51,6 +61,8 @@ class InvoiceController extends Controller
         $contact = Contact::findOrFail($data['contact_id']);
         try {
             $invoice = $emitter->emit($company, $contact, $data['items'], $data['forma_pago'] ?? 'efectivo', $data['emission_point_id'] ?? null);
+        } catch (ValidationException $e) {
+            throw $e;   // una línea con IVA o descuento imposible: 422 con el detalle, no un 500
         } catch (\RuntimeException|\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
@@ -63,27 +75,25 @@ class InvoiceController extends Controller
     /**
      * Anular factura (documento fiscal: NO se borra).
      * Marca estado 'anulado', crea un contra-asiento (reversión contable, no borra el original),
-     * y devuelve el stock + series.
+     * y devuelve el stock + series. El número y el secuencial se conservan: el documento sigue en la lista, marcado anulado.
+     * Anular aquí NO anula el comprobante en el SRI: si ya estaba autorizado, la respuesta trae `requiere_anulacion_sri`
+     * y el aviso de que también hay que anularlo en el portal SRI en línea (ver App\Support\AnulacionSri).
      */
     public function anular(Request $r, Invoice $invoice, RegisterInventoryMovement $inventario)
     {
-        AuditLog::create([
-            'company_id' => $invoice->company_id, 'user_id' => \Illuminate\Support\Facades\Auth::id(),
-            'accion' => 'anulo', 'modelo' => 'Invoice', 'modelo_id' => $invoice->id,
-            'descripcion' => $invoice->numero, 'ip' => $r->ip(),
-        ]);
         if ($invoice->estado === 'anulado') {
             return response()->json(['message' => 'La factura ya está anulada.'], 422);
         }
 
-        // Fix 1: factura AUTORIZADA por el SRI NO se anula por dentro → se reversa con Nota de Crédito
-        if (strtoupper((string) $invoice->sriDocument?->estado) === 'AUTORIZADO') {
+        // Una factura con notas de crédito o de débito vigentes no se anula por dentro: esas notas la corrigen y
+        // el libro mayor las trae consigo. Se anulan primero las notas y luego la factura.
+        if ($invoice->tieneNotasVigentes()) {
             return response()->json([
-                'message' => 'Una factura autorizada por el SRI se reversa con Nota de Crédito, no se anula.',
+                'message' => 'La factura tiene notas de crédito o de débito vigentes. Anula primero esas notas y luego la factura.',
             ], 422);
         }
 
-        return DB::transaction(function () use ($invoice, $inventario) {
+        return DB::transaction(function () use ($invoice, $inventario, $r) {
             // 1) Reversión contable: crear CONTRA-ASIENTO invirtiendo debe↔haber de cada línea del original.
             //    El asiento original QUEDA en el libro diario (rastro de auditoría). NO se borra.
             $asiento = JournalEntry::where('origen_type', $invoice->getMorphClass())
@@ -121,7 +131,8 @@ class InvoiceController extends Controller
                 ]);
             }
 
-            // 2) Devolver stock (inverso del egreso; soporta combos)
+            // 2) Devolver stock (inverso del egreso; soporta combos). Vuelve al costo al que salió en esta
+            //    factura, el mismo que el contra-asiento reversa en Costo de ventas / Inventario.
             foreach ($invoice->items ?? [] as $item) {
                 $codigo = trim((string) ($item['codigo_principal'] ?? ''));
                 $cant = (float) ($item['cantidad'] ?? 0);
@@ -137,25 +148,34 @@ class InvoiceController extends Controller
                         $parte = $c->component;
                         if ($parte && $parte->tipo !== 'servicio') {
                             $inventario->handle($parte, 'ingreso', $cant * (float) $c->cantidad,
-                                (float) $parte->costo_promedio, 'Anulación '.$invoice->numero,
+                                CostosInventario::costoUnitarioFacturado($invoice->id, $parte->id) ?? (float) $parte->costo_promedio,
+                                'Anulación '.$invoice->numero,
                                 $invoice->fecha_emision->toDateString(), null, $item['series'] ?? []);
                         }
                     }
                 } elseif ($product->tipo !== 'servicio') {
-                    $inventario->handle($product, 'ingreso', $cant, (float) $product->costo_promedio,
+                    $inventario->handle($product, 'ingreso', $cant,
+                        CostosInventario::costoUnitarioFacturado($invoice->id, $product->id) ?? (float) $product->costo_promedio,
                         'Anulación '.$invoice->numero, $invoice->fecha_emision->toDateString(),
                         null, $item['series'] ?? []);
                 }
             }
 
-            // 3) Marcar anulada
+            // 3) Marcar anulada. Solo una anulación que se hace queda en la auditoría (antes también quedaban los intentos rechazados)
             $invoice->update(['estado' => 'anulado']);
+            AuditLog::create([
+                'company_id' => $invoice->company_id, 'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                'accion' => 'anulo', 'modelo' => 'Invoice', 'modelo_id' => $invoice->id,
+                'descripcion' => $invoice->numero, 'ip' => $r->ip(),
+            ]);
+
+            $invoice = $invoice->fresh(['contact:id,razon_social,identificacion', 'sriDocument']);
 
             return response()->json([
                 'ok' => true,
                 'mensaje' => 'Factura '.$invoice->numero.' anulada. Contra-asiento creado y stock devuelto.',
-                'invoice' => $invoice->fresh(['contact:id,razon_social,identificacion', 'sriDocument']),
-            ]);
+                'invoice' => $invoice,
+            ] + AnulacionSri::resumen('La factura', $invoice->numero, $invoice->sriDocument));
         });
     }
 }

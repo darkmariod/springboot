@@ -4,32 +4,39 @@ use App\Models\Company;
 use App\Models\PendingImport;
 use App\Services\SriXmlDownloader;
 use App\Services\StorePurchaseFromXml;
+use App\Support\SriTxtComprobantes;
 use Illuminate\Http\Request;
 
 class PendingImportController extends Controller {
     public function index(Request $r) {
         return PendingImport::where('company_id', $r->company_id)->latest()->get();
     }
+    /**
+     * Sube el TXT de comprobantes recibidos del SRI. Cada línea con clave de acceso queda en la lista:
+     * las facturas (01) como "pendiente" para traer su XML; los demás comprobantes (retenciones, notas de crédito
+     * y de débito, guías, liquidaciones) como "omitido" con el motivo, no como error. Ver App\Support\SriTxtComprobantes.
+     */
     public function uploadTxt(Request $r) {
         $r->validate([
             'company_id'=>['required','exists:companies,id'],
             'txt'=>['required','file','max:8192'],
         ]);
-        $lineas = file($r->file('txt')->getRealPath(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $insertadas = 0; $repetidas = 0;
-        foreach ($lineas as $linea) {
-            if (! preg_match('/\b(\d{49})\b/', $linea, $m)) continue;
-            $cols = preg_split('/\t|;/', $linea);
+        $lectura = SriTxtComprobantes::leer(file_get_contents($r->file('txt')->getRealPath()));
+        $insertadas = 0; $omitidas = 0; $repetidas = 0;
+        foreach ($lectura['filas'] as $f) {
             $p = PendingImport::firstOrCreate(
-                ['clave_acceso'=>$m[1]],
+                ['clave_acceso'=>$f['clave_acceso']],
                 ['company_id'=>$r->company_id,
-                 'ruc_emisor'=>substr($m[1], 10, 13),
-                 'razon_social'=>trim($cols[1] ?? '') ?: null,
-                 'fecha'=>self::fechaDeClave($m[1]),
-                 'estado'=>'pendiente']);
-            $p->wasRecentlyCreated ? $insertadas++ : $repetidas++;
+                 'ruc_emisor'=>$f['ruc_emisor'],
+                 'razon_social'=>$f['razon_social'],
+                 'fecha'=>self::fechaDeClave($f['clave_acceso']),
+                 'estado'=>$f['estado'],
+                 'error'=>$f['motivo']]);
+            if (! $p->wasRecentlyCreated) $repetidas++;
+            elseif ($f['estado'] === 'omitido') $omitidas++;
+            else $insertadas++;
         }
-        return ['insertadas'=>$insertadas, 'repetidas'=>$repetidas];
+        return ['insertadas'=>$insertadas, 'omitidas'=>$omitidas, 'repetidas'=>$repetidas, 'sin_clave'=>$lectura['sin_clave']];
     }
     public function process(Request $r, SriXmlDownloader $dl, StorePurchaseFromXml $store) {
         $r->validate(['company_id'=>['required','exists:companies,id']]);

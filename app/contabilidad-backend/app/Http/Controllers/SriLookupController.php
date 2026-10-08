@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ClaseContribuyente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -57,6 +58,9 @@ class SriLookupController extends Controller
                     // Datos extra útiles para la contadora (afectan retenciones e impuestos):
                     'tipo_contribuyente' => $c['tipoContribuyente'] ?? null,      // SOCIEDAD / PERSONA NATURAL
                     'regimen' => $c['regimen'] ?? null,                           // GENERAL / RIMPE
+                    // Solo si el régimen lo dice con claridad (RISE, emprendedor, negocio popular, general);
+                    // "RIMPE" a secas no distingue entre emprendedor y negocio popular y queda en null.
+                    'clase_contribuyente_sugerida' => ClaseContribuyente::sugerida($c['regimen'] ?? null, $c['tipoContribuyente'] ?? null),
                     'actividad_economica' => $c['actividadEconomicaPrincipal'] ?? null,
                     'contribuyente_especial' => ($c['contribuyenteEspecial'] ?? 'NO') === 'SI',
                     'agente_retencion' => ($c['agenteRetencion'] ?? 'NO') === 'SI',

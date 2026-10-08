@@ -5,6 +5,7 @@ use App\Models\Employee;
 use App\Models\Payroll;
 use App\Services\PayrollCalculator;
 use App\Services\SimpleEntry;
+use App\Support\Cuentas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -61,20 +62,13 @@ class PayrollController extends Controller {
             $neto = round($l->sum('neto'), 2);
 
             SimpleEntry::make($payroll->company_id, "Rol de pagos {$payroll->mes}/{$payroll->anio}", [
-                ['codigo'=>'5.2.01','nombre'=>'Sueldos y salarios','tipo'=>'gasto',
-                 'debe'=>$sueldos,'haber'=>0,'ref'=>'ROL'],
-                ['codigo'=>'5.2.02','nombre'=>'Aporte patronal IESS','tipo'=>'gasto',
-                 'debe'=>$patronal,'haber'=>0,'ref'=>'ROL'],
-                ['codigo'=>'5.2.03','nombre'=>'Beneficios sociales','tipo'=>'gasto',
-                 'debe'=>$provisiones,'haber'=>0,'ref'=>'ROL'],
-                ['codigo'=>'2.1.04','nombre'=>'IESS por pagar','tipo'=>'pasivo',
-                 'debe'=>0,'haber'=>round($aportePersonal + $patronal, 2),'ref'=>'ROL'],
-                ['codigo'=>'2.1.05','nombre'=>'Beneficios sociales por pagar','tipo'=>'pasivo',
-                 'debe'=>0,'haber'=>$provisiones,'ref'=>'ROL'],
-                ['codigo'=>'2.1.06','nombre'=>'Descuentos a empleados','tipo'=>'pasivo',
-                 'debe'=>0,'haber'=>$descuentos,'ref'=>'ROL'],
-                ['codigo'=>'2.1.07','nombre'=>'Sueldos por pagar','tipo'=>'pasivo',
-                 'debe'=>0,'haber'=>$neto,'ref'=>'ROL'],
+                Cuentas::linea('sueldos', $sueldos, 0, 'ROL'),
+                Cuentas::linea('aporte_patronal', $patronal, 0, 'ROL'),
+                Cuentas::linea('beneficios_sociales', $provisiones, 0, 'ROL'),
+                Cuentas::linea('iess_por_pagar', 0, round($aportePersonal + $patronal, 2), 'ROL'),
+                Cuentas::linea('beneficios_por_pagar', 0, $provisiones, 'ROL'),
+                Cuentas::linea('descuentos_empleados', 0, $descuentos, 'ROL'),
+                Cuentas::linea('sueldos_por_pagar', 0, $neto, 'ROL'),
             ], $payroll);
 
             $payroll->update(['estado'=>'cerrado']);

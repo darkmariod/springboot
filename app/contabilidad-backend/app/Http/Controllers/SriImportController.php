@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Services\StoreIssuedInvoiceFromXml;
 use App\Services\Sri\ClaveAccesoProvider;
 use App\Services\Sri\SriImportProvider;
 use App\Services\Sri\XmlUploadProvider;
@@ -58,5 +59,44 @@ class SriImportController extends Controller
                 'strategy' => $strategy,
             ], 422);
         }
+    }
+    /**
+     * POST /sri/importar-ventas-xml — registra ventas ya emitidas desde el portal del SRI.
+     * Recibe uno (`xml_file`) o varios (`xml_files[]`) XML autorizados de facturas de la empresa; cada archivo
+     * se registra por separado (uno rechazado no afecta a los demás). 201 si se importó al menos uno, 422 si ninguno.
+     */
+    public function importarVentasXml(Request $r, StoreIssuedInvoiceFromXml $store)
+    {
+        $r->validate([
+            'company_id' => ['required', 'exists:companies,id'],
+            'xml_file'   => ['required_without:xml_files', 'file', 'max:10240'],
+            'xml_files'  => ['required_without:xml_file', 'array', 'min:1', 'max:200'],
+            'xml_files.*' => ['file', 'max:10240'],
+        ]);
+        $company = Company::findOrFail($r->input('company_id'));
+        $archivos = $r->hasFile('xml_files') ? $r->file('xml_files') : [$r->file('xml_file')];
+
+        $importadas = []; $rechazadas = [];
+        foreach ($archivos as $archivo) {
+            $nombre = $archivo->getClientOriginalName();
+            try {
+                $invoice = $store->handle($company, (string) file_get_contents($archivo->getRealPath()));
+                $importadas[] = ['archivo' => $nombre, 'id' => $invoice->id, 'numero' => $invoice->numero,
+                    'cliente' => $invoice->contact?->razon_social, 'total' => (float) $invoice->importe_total,
+                    'fecha' => $invoice->fecha_emision?->format('Y-m-d')];
+            } catch (\InvalidArgumentException $e) {
+                $rechazadas[] = ['archivo' => $nombre, 'motivo' => $e->getMessage()];
+            } catch (\Throwable $e) {
+                report($e);
+                $rechazadas[] = ['archivo' => $nombre, 'motivo' => 'No se pudo registrar este archivo.'];
+            }
+        }
+
+        return response()->json([
+            'ok' => count($importadas) > 0,
+            'importadas' => $importadas,
+            'rechazadas' => $rechazadas,
+            'message' => count($importadas) ? count($importadas).' venta(s) registrada(s).' : ($rechazadas[0]['motivo'] ?? 'No se registró ninguna venta.'),
+        ], count($importadas) ? 201 : 422);
     }
 }

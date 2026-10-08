@@ -1,14 +1,14 @@
 <?php
 namespace App\Services;
-use App\Models\Account;
 use App\Models\InventoryMovement;
 use App\Models\JournalEntry;
+use App\Support\Cuentas;
 
 /**
  * Asiento del ajuste de inventario (pedido de la contadora: "no se puede
  * ajustar sin sustento contable"). Mismo patrón que Compras/Ventas: contra
- * la cuenta de Inventario (1.1.05, ya existe en el plan de cuentas) y
- * Faltantes y sobrantes (5.1.03) como contrapartida.
+ * la cuenta de Inventario y Faltantes y sobrantes como contrapartida
+ * (ambas salen del plan central, config/cuentas.php).
  *
  * Sobrante (ingreso): sube el inventario, baja el gasto de ajuste.
  * Faltante (egreso): sube el gasto de ajuste, baja el inventario.
@@ -17,8 +17,8 @@ class GenerateAdjustmentJournalEntry {
     public function handle(InventoryMovement $m): JournalEntry {
         $cid = $m->company_id;
         $valor = round((float) $m->cantidad * (float) $m->costo_unitario, 2);
-        $inventario = $this->cuenta($cid, '1.1.05', 'activo', 'Inventario');
-        $ajuste = $this->cuenta($cid, '5.1.03', 'gasto', 'Faltantes y sobrantes de inventario');
+        $inventario = Cuentas::cuenta($cid, 'inventario');
+        $ajuste = Cuentas::cuenta($cid, 'faltantes_sobrantes');
 
         $e = JournalEntry::create(['company_id' => $cid,
             'numero' => 'AS-' . str_pad((string) (JournalEntry::where('company_id', $cid)->count() + 1), 6, '0', STR_PAD_LEFT),
@@ -36,9 +36,5 @@ class GenerateAdjustmentJournalEntry {
         $e->lines()->createMany($lineas);
 
         return $e;
-    }
-
-    private function cuenta($cid, $cod, $tipo, $nombre) {
-        return Account::firstOrCreate(['company_id' => $cid, 'codigo' => $cod], ['nombre' => $nombre, 'tipo' => $tipo]);
     }
 }

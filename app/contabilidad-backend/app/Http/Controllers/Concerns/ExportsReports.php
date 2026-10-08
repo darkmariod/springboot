@@ -10,11 +10,13 @@ namespace App\Http\Controllers\Concerns;
  */
 trait ExportsReports
 {
-    private function csvResponse(array $headers, array $rows, string $filename)
+    /** $bom = true antepone la marca UTF-8 para que Excel muestre bien las tildes (los reportes de siempre no la llevan). */
+    private function csvResponse(array $headers, array $rows, string $filename, bool $bom = false)
     {
-        $csv = $this->csvLine($headers);
+        $csv = ($bom ? "\xEF\xBB\xBF" : '') . $this->csvLine($headers);
         foreach ($rows as $row) {
-            $csv .= $this->csvLine($row);
+            // Una fila que es solo texto es el título de una sección del reporte
+            $csv .= $this->csvLine(is_array($row) ? $row : [$row]);
         }
 
         return response($csv)
@@ -32,6 +34,11 @@ trait ExportsReports
         $thead = implode('', array_map(fn ($h) => "<th>{$h}</th>", $headers));
         $tbody = '';
         foreach ($rows as $row) {
+            if (! is_array($row)) {
+                // Título de una sección: ocupa todo el ancho de la tabla
+                $tbody .= '<tr class="seccion"><td colspan="' . count($headers) . '">' . htmlspecialchars((string) $row) . '</td></tr>';
+                continue;
+            }
             $tbody .= '<tr>' . implode('', array_map(fn ($c) => "<td>{$c}</td>", $row)) . '</tr>';
         }
         $tfoot = '';
@@ -47,6 +54,7 @@ trait ExportsReports
             th { background: #1e5bb8; color: #fff; padding: 5px 7px; text-align: left; font-size: 8.5px; }
             td { padding: 4px 7px; border-bottom: 1px solid #ddd; font-size: 8.5px; }
             .total td { font-weight: bold; border-top: 2px solid #333; }
+            .seccion td { background: #e8eef7; font-weight: bold; padding-top: 6px; }
             </style></head><body>
             <h1>" . strtoupper($titulo) . "</h1>
             <h2>Generado: " . now()->format('d/m/Y H:i') . "</h2>

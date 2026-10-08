@@ -116,6 +116,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('feature:cartera')->group(function () { Route::get("payables", [\App\Http\Controllers\PayableController::class, "index"]); });
     Route::middleware('feature:cartera')->group(function () { Route::post("payables/{purchase}/pay", [\App\Http\Controllers\PayableController::class, "pay"]); });
     Route::middleware('feature:cartera')->group(function () { Route::post("payables/pay-multiple", [\App\Http\Controllers\PayableController::class, 'payMultiple']); });
+    // Cruce de saldos: documentos abiertos del mismo contacto contra los que se puede cruzar
+    Route::middleware('feature:cartera')->group(function () { Route::get("cruce-saldos/documentos", [\App\Http\Controllers\CruceSaldosController::class, "documentos"]); });
+
+    // Estado de cuenta de clientes y de proveedores: por documento y resumen por contacto (JSON, Excel o PDF)
+    Route::middleware('feature:cartera')->group(function () {
+        Route::get("estado-cuenta/clientes", [\App\Http\Controllers\EstadoCuentaController::class, "clientes"]);
+        Route::get("estado-cuenta/clientes/{contact}", [\App\Http\Controllers\EstadoCuentaController::class, "cliente"]);
+        Route::get("estado-cuenta/proveedores", [\App\Http\Controllers\EstadoCuentaController::class, "proveedores"]);
+        Route::get("estado-cuenta/proveedores/{contact}", [\App\Http\Controllers\EstadoCuentaController::class, "proveedor"]);
+    });
 
     // Retenciones
     Route::get("withholdings", [\App\Http\Controllers\WithholdingController::class, "index"]);
@@ -179,6 +189,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('feature:cartera')->group(function () { Route::post("credit-notes", [\App\Http\Controllers\CreditNoteController::class, "store"]); });
     Route::get("credits/available", [\App\Http\Controllers\CreditApplicationController::class, "available"]);
     Route::post("credits/apply/{invoice}", [\App\Http\Controllers\CreditApplicationController::class, "apply"]);
+    // Anticipos a proveedores: los abiertos de un proveedor y su aplicación a una compra
+    Route::middleware('feature:cartera')->group(function () { Route::get("credits/available-supplier", [\App\Http\Controllers\CreditApplicationController::class, "availableSupplier"]); });
+    Route::middleware('feature:cartera')->group(function () { Route::post("credits/apply-purchase/{purchase}", [\App\Http\Controllers\CreditApplicationController::class, "applyPurchase"]); });
 
     // ── Liquidación de compra ──
     Route::get('liquidacion-compra', [LiquidacionCompraController::class, 'index']);
@@ -188,6 +201,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Nota de débito ──
     Route::get('notas-debito', [NotaDebitoController::class, 'index']);
     Route::post('notas-debito', [NotaDebitoController::class, 'store']);
+    Route::post('notas-debito/{notaDebito}/anular', [NotaDebitoController::class, 'anular']);
     Route::middleware('feature:facturacion_sri')->group(function () { Route::post('notas-debito/{notaDebito}/emit', [NotaDebitoController::class, 'emit']); });
 
     // ── Guía de remisión ──
@@ -215,6 +229,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Fase A — Catálogos (formas de pago, sustentos tributarios)
     Route::get("catalogos/formas-pago", [\App\Http\Controllers\CatalogosController::class, "formasPago"]);
     Route::get("catalogos/sustentos", [\App\Http\Controllers\CatalogosController::class, "sustentos"]);
+    Route::get("catalogos/tipos-comprobante-compra", [\App\Http\Controllers\CatalogosController::class, "tiposComprobanteCompra"]);
+    Route::get("catalogos/retenciones", [\App\Http\Controllers\CatalogosController::class, "retenciones"]);
+    Route::get("catalogos/clases-contribuyente", [\App\Http\Controllers\CatalogosController::class, "clasesContribuyente"]);
 
     // Fase B — Bodegas
     Route::apiResource('warehouses', \App\Http\Controllers\WarehouseController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -223,12 +240,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('feature:facturacion_sri')->group(function () { Route::post("credit-notes/{creditNote}/emit", [\App\Http\Controllers\CreditNoteController::class, "emit"]); });
     Route::middleware('feature:facturacion_sri')->group(function () { Route::get("withholdings-emitted", [\App\Http\Controllers\WithholdingEmitController::class, "index"]); });
     Route::middleware('feature:facturacion_sri')->group(function () { Route::post("withholdings-emitted", [\App\Http\Controllers\WithholdingEmitController::class, "store"]); });
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::post("withholdings-emitted/{withholding}/emit", [\App\Http\Controllers\WithholdingEmitController::class, "emit"]); });
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::get("purchases/{purchase}/withholdings", [\App\Http\Controllers\WithholdingEmitController::class, "porCompra"]); });
 
     // Fase E — Módulo Impuestos
     Route::get("taxes/formulario104", [\App\Http\Controllers\TaxController::class, "formulario104"]);
     Route::get("taxes/ats", [\App\Http\Controllers\TaxController::class, "ats"]);
 
     // Fase F — Transacciones de inventario
+    Route::get("inventory/stock-bodega", [\App\Http\Controllers\InventoryTransactionController::class, "stockBodega"]);
     Route::post("inventory/ajuste", [\App\Http\Controllers\InventoryTransactionController::class, "ajuste"]);
     Route::post("inventory/transferencia", [\App\Http\Controllers\InventoryTransactionController::class, "transferencia"]);
     Route::get("inventory/kardex/{product}/bodega", [\App\Http\Controllers\InventoryTransactionController::class, "kardexBodega"]);
@@ -238,6 +258,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("reportes/ventas", [\App\Http\Controllers\ReportesController::class, "ventas"]);
     Route::get("reportes/ventas-detalle", [\App\Http\Controllers\ReportesController::class, "ventasDetalle"]);
     Route::get("reportes/compras", [\App\Http\Controllers\ReportesController::class, "compras"]);
+    Route::get("reportes/compras-sustento", [\App\Http\Controllers\ReportesController::class, "comprasPorSustento"]);
 
     // Fase 6 — Conversión de artículos
     Route::middleware('feature:conversion_articulos')->group(function () {
@@ -269,4 +290,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Fase 2b — Importación SRI pluggable
     Route::post("sri/importar", [\App\Http\Controllers\SriImportController::class, "importar"]);
+    // Ventas emitidas desde el portal del SRI: se registran subiendo el XML autorizado de cada factura
+    Route::middleware('feature:import_lote')->group(function () { Route::post("sri/importar-ventas-xml", [\App\Http\Controllers\SriImportController::class, "importarVentasXml"]); });
 });

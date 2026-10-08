@@ -18,6 +18,21 @@ class Company extends Model
 
     protected $hidden = ['certificado_p12', 'certificado_clave'];
 
+    /** Plan con el que nace una empresa nueva si no se elige otro. Debe existir en config/planes.php. */
+    public const PLAN_POR_DEFECTO = 'completo';
+
+    protected static function booted(): void
+    {
+        // La columna `plan` quedó con default 'corporativo' (migración 2026_07_28), un plan que no
+        // existe en config/planes.php: la empresa nacía sin módulos y sin menú. SQLite no deja
+        // cambiar ese default fácilmente, así que se corrige aquí, al crear.
+        static::creating(function (Company $company) {
+            if (! $company->plan || ! array_key_exists($company->plan, config('planes', []))) {
+                $company->plan = self::PLAN_POR_DEFECTO;
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [

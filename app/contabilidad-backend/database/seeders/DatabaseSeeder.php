@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\Account;
 use App\Models\Company;
 use App\Models\EmissionPoint;
 use App\Models\User;
+use App\Support\Cuentas;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
                 'nombre_comercial' => 'Demo Contable',
                 'dir_matriz' => 'Av. Principal 123, Quito',
                 'estab' => '001', 'pto_emi' => '001', 'secuencial' => 1, 'ambiente' => 1,
+                'plan' => 'completo',
             ],
         );
 
@@ -42,24 +43,8 @@ class DatabaseSeeder extends Seeder
             ['nombre' => 'Caja principal', 'secuencial' => 1],
         );
 
-        // Plan de cuentas básico (NIIF PYME)
-        $cuentas = [
-            ['1', 'ACTIVO', 'activo'], ['1.1', 'ACTIVO CORRIENTE', 'activo'],
-            ['1.1.01', 'Caja', 'activo'], ['1.1.02', 'Bancos', 'activo'],
-            ['1.1.03', 'Cuentas por cobrar clientes', 'activo'], ['1.1.04', 'Credito tributario IVA', 'activo'],
-            ['1.1.05', 'Inventario', 'activo'],
-            ['2', 'PASIVO', 'pasivo'], ['2.1', 'PASIVO CORRIENTE', 'pasivo'],
-            ['2.1.01', 'Cuentas por pagar proveedores', 'pasivo'], ['2.1.02', 'IVA por pagar', 'pasivo'],
-            ['2.1.03', 'Retenciones por pagar', 'pasivo'],
-            ['3', 'PATRIMONIO', 'patrimonio'], ['3.1.01', 'Capital', 'patrimonio'],
-            ['4', 'INGRESOS', 'ingreso'], ['4.1.01', 'Ventas', 'ingreso'],
-            ['5', 'GASTOS', 'gasto'], ['5.1.01', 'Compras', 'gasto'], ['5.1.02', 'Gastos generales', 'gasto'],
-        ];
-        foreach ($cuentas as [$cod, $nom, $tipo]) {
-            Account::firstOrCreate(
-                ['company_id' => $company->id, 'codigo' => $cod],
-                ['nombre' => $nom, 'tipo' => $tipo],
-            );
-        }
+        // Plan de cuentas básico (NIIF PYME): sale de config/cuentas.php, el único lugar
+        // donde cada concepto contable tiene su código.
+        Cuentas::sembrar($company->id);
     }
 }

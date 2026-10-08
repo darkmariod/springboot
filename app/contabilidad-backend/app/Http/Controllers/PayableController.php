@@ -4,6 +4,9 @@ use App\Models\Purchase;
 use App\Models\PurchasePayment;
 use App\Services\SimpleEntry;
 use App\Services\RegistrarPagos;
+use App\Support\Cuentas;
+use App\Support\CruceSaldos;
+use App\Support\MovimientosBanco;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -14,6 +17,7 @@ class PayableController extends Controller {
             ->when($r->company_id, fn($q,$id)=>$q->where('company_id',$id))
             ->where('saldo_pendiente','>',0)->orderBy('fecha_emision')->get()
             ->map(fn($p)=>['id'=>$p->id,'numero'=>$p->numero,'proveedor'=>$p->contact?->razon_social,
+                'contact_id'=>$p->contact_id,
                 'fecha'=>optional($p->fecha_emision)->format('Y-m-d'),
                 'total'=>(float)$p->importe_total,'saldo'=>(float)$p->saldo_pendiente]);
         return ['cartera'=>$rows,'total'=>round($rows->sum('saldo'),2)];
@@ -28,17 +32,26 @@ class PayableController extends Controller {
             if ($total > (float)$purchase->saldo_pendiente + 0.001)
                 throw ValidationException::withMessages(['pagos'=>['El pago supera el saldo pendiente.']]);
             return DB::transaction(function() use ($purchase, $r) {
-                $service = app(RegistrarPagos::class);
-                $service->handle($purchase, $r->pagos, '2.1.01', 'Pago compra '.$purchase->numero);
-                $purchase->decrement('saldo_pendiente', array_sum(array_column($r->pagos, 'valor')));
-                // Registrar en purchase_payments para compatibilidad
-                foreach ($r->pagos as $p) {
-                    PurchasePayment::create([
-                        'purchase_id'=>$purchase->id, 'fecha'=>now()->toDateString(),
-                        'monto'=>$p['valor'], 'forma_pago'=>$p['tipo'],
-                        'bank_id'=>$p['bank_id'] ?? null,
-                        'cheque_numero'=>$p['documento'] ?? null,
-                    ]);
+                // El cruce de saldos no es dinero: se paga contra una factura del mismo proveedor (CruceSaldos)
+                $cruces = array_values(array_filter($r->pagos, fn($p) => CruceSaldos::esCruce($p['tipo'])));
+                $normales = array_values(array_filter($r->pagos, fn($p) => ! CruceSaldos::esCruce($p['tipo'])));
+                if ($normales) {
+                    $service = app(RegistrarPagos::class);
+                    // Se salda la CxP en que nació la compra (normal o de partes relacionadas)
+                    $service->handle($purchase, $normales, Cuentas::codigo(Cuentas::cxpDe($purchase)), 'Pago compra '.$purchase->numero, RegistrarPagos::PAGO);
+                    $purchase->decrement('saldo_pendiente', array_sum(array_column($normales, 'valor')));
+                    // Registrar en purchase_payments para compatibilidad
+                    foreach ($normales as $p) {
+                        PurchasePayment::create([
+                            'purchase_id'=>$purchase->id, 'fecha'=>now()->toDateString(),
+                            'monto'=>$p['valor'], 'forma_pago'=>$p['tipo'],
+                            'bank_id'=>$p['bank_id'] ?? null,
+                            'cheque_numero'=>$p['documento'] ?? null,
+                        ]);
+                    }
+                }
+                foreach ($cruces as $p) {
+                    CruceSaldos::pagar($purchase, $p['documento_cruce'] ?? null, (float)$p['valor']);
                 }
                 return ['ok'=>true,'saldo'=>(float)$purchase->fresh()->saldo_pendiente];
             });
@@ -46,59 +59,95 @@ class PayableController extends Controller {
         // Formato antiguo: monto + forma_pago
         $d = $r->validate(['monto'=>['required','numeric','min:0.01'],
             'forma_pago'=>['required','in:efectivo,transferencia,cheque,cruce'],
-            'bank_id'=>['nullable','exists:banks,id'],'cheque_numero'=>['nullable','string']]);
+            'bank_id'=>['nullable','exists:banks,id'],'cheque_numero'=>['nullable','string'],
+            'documento_cruce'=>['nullable','integer']]);
         if ($d['monto'] > (float)$purchase->saldo_pendiente + 0.001)
             throw ValidationException::withMessages(['monto'=>['El pago supera el saldo pendiente.']]);
         return DB::transaction(function() use ($purchase,$d) {
-            PurchasePayment::create($d + ['purchase_id'=>$purchase->id,'fecha'=>now()->toDateString()]);
+            // Un cruce siempre necesita el documento contra el que se cruza (antes asentaba CxP contra CxC sin contraparte)
+            if ($d['forma_pago'] === 'cruce') {
+                CruceSaldos::pagar($purchase, $d['documento_cruce'] ?? null, (float)$d['monto']);
+                return ['ok'=>true,'saldo'=>(float)$purchase->fresh()->saldo_pendiente];
+            }
+            PurchasePayment::create(['monto'=>$d['monto'],'forma_pago'=>$d['forma_pago'],'bank_id'=>$d['bank_id'] ?? null,
+                'cheque_numero'=>$d['cheque_numero'] ?? null,'purchase_id'=>$purchase->id,'fecha'=>now()->toDateString()]);
             $purchase->decrement('saldo_pendiente', $d['monto']);
-            $origen = match($d['forma_pago']) {
-                'efectivo' => ['codigo'=>'1.1.01','nombre'=>'Caja','tipo'=>'activo'],
-                'cruce'    => ['codigo'=>'1.1.03','nombre'=>'Cuentas por cobrar clientes','tipo'=>'activo'],
-                default    => ['codigo'=>'1.1.02','nombre'=>'Bancos','tipo'=>'activo'],
-            };
+            // Pago a proveedor: Debe la CxP en que nació la compra / Haber de dónde sale el dinero
+            $origen = $d['forma_pago'] === 'efectivo' ? 'caja' : 'bancos';
             SimpleEntry::make($purchase->company_id, 'Pago compra '.$purchase->numero, [
-                ['codigo'=>'2.1.01','nombre'=>'Cuentas por pagar proveedores','tipo'=>'pasivo','debe'=>$d['monto'],'haber'=>0,'ref'=>$purchase->numero],
-                $origen + ['debe'=>0,'haber'=>$d['monto'],'ref'=>$purchase->numero],
+                Cuentas::linea(Cuentas::cxpDe($purchase), $d['monto'], 0, $purchase->numero),
+                Cuentas::linea($origen, 0, $d['monto'], $purchase->numero),
             ], $purchase);
+            // Por banco (transferencia, cheque): el egreso queda listo para conciliar con el número de cheque
+            if ($origen === 'bancos') {
+                MovimientosBanco::registrar($purchase->company_id, $d['bank_id'] ?? null, MovimientosBanco::PAGO,
+                    (float)$d['monto'], 'Pago compra '.$purchase->numero, $d['cheque_numero'] ?? null, $purchase);
+            }
             return ['ok'=>true,'saldo'=>(float)$purchase->fresh()->saldo_pendiente];
         });
     }
-    public function payMultiple(\Illuminate\Http\Request $r) {
+    /**
+     * Pago a varios proveedores con un solo comprobante de pago.
+     *
+     * Formato nuevo: `pagos` = compras [{purchase_id, monto}] y `formas` = formas de pago [{tipo, valor, bank_id, documento}]
+     * cuya suma debe ser igual al total. Formato antiguo: `pagos` + `forma_pago` (+ `bank_id`), una sola forma por el total.
+     * Cada compra recibe sus propios PurchasePayment; un solo asiento (Debe cada CxP / Haber cada forma). Sin cruce de saldos.
+     */
+    public function payMultiple(Request $r) {
         $d = $r->validate([
             'company_id'=>['required','exists:companies,id'],
-            'forma_pago'=>['required','in:efectivo,transferencia,cheque,cruce'],
+            'forma_pago'=>['required_without:formas','nullable','in:efectivo,transferencia,cheque,cruce'],
             'bank_id'=>['nullable','exists:banks,id'],
+            'formas'=>['required_without:forma_pago','nullable','array','min:1'],
+            'formas.*.tipo'=>['required','string'],
+            'formas.*.valor'=>['required','numeric','min:0.01'],
+            'formas.*.bank_id'=>['nullable','integer'],
+            'formas.*.documento'=>['nullable','string','max:100'],
             'pagos'=>['required','array','min:1'],
             'pagos.*.purchase_id'=>['required','exists:purchases,id'],
             'pagos.*.monto'=>['required','numeric','min:0.01'],
         ]);
-        return \Illuminate\Support\Facades\DB::transaction(function() use ($d) {
-            $total = 0;
+        // El cruce necesita un documento contrario por cada pago: se registra en el pago individual de cada compra
+        $cruceMsg = 'Para cruzar saldos paga cada compra por separado con la forma Cruce de saldos e indica la factura contra la que se cruza.';
+        if (($d['forma_pago'] ?? null) === 'cruce')
+            throw ValidationException::withMessages(['forma_pago'=>[$cruceMsg]]);
+        foreach ($d['formas'] ?? [] as $f) {
+            if (CruceSaldos::esCruce($f['tipo']))
+                throw ValidationException::withMessages(['formas'=>[$cruceMsg]]);
+        }
+        return DB::transaction(function() use ($d) {
+            // Una compra repetida en la lista se suma: se valida contra su saldo una sola vez
+            $montos = [];
             foreach ($d['pagos'] as $p) {
-                $purchase = \App\Models\Purchase::findOrFail($p['purchase_id']);
-                if ($p['monto'] > (float)$purchase->saldo_pendiente + 0.001)
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'pagos'=>["El pago a {$purchase->numero} supera su saldo."]]);
-                \App\Models\PurchasePayment::create([
-                    'purchase_id'=>$purchase->id,'fecha'=>now()->toDateString(),
-                    'monto'=>$p['monto'],'forma_pago'=>$d['forma_pago'],'bank_id'=>$d['bank_id'] ?? null,
-                ]);
-                $purchase->decrement('saldo_pendiente', $p['monto']);
-                $total += $p['monto'];
+                $montos[$p['purchase_id']] = ($montos[$p['purchase_id']] ?? 0) + (float)$p['monto'];
             }
-            $origen = match($d['forma_pago']) {
-                'efectivo' => ['codigo'=>'1.1.01','nombre'=>'Caja','tipo'=>'activo'],
-                'cruce'    => ['codigo'=>'1.1.03','nombre'=>'Cuentas por cobrar clientes','tipo'=>'activo'],
-                default    => ['codigo'=>'1.1.02','nombre'=>'Bancos','tipo'=>'activo'],
-            };
-            \App\Services\SimpleEntry::make($d['company_id'],
-                'Pago múltiple a proveedores ('.count($d['pagos']).' facturas)', [
-                ['codigo'=>'2.1.01','nombre'=>'Cuentas por pagar proveedores','tipo'=>'pasivo',
-                 'debe'=>round($total,2),'haber'=>0,'ref'=>'PAGO-MULT'],
-                $origen + ['debe'=>0,'haber'=>round($total,2),'ref'=>'PAGO-MULT'],
-            ]);
-            return ['ok'=>true,'pagado'=>round($total,2),'facturas'=>count($d['pagos'])];
+            $compras = [];
+            foreach ($montos as $purchaseId => $monto) {
+                $purchase = Purchase::where('company_id', $d['company_id'])->whereKey($purchaseId)->lockForUpdate()->first();
+                if (! $purchase)
+                    throw ValidationException::withMessages(['pagos'=>['Una de las compras no pertenece a esta empresa.']]);
+                if (round($monto, 2) > (float)$purchase->saldo_pendiente + 0.001)
+                    throw ValidationException::withMessages(['pagos'=>["El pago a {$purchase->numero} supera su saldo."]]);
+                $compras[$purchaseId] = ['compra'=>$purchase, 'monto'=>round($monto, 2)];
+            }
+            // Formato antiguo: una sola forma por el total (cheque = cheque de banco)
+            $formas = $d['formas'] ?? [[
+                'tipo'=>['efectivo'=>'efectivo','transferencia'=>'transferencia','cheque'=>'cheque_banco'][$d['forma_pago']],
+                'valor'=>array_sum(array_column($compras, 'monto')), 'bank_id'=>$d['bank_id'] ?? null,
+            ]];
+            $res = app(RegistrarPagos::class)->pagarVarios((int)$d['company_id'], $compras, $formas,
+                'Pago múltiple a proveedores ('.count($compras).' facturas)');
+            // Cada compra: sus pagos (uno por forma que la cubrió) y su saldo
+            foreach ($compras as $purchaseId => $c) {
+                foreach ($res['reparto'][$purchaseId] as $tramo) {
+                    PurchasePayment::create([
+                        'purchase_id'=>$purchaseId, 'fecha'=>now()->toDateString(), 'monto'=>$tramo['monto'],
+                        'forma_pago'=>$tramo['tipo'], 'bank_id'=>$tramo['bank_id'], 'cheque_numero'=>$tramo['documento'],
+                    ]);
+                }
+                $c['compra']->decrement('saldo_pendiente', $c['monto']);
+            }
+            return ['ok'=>true,'pagado'=>round($res['total'],2),'facturas'=>count($compras),'asiento'=>$res['asiento']->numero];
         });
     }
 }
