@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -8,6 +8,7 @@ import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import DatePicker from 'primevue/datepicker'
 import api from '../lib/api'
+import { useCompanyStore } from '../stores/company'
 
 interface PagoRow {
   id: number
@@ -17,6 +18,14 @@ interface PagoRow {
   bank_id: number | null
   documento: string | null
   cuenta: string | null
+  documento_cruce?: number | null
+}
+interface DocCruce {
+  id: number
+  numero: string
+  fecha: string | null
+  saldo: number
+  etiqueta: string
 }
 interface FormaPago {
   value: string
@@ -25,27 +34,65 @@ interface FormaPago {
   pide_banco: boolean
   pide_documento: boolean
   pide_cuenta: boolean
+  es_cruce?: boolean
 }
 interface Bank {
   id: number
   nombre: string
 }
 
-const props = defineProps<{
+// El cruce de saldos cancela este documento contra uno del MISMO contacto (cliente que también es proveedor).
+// Solo se ofrece cuando la pantalla lo permite y conoce el contacto: `lado` 'cobro' = se cobra una factura
+// (se cruza contra compras); 'pago' = se paga una compra (se cruza contra facturas).
+const props = withDefaults(defineProps<{
   modelValue: PagoRow[]
   total: number
   banks: Bank[]
-}>()
+  permiteCruce?: boolean
+  contactId?: number | null
+  lado?: 'cobro' | 'pago'
+}>(), { permiteCruce: false, contactId: null, lado: 'cobro' })
 const emit = defineEmits<{
   'update:modelValue': [value: PagoRow[]]
 }>()
 
+const company = useCompanyStore()
 const formas = ref<FormaPago[]>([])
+const docsCruce = ref<DocCruce[]>([])
+const docsCargados = ref(false)
 let nextId = 1
+
+const cruceDisponible = computed(() => props.permiteCruce && !!props.contactId)
+const formasVisibles = computed(() => formas.value.filter(f => !f.es_cruce || cruceDisponible.value))
+const esCruce = (tipo: string | null) => !!formas.value.find(f => f.value === tipo)?.es_cruce
+const hayCruce = computed(() => cruceDisponible.value && props.modelValue.some(r => esCruce(r.tipo)))
+const contraparte = computed(() => props.lado === 'cobro'
+  ? { docs: 'compras', doc: 'la compra', quien: 'cliente' }
+  : { docs: 'facturas', doc: 'la factura', quien: 'proveedor' })
+
+async function cargarDocsCruce() {
+  docsCargados.value = false
+  try {
+    const res = await api.get('/cruce-saldos/documentos', {
+      params: { company_id: company.activeId, contact_id: props.contactId, lado: props.lado },
+    })
+    docsCruce.value = res.data.map((d: any) => ({
+      ...d,
+      etiqueta: d.numero + (d.fecha ? ' · ' + d.fecha : '') + ' · saldo $' + Number(d.saldo).toFixed(2),
+    }))
+  } catch {
+    docsCruce.value = []
+  } finally {
+    docsCargados.value = true
+  }
+}
+// Se piden los documentos solo cuando alguien elige "Cruce de saldos" (y de nuevo si cambia el contacto)
+watch(hayCruce, (v) => { if (v && !docsCargados.value) cargarDocsCruce() })
+watch(() => [props.contactId, props.lado], () => { docsCargados.value = false; docsCruce.value = []; if (hayCruce.value) cargarDocsCruce() })
 
 function addRow() {
   const rows = [...props.modelValue]
-  rows.push({ id: nextId++, tipo: null, fecha: '', valor: 0, bank_id: null, documento: null, cuenta: null })
+  rows.push({ id: nextId++, tipo: null, fecha: '', valor: 0, bank_id: null, documento: null, cuenta: null, documento_cruce: null })
   emit('update:modelValue', rows)
 }
 function removeRow(id: number) {
@@ -53,7 +100,18 @@ function removeRow(id: number) {
   emit('update:modelValue', rows)
 }
 function updateRow(id: number, field: string, value: any) {
-  const rows = props.modelValue.map(r => r.id === id ? { ...r, [field]: value } : r)
+  const rows = props.modelValue.map(r => {
+    if (r.id !== id) return r
+    const nueva = { ...r, [field]: value }
+    // Al dejar el cruce se olvida el documento elegido
+    if (field === 'tipo' && !esCruce(value)) nueva.documento_cruce = null
+    // El valor de un cruce no puede pasar del saldo del documento elegido
+    if (field === 'documento_cruce') {
+      const doc = docsCruce.value.find(d => d.id === value)
+      if (doc && (Number(nueva.valor) || 0) > doc.saldo) nueva.valor = doc.saldo
+    }
+    return nueva
+  })
   emit('update:modelValue', rows)
 }
 
@@ -72,7 +130,7 @@ onMounted(async () => {
     <DataTable :value="modelValue" size="small" stripedRows>
       <Column header="Tipo">
         <template #body="{ data }">
-          <Select v-model="data.tipo" :options="formas" optionLabel="label" optionValue="value"
+          <Select v-model="data.tipo" :options="formasVisibles" optionLabel="label" optionValue="value"
                   placeholder="Seleccione" fluid @update:modelValue="(v:any) => updateRow(data.id, 'tipo', v)" />
         </template>
       </Column>
@@ -123,6 +181,14 @@ onMounted(async () => {
                      @update:modelValue="(v:any) => updateRow(data.id, 'cuenta', v)" />
         </template>
       </Column>
+      <Column header="Documento a cruzar" v-if="hayCruce">
+        <template #body="{ data }">
+          <Select v-if="esCruce(data.tipo)"
+                  :modelValue="data.documento_cruce" :options="docsCruce" optionLabel="etiqueta" optionValue="id"
+                  :placeholder="'Elige ' + contraparte.doc" fluid
+                  @update:modelValue="(v:any) => updateRow(data.id, 'documento_cruce', v)" />
+        </template>
+      </Column>
       <Column header="" style="width:50px;">
         <template #body="{ data }">
           <Button icon="pi pi-minus" severity="danger" text rounded size="small" @click="removeRow(data.id)" />
@@ -138,5 +204,8 @@ onMounted(async () => {
         </div>
       </template>
     </DataTable>
+    <small v-if="hayCruce && docsCargados && !docsCruce.length" style="display:block; margin-top:6px; color:#d97706;">
+      Este {{ contraparte.quien }} no tiene {{ contraparte.docs }} abiertas para cruzar.
+    </small>
   </div>
 </template>

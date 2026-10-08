@@ -7,6 +7,7 @@ import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
 // Select and InputText available if needed for payment form
 import Tag from 'primevue/tag'
+import Message from 'primevue/message'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import FormasPago from '../components/FormasPago.vue'
@@ -15,6 +16,7 @@ const company = useCompanyStore()
 const data = ref<any>({ cartera: [], total: 0, antiguedad: {} })
 const loading = ref(true)
 const cobro = ref<any>(null)
+const errorCobro = ref('')
 const banks = ref<any[]>([])
 const money = (n: any) => '$' + Number(n).toFixed(2)
 
@@ -25,32 +27,54 @@ async function load() {
   loading.value = false
 }
 function abrirCobro(r: any) {
+  errorCobro.value = ''
   cobro.value = {
     invoice: r,
-    pagos: [{ id: 1, tipo: 'efectivo', fecha: '', valor: r.saldo, bank_id: null, documento: null, cuenta: null }],
+    pagos: [{ id: 1, tipo: 'efectivo', fecha: '', valor: r.saldo, bank_id: null, documento: null, cuenta: null, documento_cruce: null }],
   }
 }
 async function cobrar() {
-  await api.post('/receivables/' + cobro.value.invoice.id + '/pay',
-    { pagos: cobro.value.pagos.map((p: any) => ({
-      tipo: p.tipo, valor: p.valor, bank_id: p.bank_id, documento: p.documento,
-    })) })
+  errorCobro.value = ''
+  try {
+    await api.post('/receivables/' + cobro.value.invoice.id + '/pay',
+      { pagos: cobro.value.pagos.map((p: any) => ({
+        tipo: p.tipo, valor: p.valor, bank_id: p.bank_id, documento: p.documento, documento_cruce: p.documento_cruce,
+      })) })
+  } catch (err: any) {
+    const e = err.response?.data?.errors
+    errorCobro.value = e ? Object.values(e).flat().join(' · ') : (err.response?.data?.message ?? 'No se pudo registrar el cobro.')
+    return
+  }
   cobro.value = null; load()
 }
 const saldos = ref<any>({ saldos: [], total: 0 })
 const usarDialog = ref<any>(null)
+const errorUsar = ref('')
 
 async function abrirUsarSaldo(r: any) {
+  errorUsar.value = ''
   const res = await api.get('/credits/available?company_id=' + company.activeId +
     '&contact_id=' + r.contact_id)
-  saldos.value = res.data
+  // Un anticipo y una nota pueden tener el mismo id: la clave los distingue al elegir una fila
+  saldos.value = { ...res.data, saldos: res.data.saldos.map((s: any) => ({ ...s, clave: s.tipo + '-' + s.id })) }
   usarDialog.value = { invoice: r, seleccion: null, monto: 0 }
+}
+// Una nota de crédito ya bajó el saldo de su factura al emitirse: aquí solo aparece lo que le sobró (saldo a favor)
+function alElegirSaldo(e: any) {
+  usarDialog.value.monto = Math.min(Number(e.data.disponible), Number(usarDialog.value.invoice.saldo))
 }
 async function aplicarSaldo() {
   const s = usarDialog.value.seleccion
-  await api.post('/credits/apply/' + usarDialog.value.invoice.id, {
-    tipo: s.tipo, id: s.id, monto: usarDialog.value.monto,
-  })
+  errorUsar.value = ''
+  try {
+    await api.post('/credits/apply/' + usarDialog.value.invoice.id, {
+      tipo: s.tipo, id: s.id, monto: usarDialog.value.monto,
+    })
+  } catch (err: any) {
+    const e = err.response?.data?.errors
+    errorUsar.value = e ? Object.values(e).flat().join(' · ') : (err.response?.data?.message ?? 'No se pudo usar el saldo.')
+    return
+  }
   usarDialog.value = null; load()
 }
 onMounted(load)
@@ -81,7 +105,9 @@ onMounted(load)
       <div v-if="cobro" style="display:flex; flex-direction:column; gap:12px;">
         <div style="background:#f8fafc; padding:10px; border-radius:8px;">
           Factura <b>{{ cobro.invoice.numero }}</b> — saldo {{ money(cobro.invoice.saldo) }}</div>
-        <FormasPago v-model="cobro.pagos" :total="cobro.invoice.saldo" :banks="banks" />
+        <Message v-if="errorCobro" severity="error" :closable="false">{{ errorCobro }}</Message>
+        <FormasPago v-model="cobro.pagos" :total="cobro.invoice.saldo" :banks="banks"
+                    permite-cruce :contact-id="cobro.invoice.contact_id" lado="cobro" />
       </div>
       <template #footer>
         <Button label="Cancelar" text @click="cobro=null" />
@@ -94,9 +120,10 @@ onMounted(load)
         <div style="background:#f8fafc; padding:10px; border-radius:8px;">
           Factura <b>{{ usarDialog.invoice.numero }}</b> — saldo {{ money(usarDialog.invoice.saldo) }}
         </div>
+        <Message v-if="errorUsar" severity="error" :closable="false">{{ errorUsar }}</Message>
         <p v-if="!saldos.saldos.length" style="color:#94a3b8;">Este cliente no tiene saldos a favor.</p>
         <DataTable v-else :value="saldos.saldos" size="small" selectionMode="single"
-                   v-model:selection="usarDialog.seleccion" dataKey="id">
+                   v-model:selection="usarDialog.seleccion" dataKey="clave" @rowSelect="alElegirSaldo">
           <Column field="tipo" header="Tipo" />
           <Column field="fecha" header="Fecha" />
           <Column field="detalle" header="Detalle" />
@@ -104,7 +131,7 @@ onMounted(load)
         </DataTable>
         <div v-if="usarDialog.seleccion" class="kvs-row">
           <label class="kvs-lbl"><span class="req">*</span> Monto a cruzar:</label>
-          <InputNumber v-model="usarDialog.monto" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
+          <InputNumber v-model="usarDialog.monto" mode="currency" currency="USD" @focus="($event: Event) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
         </div>
       </div>
       <template #footer>

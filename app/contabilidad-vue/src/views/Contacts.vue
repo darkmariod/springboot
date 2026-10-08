@@ -28,6 +28,7 @@ const tabs = [
   { key: 'general', label: 'General' },
   { key: 'contacto', label: 'Contacto' },
   { key: 'direccion', label: 'Dirección' },
+  { key: 'tributario', label: 'Tributario' },
 ]
 
 const filtrados = computed(() => rows.value.filter((r: any) => {
@@ -173,6 +174,11 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
               <label class="kvs-lbl">Observación:</label>
               <InputText v-model="form.observacion" :disabled="!editando" class="kvs-in" />
             </div>
+          </div>
+
+          <!-- Tributario tab (parte relacionada, clase de contribuyente, cuenta contable del proveedor) -->
+          <div v-show="tab === 'tributario'">
+            <ClienteForm v-model="form" seccion="tributario" :readonly="!editando" />
           </div>
         </div>
 

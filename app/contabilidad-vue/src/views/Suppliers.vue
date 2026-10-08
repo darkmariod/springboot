@@ -10,6 +10,7 @@ import Message from 'primevue/message'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { onShortcut } from '../composables/useShortcuts'
+import ClienteForm from '../components/ClienteForm.vue'
 
 const company = useCompanyStore()
 const rows = ref<any[]>([])
@@ -102,7 +103,7 @@ onShortcut('guardar', () => guardar())
     </DataTable>
 
     <Dialog v-model:visible="dialog" modal :header="form.id ? 'Editar proveedor' : 'Nuevo proveedor'"
-            style="width:480px">
+            style="width:560px">
       <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom:12px;">{{ msg.text }}</Message>
       <div style="display:flex; flex-direction:column; gap:12px;">
         <div style="display:flex; gap:12px;">
@@ -133,6 +134,10 @@ onShortcut('guardar', () => guardar())
             Email
             <InputText v-model="form.email" fluid />
           </label>
+        </div>
+        <div style="border-top:1px solid #e2e5ea; padding-top:10px;">
+          <div style="font-size:13px; font-weight:600; margin-bottom:8px;">Tributario</div>
+          <ClienteForm v-model="form" seccion="tributario" />
         </div>
       </div>
       <template #footer>

@@ -10,14 +10,18 @@ import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
+import Message from 'primevue/message'
 import ClienteForm from '../components/ClienteForm.vue'
+import RetencionCompra from '../components/RetencionCompra.vue'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import { usePlanStore } from '../stores/plan'
 import KvsDocGrid from '../components/kvs/KvsDocGrid.vue'
 import KvsToolbar from '../components/kvs/KvsToolbar.vue'
 import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 
 const company = useCompanyStore()
+const plan = usePlanStore()
 const rows = ref<any[]>([])
 const loading = ref(true)
 const seleccion = ref<any>(null)
@@ -30,6 +34,12 @@ const contacts = ref<any[]>([])
 const products = ref<any[]>([])
 const warehouses = ref<any[]>([])
 const sustentos = ref<any[]>([])
+const tiposComprobante = ref<any[]>([
+  { value: 'factura', label: 'Factura' },
+  { value: 'nota_venta', label: 'Nota de venta' },
+])
+// Justo después de guardar una compra nueva se pregunta si se le aplica retención
+const preguntarRetencion = ref(false)
 
 // Formulario de cabecera
 const form = ref<any>({})
@@ -61,11 +71,14 @@ async function guardarNuevoProveedor() {
   }
 }
 
-const tabs = [
+// La retención se emite con el comprobante electrónico: solo con el módulo del SRI y con la compra ya guardada
+const puedeRetener = computed(() => !!form.value.id && plan.tiene('facturacion_sri'))
+const tabs = computed(() => [
   { key: 'datos', label: 'Datos del Comprobante' },
   { key: 'items', label: 'Detalle de Artículos' },
   { key: 'pagos', label: 'Pagos' },
-]
+  ...(puedeRetener.value ? [{ key: 'retencion', label: 'Retención' }] : []),
+])
 
 // ── Filtros del listado ──
 const filtro = ref({ numero: '', proveedor: '' })
@@ -80,18 +93,20 @@ const filtrados = computed(() => rows.value.filter((r: any) => {
 
 async function load() {
   loading.value = true
-  const [purchases, contactsRes, productsRes, warehousesRes, sustentosRes] = await Promise.all([
+  const [purchases, contactsRes, productsRes, warehousesRes, sustentosRes, tiposRes] = await Promise.all([
     api.get('/purchases?company_id=' + company.activeId),
     api.get('/contacts?company_id=' + company.activeId),
     api.get('/products?company_id=' + company.activeId),
     api.get('/warehouses?company_id=' + company.activeId).catch(() => ({ data: [] })),
     api.get('/catalogos/sustentos').catch(() => ({ data: [] })),
+    api.get('/catalogos/tipos-comprobante-compra').catch(() => ({ data: [] })),
   ])
   rows.value = purchases.data
   contacts.value = contactsRes.data
   products.value = productsRes.data
   warehouses.value = warehousesRes.data
   sustentos.value = sustentosRes.data
+  if (tiposRes.data.length) tiposComprobante.value = tiposRes.data
   loading.value = false
 }
 
@@ -99,6 +114,7 @@ function seleccionar(r: any) {
   seleccion.value = r
   editando.value = false
   tab.value = 'datos'
+  preguntarRetencion.value = false
   form.value = {
     id: r.id,
     contact_id: r.contact_id,
@@ -109,6 +125,7 @@ function seleccionar(r: any) {
     punto_emision: r.punto_emision ?? '001',
     autorizacion: r.autorizacion ?? '',
     sustento_tributario: r.sustento_tributario ?? '01',
+    tipo_comprobante: r.tipo_comprobante === 'nota_venta' ? 'nota_venta' : 'factura',
     warehouse_id: r.warehouse_id ?? null,
     observacion: r.observacion ?? '',
   }
@@ -130,6 +147,7 @@ function nuevo() {
     punto_emision: '001',
     autorizacion: '',
     sustento_tributario: '01',
+    tipo_comprobante: 'factura',
     warehouse_id: null,
     observacion: '',
   }
@@ -203,6 +221,7 @@ async function guardar() {
     autorizacion: form.value.autorizacion,
     clave_acceso: form.value.clave_acceso,
     sustento_tributario: form.value.sustento_tributario,
+    tipo_comprobante: form.value.tipo_comprobante,
     warehouse_id: form.value.warehouse_id,
     observacion: form.value.observacion,
     items: calcItems,
@@ -212,6 +231,7 @@ async function guardar() {
   }
 
   try {
+    const eraNueva = !form.value.id
     if (form.value.id) {
       await api.put('/purchases/' + form.value.id, payload)
       msg.value = { type: 'success', text: 'Compra actualizada.' }
@@ -224,6 +244,12 @@ async function guardar() {
     await load()
     const fresco = rows.value.find((r: any) => r.id === form.value.id)
     if (fresco) seleccionar(fresco)
+    // Compra nueva: el paso que sigue es decidir si se retiene
+    if (eraNueva && fresco && puedeRetener.value) {
+      preguntarRetencion.value = true
+      tab.value = 'retencion'
+      msg.value = { type: 'success', text: 'Compra registrada. ¿Se le aplica retención?' }
+    }
   } catch (err: any) {
     const e = err.response?.data?.errors
     msg.value = { type: 'error', text: e ? Object.values(e).flat().join(' · ') : 'No se pudo guardar la compra.' }
@@ -232,6 +258,14 @@ async function guardar() {
 
 function editar() {
   editando.value = true
+}
+
+// Registrada una retención: el saldo de la compra cambió, se refresca sin salir de la pestaña
+async function retencionRegistrada() {
+  const id = form.value.id
+  await load()
+  const fresco = rows.value.find((r: any) => r.id === id)
+  if (fresco) seleccion.value = fresco
 }
 
 async function eliminar() {
@@ -309,6 +343,7 @@ onMounted(load)
       </div>
 
       <template v-else>
+        <Message v-if="msg" :severity="msg.type" :closable="false" style="margin:8px 10px 0;">{{ msg.text }}</Message>
         <div class="kvs-tabs">
           <button v-for="t in tabs" :key="t.key" class="kvs-tab"
                   :class="{ active: tab === t.key }" @click="tab = t.key">{{ t.label }}</button>
@@ -351,6 +386,11 @@ onMounted(load)
                       optionValue="value" :disabled="!editando" class="kvs-in" style="max-width:340px" />
             </div>
             <div class="kvs-row">
+              <label class="kvs-lbl">Tipo de Comprobante:</label>
+              <Select v-model="form.tipo_comprobante" :options="tiposComprobante" optionLabel="label"
+                      optionValue="value" :disabled="!editando" class="kvs-in" style="max-width:220px" />
+            </div>
+            <div class="kvs-row">
               <label class="kvs-lbl">Bodega:</label>
               <Select v-model="form.warehouse_id" :options="warehouses" optionValue="id"
                       optionLabel="nombre" placeholder="General" :disabled="!editando" class="kvs-in" style="max-width:220px" />
@@ -383,6 +423,11 @@ onMounted(load)
               <label class="kvs-lbl">Saldo pendiente:</label>
               <Tag :value="money(seleccion.saldo_pendiente)" severity="warn" />
             </div>
+          </div>
+
+          <!-- Retención al proveedor -->
+          <div v-if="tab === 'retencion' && puedeRetener && seleccion">
+            <RetencionCompra :purchase="seleccion" :preguntar="preguntarRetencion" @registrada="retencionRegistrada" />
           </div>
         </div>
 

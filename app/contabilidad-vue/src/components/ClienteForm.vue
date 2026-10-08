@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Checkbox from 'primevue/checkbox'
 import api from '../lib/api'
+import { useCompanyStore } from '../stores/company'
 
-const props = defineProps<{
+// seccion 'datos' = la ficha de siempre; 'tributario' = solo los datos tributarios y contables
+// (parte relacionada, clase de contribuyente y, en proveedores, la cuenta contable por defecto).
+const props = withDefaults(defineProps<{
   modelValue: any
   readonly?: boolean
   loading?: boolean
-}>()
+  seccion?: 'datos' | 'tributario'
+}>(), { seccion: 'datos' })
 
 const emit = defineEmits<{
   'update:modelValue': [value: any]
@@ -23,8 +27,27 @@ const tipos = [
   { label: 'Consumidor final', value: '07' },
 ]
 
+const company = useCompanyStore()
 const sriLoading = ref(false)
 const sriHint = ref('')
+
+const clases = ref<{ value: string; label: string }[]>([])
+const cuentasGasto = ref<{ id: number; etiqueta: string }[]>([])
+
+onMounted(async () => {
+  try {
+    clases.value = (await api.get('/catalogos/clases-contribuyente')).data
+  } catch { /* sin catálogo la clase simplemente no se puede elegir */ }
+  if (props.seccion !== 'tributario') return
+  try {
+    // Solo cuentas de gasto/costo que reciben movimientos (sin las que son encabezado de otras)
+    const todas: any[] = (await api.get('/accounts?company_id=' + company.activeId)).data
+    cuentasGasto.value = todas
+      .filter(a => a.tipo === 'gasto' && String(a.codigo).startsWith('5')
+        && !todas.some(b => b.id !== a.id && String(b.codigo).startsWith(a.codigo + '.')))
+      .map(a => ({ id: a.id, etiqueta: a.codigo + ' — ' + a.nombre }))
+  } catch { /* la cuenta por defecto es opcional */ }
+})
 
 const local = computed({
   get: () => props.modelValue ?? {},
@@ -52,9 +75,13 @@ async function onSriLookup() {
         razon_social: res.data.razon_social ?? local.value.razon_social,
         nombre_comercial: res.data.nombre_comercial ?? local.value.nombre_comercial,
         tipo_identificacion: res.data.tipo_identificacion ?? local.value.tipo_identificacion,
+        // Solo si el régimen del SRI lo dice con claridad; si no, se respeta lo que ya estaba
+        clase_contribuyente: res.data.clase_contribuyente_sugerida ?? local.value.clase_contribuyente,
       }
       // Mostrar los datos extra que trae el SRI (útiles para la contadora: régimen, etc.)
+      const claseSugerida = clases.value.find(c => c.value === res.data.clase_contribuyente_sugerida)
       const extra = [res.data.tipo_contribuyente, res.data.regimen ? 'Régimen ' + res.data.regimen : null,
+        claseSugerida ? 'Clase: ' + claseSugerida.label : null,
         res.data.obligado_contabilidad ? 'Obligado contab.' : null,
         res.data.contribuyente_especial ? 'Contrib. especial' : null,
         res.data.estado].filter(Boolean).join(' · ')
@@ -74,7 +101,32 @@ async function onSriLookup() {
 </script>
 
 <template>
-  <div>
+  <div v-if="seccion === 'tributario'">
+    <div class="kvs-row">
+      <label class="kvs-lbl">Parte relacionada:</label>
+      <div class="kvs-in" style="display:flex; align-items:center; gap:8px;">
+        <Checkbox v-model="local.parte_relacionada" :binary="true" :disabled="readonly" inputId="parte-relacionada" />
+        <label for="parte-relacionada" style="font-size:12px; color:#64748b;">
+          Sus ventas y compras van a cuentas por cobrar/pagar de partes relacionadas y se marcan en el ATS.
+        </label>
+      </div>
+    </div>
+    <div class="kvs-row">
+      <label class="kvs-lbl">Clase de contribuyente:</label>
+      <Select v-model="local.clase_contribuyente" :options="clases" optionLabel="label" optionValue="value"
+              :disabled="readonly" showClear placeholder="Sin definir" class="kvs-in" />
+    </div>
+    <div v-if="local.es_proveedor" class="kvs-row">
+      <label class="kvs-lbl">Cuenta contable por defecto:</label>
+      <Select v-model="local.cuenta_contable_id" :options="cuentasGasto" optionLabel="etiqueta" optionValue="id"
+              :disabled="readonly" showClear filter placeholder="Compras (5.1.01)" class="kvs-in" />
+    </div>
+    <div v-if="local.es_proveedor" class="kvs-row">
+      <label class="kvs-lbl"></label>
+      <small style="color:#64748b;">Los servicios y gastos de sus compras se asientan en esta cuenta; la mercadería sigue en Inventario.</small>
+    </div>
+  </div>
+  <div v-else>
     <!-- Row 1: Identification type + Identification number -->
     <div class="kvs-row">
       <label class="kvs-lbl"><span class="req">*</span> Tipo ID:</label>

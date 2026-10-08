@@ -49,18 +49,20 @@ onMounted(loadBanks)
       </div>
     </div>
     <Message severity="info" :closable="false" style="margin-bottom:14px;">
-      Registrá los movimientos del estado de cuenta del banco y marcá los que ya verificaste.
+      Los pagos y cobros hechos con cheque o transferencia aparecen aquí solos, con su número de documento.
+      Registra los demás movimientos del estado de cuenta del banco y marca los que ya verificaste.
       El saldo conciliado debe coincidir con el saldo final del estado de cuenta.
     </Message>
     <div style="display:flex; gap:8px; align-items:flex-end; margin-bottom:14px; background:#fff; border:1px solid #e2e5ea; border-radius:10px; padding:12px;">
       <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">Tipo<Select v-model="nuevo.tipo" :options="tipos" optionLabel="label" optionValue="value" /></label>
-      <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">Monto<InputNumber v-model="nuevo.monto" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" /></label>
+      <label style="display:flex; flex-direction:column; gap:4px; font-size:12px;">Monto<InputNumber v-model="nuevo.monto" mode="currency" currency="USD" @focus="($event: Event) => ($event.target as HTMLInputElement).select()" /></label>
       <label style="flex:1; display:flex; flex-direction:column; gap:4px; font-size:12px;">Concepto<InputText v-model="nuevo.concepto" /></label>
       <Button label="Agregar" @click="agregar" />
     </div>
     <DataTable :value="data.movimientos" size="small" stripedRows>
       <Column header="Fecha"><template #body="{ data: m }">{{ String(m.fecha).slice(0,10) }}</template></Column>
       <Column field="concepto" header="Concepto" />
+      <Column header="Documento"><template #body="{ data: m }">{{ m.documento ?? '' }}</template></Column>
       <Column header="Monto"><template #body="{ data: m }">
         <span :style="{color: m.tipo==='credito' ? '#22a06b':'#d93025'}">{{ m.tipo==='credito'?'+':'-' }}{{ money(m.monto) }}</span></template></Column>
       <Column header="Conciliado"><template #body="{ data: m }">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -7,17 +7,39 @@ import Message from 'primevue/message'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
+import RetencionCompra from '../components/RetencionCompra.vue'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import { usePlanStore } from '../stores/plan'
 
 const company = useCompanyStore()
+const plan = usePlanStore()
 const rows = ref<any[]>([])
 const loading = ref(true)
 const importing = ref(false)
 const msg = ref<{ type: string; text: string } | null>(null)
 const fileRef = ref<HTMLInputElement>()
 const sustentos = ref<any[]>([])
-const sustento = ref('01')
+// '' = automático: 06 (inventario) si la factura trae bienes con stock, 01 si son servicios o gastos
+const sustento = ref('')
+const opcionesSustento = computed(() => [
+  { value: '', label: 'Automático (06 si lleva inventario, 01 si no)' },
+  ...sustentos.value,
+])
+
+// Retención de una compra (se pregunta justo después de importar o desde la fila)
+const retencionDialog = ref<any>(null)
+const importada = ref<any>(null)
+const puedeRetener = computed(() => plan.tiene('facturacion_sri'))
+function abrirRetencion(compra: any, preguntar = false) {
+  retencionDialog.value = { compra, preguntar }
+}
+async function retencionRegistrada() {
+  await load()
+  const actual = retencionDialog.value?.compra
+  const fresco = rows.value.find((r: any) => r.id === actual?.id)
+  if (fresco && retencionDialog.value) retencionDialog.value.compra = fresco
+}
 
 const seriesDialog = ref<any>(null)
 
@@ -62,10 +84,11 @@ async function importar(e: Event) {
   const form = new FormData()
   form.append('company_id', String(company.activeId))
   form.append('xml', file)
-  form.append('sustento_tributario', sustento.value)
+  if (sustento.value) form.append('sustento_tributario', sustento.value)
   try {
     const res = await api.post('/purchases/import', form)
-    msg.value = { type: 'success', text: `Compra ${res.data.numero} de ${res.data.contact.razon_social} importada — ${money(res.data.importe_total)}` }
+    importada.value = res.data
+    msg.value = { type: 'success', text: `Compra ${res.data.numero} de ${res.data.contact.razon_social} importada con sustento ${res.data.sustento_tributario} — ${money(res.data.importe_total)}` }
     load()
     pedirSeries(res.data)
   } catch (err: any) {
@@ -85,7 +108,7 @@ onMounted(() => { load(); loadSustentos() })
       <div style="display:flex; gap:10px; align-items:center;">
         <label style="display:flex; flex-direction:column; gap:2px; font-size:12px; color:#64748b;">
           Sustento tributario
-          <Select v-model="sustento" :options="sustentos" optionLabel="label" optionValue="value" style="width:320px;" />
+          <Select v-model="sustento" :options="opcionesSustento" optionLabel="label" optionValue="value" style="width:320px;" />
         </label>
         <input ref="fileRef" type="file" accept=".xml" style="display:none" @change="importar" />
         <Button label="Importar factura (XML del SRI)" icon="pi pi-upload" :loading="importing" @click="fileRef?.click()" />
@@ -97,7 +120,11 @@ onMounted(() => { load(); loadSustentos() })
       el proveedor, registra la compra y calcula el crédito tributario del IVA. No necesita el .p12.
     </Message>
 
-    <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom:14px;">{{ msg.text }}</Message>
+    <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom:14px;">
+      {{ msg.text }}
+      <Button v-if="msg.type === 'success' && importada && puedeRetener" label="Aplicar retención" icon="pi pi-percentage"
+              size="small" text style="margin-left:10px;" @click="abrirRetencion(importada, true)" />
+    </Message>
 
     <DataTable :value="rows" :loading="loading" size="small" paginator :rows="15" stripedRows>
       <Column header="Fecha"><template #body="{ data }">{{ String(data.fecha_emision).slice(0,10) }}</template></Column>
@@ -106,7 +133,19 @@ onMounted(() => { load(); loadSustentos() })
       <Column header="Base"><template #body="{ data }">{{ money(data.total_sin_impuestos) }}</template></Column>
       <Column header="IVA"><template #body="{ data }">{{ money(data.total_impuesto) }}</template></Column>
       <Column header="Total"><template #body="{ data }">{{ money(data.importe_total) }}</template></Column>
+      <Column header="Sustento"><template #body="{ data }">{{ data.sustento_tributario }}</template></Column>
+      <Column v-if="puedeRetener" header="Retención" style="width:120px;">
+        <template #body="{ data }">
+          <Button label="Retención" icon="pi pi-percentage" size="small" text @click="abrirRetencion(data)" />
+        </template>
+      </Column>
     </DataTable>
+
+    <Dialog :visible="!!retencionDialog" modal header="Retención de la compra" style="width:820px"
+            @update:visible="retencionDialog = null">
+      <RetencionCompra v-if="retencionDialog" :purchase="retencionDialog.compra" :preguntar="retencionDialog.preguntar"
+                       @registrada="retencionRegistrada" />
+    </Dialog>
 
     <Dialog :visible="!!seriesDialog" modal header="Ingresar series de los productos" style="width:520px"
             @update:visible="seriesDialog=null">

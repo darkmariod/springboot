@@ -9,6 +9,8 @@ import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Tag from 'primevue/tag'
+import Message from 'primevue/message'
+import Checkbox from 'primevue/checkbox'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { useTabsStore } from '../stores/tabs'
@@ -24,14 +26,26 @@ const seleccion = ref<any>(null)
 const docRef = ref<HTMLElement>()
 const anularTarget = ref<any>(null)
 const anularBusy = ref(false)
+const anularError = ref('')
+// Si el SRI ya la autorizó, anularla aquí no basta: hay que confirmarlo y recordar el portal SRI en línea
+const confirmaSri = ref(false)
+// Aviso que queda en pantalla hasta que se cierre (la respuesta del servidor dice si hace falta anular también en el SRI)
+const avisoAnulacion = ref<{ texto: string; requiere: boolean } | null>(null)
 
 // Filtros
-const filtro = ref({ anio: '', numero: '', cliente: '', identificacion: '', valor: '' })
+const filtro = ref({ anio: '', numero: '', cliente: '', identificacion: '', valor: '', estado: '' })
+const estados = [
+  { label: 'Todas', value: '' },
+  { label: 'Vigentes', value: 'vigentes' },
+  { label: 'Anuladas', value: 'anuladas' },
+]
 
 const estadoSev: Record<string, string> = {
   generado: 'warn', firmado: 'info', enviado: 'info', AUTORIZADO: 'success', autorizado: 'success',
 }
-const facturaSev: Record<string, string> = { emitida: 'success', anulada: 'danger', pendiente: 'warn' }
+const facturaSev: Record<string, string> = { emitida: 'success', anulado: 'danger', pendiente: 'warn' }
+const etiquetaEstado = (e: any) => e === 'anulado' ? 'Anulada' : (e === 'emitida' ? 'Emitida' : (e ?? '—'))
+const esAutorizada = (r: any) => String(r?.sri_document?.estado ?? '').toUpperCase() === 'AUTORIZADO'
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 const empresa = computed(() => company.companies.find((c: any) => c.id === company.activeId))
 
@@ -44,13 +58,17 @@ const anios = computed(() => {
   return [...set].sort().reverse().map((a) => ({ label: a, value: a }))
 })
 
+const anuladas = computed(() => rows.value.filter((r: any) => r.estado === 'anulado').length)
+
 const filtrados = computed(() => rows.value.filter((r: any) => {
   const a = filtro.value.anio
   const n = filtro.value.numero.toLowerCase()
   const c = filtro.value.cliente.toLowerCase()
   const id = filtro.value.identificacion.toLowerCase()
   const v = filtro.value.valor
+  const e = filtro.value.estado
   return (!a || String(r.fecha_emision).startsWith(a))
+    && (!e || (e === 'anuladas' ? r.estado === 'anulado' : r.estado !== 'anulado'))
     && (!n || (r.numero ?? '').toLowerCase().includes(n))
     && (!c || (r.contact?.razon_social ?? '').toLowerCase().includes(c))
     && (!id || (r.contact?.identificacion ?? '').toLowerCase().includes(id))
@@ -108,16 +126,21 @@ function nuevo() {
 }
 function salir() { tabs.close(tabs.activeKey ?? 'invoices') }
 
-function pedirAnular(r: any) { anularTarget.value = r }
+function pedirAnular(r: any) { anularError.value = ''; confirmaSri.value = false; anularTarget.value = r }
 async function confirmarAnular() {
   if (!anularTarget.value || anularBusy.value) return
+  if (esAutorizada(anularTarget.value) && !confirmaSri.value) return
   anularBusy.value = true
+  anularError.value = ''
   try {
-    await api.post(`/invoices/${anularTarget.value.id}/anular`)
+    const { data } = await api.post(`/invoices/${anularTarget.value.id}/anular`)
+    // El servidor dice si hace falta anularla también en el SRI: la pantalla no lo adivina
+    avisoAnulacion.value = { texto: data.aviso_sri ?? data.mensaje, requiere: !!data.requiere_anulacion_sri }
     anularTarget.value = null
+    seleccion.value = null
     await load()
   } catch (e: any) {
-    alert(e?.response?.data?.message ?? 'No se pudo anular la factura.')
+    anularError.value = e?.response?.data?.message ?? 'No se pudo anular la factura.'
   } finally {
     anularBusy.value = false
   }
@@ -144,6 +167,8 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
         <InputText v-model="filtro.cliente" placeholder="Cliente" size="small" style="width:160px" />
         <InputText v-model="filtro.identificacion" placeholder="CI/RUC" size="small" style="width:120px" />
         <InputText v-model="filtro.valor" placeholder="Valor" size="small" style="width:90px" />
+        <Select v-model="filtro.estado" :options="estados" optionLabel="label" optionValue="value"
+                size="small" style="width:120px" aria-label="Estado de la factura" />
         <div style="flex:1"></div>
         <Button label="Nuevo" icon="pi pi-plus" size="small" @click="nuevo" />
         <Button label="Editar" icon="pi pi-pencil" size="small" outlined
@@ -153,6 +178,9 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
         <Button label="Salir" icon="pi pi-times" size="small" text @click="salir" />
       </div>
     </div>
+
+    <Message v-if="avisoAnulacion" :severity="avisoAnulacion.requiere ? 'warn' : 'info'" :closable="true"
+             style="margin:8px 12px 0;" @close="avisoAnulacion = null">{{ avisoAnulacion.texto }}</Message>
 
     <!-- ══ Grilla densa ══ -->
     <div class="invoices-grid-wrap">
@@ -191,7 +219,7 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
             <td style="font-family:monospace; font-size:11.5px;">{{ r.contact?.identificacion }}</td>
             <td class="der"><b>{{ money(r.importe_total) }}</b></td>
             <td>
-              <Tag :value="r.estado ?? '—'" :severity="facturaSev[r.estado] ?? 'secondary'" size="small" />
+              <Tag :value="etiquetaEstado(r.estado)" :severity="facturaSev[r.estado] ?? 'secondary'" size="small" />
             </td>
             <td>
               <Tag :value="r.sri_document?.estado ?? '—'"
@@ -216,7 +244,7 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
 
     <!-- ══ Pie ══ -->
     <div class="invoices-foot">
-      Mostrando {{ filtrados.length }} de {{ rows.length }} facturas
+      Mostrando {{ filtrados.length }} de {{ rows.length }} facturas · {{ anuladas }} anuladas
     </div>
 
     <!-- ══ Confirmar anulación ══ -->
@@ -227,14 +255,23 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
           ¿Anular la factura <b>{{ anularTarget.numero }}</b> por <b>{{ money(anularTarget.importe_total) }}</b>?
         </p>
         <p style="margin:0; font-size:12px; color:#64748b;">
-          El documento fiscal no se borra: quedará con estado <b>anulado</b>, se revertirá el asiento contable y se devolverá el stock y las series.
+          El documento fiscal no se borra: quedará con estado <b>anulado</b>, conservará su número, se revertirá el asiento contable y se devolverá el stock y las series.
         </p>
+        <Message v-if="esAutorizada(anularTarget)" severity="warn" :closable="false" style="margin-top:12px;">
+          El SRI ya autorizó esta factura. Anularla aquí <b>no la anula en el SRI</b>: después tendrás que anularla también en el portal SRI en línea;
+          mientras no lo hagas, el SRI la seguirá considerando válida.
+        </Message>
+        <label v-if="esAutorizada(anularTarget)" style="display:flex; gap:8px; align-items:center; margin-top:10px; font-size:12.5px; cursor:pointer;">
+          <Checkbox v-model="confirmaSri" binary input-id="confirma-sri" />
+          <span>Entiendo que también debo anularla en el portal SRI en línea.</span>
+        </label>
+        <Message v-if="anularError" severity="error" :closable="false" style="margin-top:12px;">{{ anularError }}</Message>
       </div>
       <template #footer>
         <div class="kvs-footer">
           <Button label="Cancelar" text @click="anularTarget = null" />
           <Button label="Anular factura" icon="pi pi-ban" severity="danger"
-                  :loading="anularBusy" @click="confirmarAnular" />
+                  :loading="anularBusy" :disabled="esAutorizada(anularTarget) && !confirmaSri" @click="confirmarAnular" />
         </div>
       </template>
     </Dialog>

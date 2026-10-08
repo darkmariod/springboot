@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /**
- * Reportes de ventas y compras: Comprobantes, Ventas, Ventas Detallada, Compras.
+ * Reportes de ventas y compras: Comprobantes (facturas, notas de crédito y de débito), Ventas (por tarifa de IVA y estado SRI),
+ * Ventas Detallada, Compras y Compras por sustento tributario.
  * Mismo patrón que InventoryReports.vue (selector de tipo + filtros + exportación),
  * pero para los documentos comerciales en vez del inventario.
  */
 import { computed, onMounted, ref } from 'vue'
 import RadioButton from 'primevue/radiobutton'
 import Select from 'primevue/select'
+import Checkbox from 'primevue/checkbox'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
@@ -28,6 +30,7 @@ const tiposReporte = [
   { label: 'Ventas', value: 'ventas' },
   { label: 'Ventas Detallada', value: 'ventas-detalle' },
   { label: 'Compras', value: 'compras' },
+  { label: 'Compras por sustento tributario', value: 'compras-sustento' },
 ]
 
 const titulos: Record<string, string> = {
@@ -35,6 +38,7 @@ const titulos: Record<string, string> = {
   ventas: 'Reporte de Ventas',
   'ventas-detalle': 'Ventas Detallada',
   compras: 'Reporte de Compras',
+  'compras-sustento': 'Compras por sustento tributario',
 }
 
 const filtro = ref({
@@ -42,6 +46,8 @@ const filtro = ref({
   proveedorId: null as number | null,
   desde: '',
   hasta: '',
+  // Ventas: por defecto cuenta toda factura vigente (con o sin certificado); marcado, solo las que el SRI autorizó
+  soloAutorizadas: false,
 })
 
 const tiposComprobante = [
@@ -54,12 +60,19 @@ const tiposComprobante = [
 const proveedores = ref<any[]>([])
 const filas = ref<any[]>([])
 const totales = ref<any>(null)
+// Compras por sustento: una sección por sustento y otra por tipo de comprobante
+const porSustento = ref<any[]>([])
+const porTipo = ref<any[]>([])
+// Ventas: resumen por tarifa de IVA (solo las tarifas que existen en el período)
+const porTarifa = ref<any[]>([])
+const esVentas = computed(() => tipo.value === 'ventas' || tipo.value === 'ventas-detalle')
 
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 
 function colorEstado(estado: string) {
-  if (estado === 'autorizado') return '#16a34a'
-  if (estado === 'anulado') return '#dc2626'
+  if (estado === 'autorizado' || estado === 'emitida') return '#16a34a'
+  if (estado === 'anulado' || estado === 'no autorizado' || estado === 'devuelta') return '#dc2626'
+  if (estado === 'sin sri') return '#64748b'
   return '#d97706' // generado, firmado, enviado, pendiente — en trámite con el SRI
 }
 
@@ -73,7 +86,8 @@ function baseParams(): any {
   if (filtro.value.desde) p.desde = filtro.value.desde
   if (filtro.value.hasta) p.hasta = filtro.value.hasta
   if (tipo.value === 'comprobantes' && filtro.value.tipoComprobante) p.tipo = filtro.value.tipoComprobante
-  if (tipo.value === 'compras' && filtro.value.proveedorId) p.contact_id = filtro.value.proveedorId
+  if ((tipo.value === 'compras' || tipo.value === 'compras-sustento') && filtro.value.proveedorId) p.contact_id = filtro.value.proveedorId
+  if (esVentas.value && filtro.value.soloAutorizadas) p.solo_autorizadas = 1
   return p
 }
 
@@ -85,7 +99,10 @@ async function generar() {
   showTable.value = false
   try {
     const data = (await api.get(endpoint.value, { params: baseParams() })).data
-    filas.value = data.items
+    filas.value = data.items ?? []
+    porSustento.value = data.por_sustento ?? []
+    porTipo.value = data.por_tipo ?? []
+    porTarifa.value = data.por_tarifa ?? []
     totales.value = data.totales ?? null
     showTable.value = true
   } catch (e: any) {
@@ -110,9 +127,12 @@ async function descargar(formato: 'excel' | 'pdf') {
 }
 
 function resetear() {
-  filtro.value = { tipoComprobante: null, proveedorId: null, desde: '', hasta: '' }
+  filtro.value = { tipoComprobante: null, proveedorId: null, desde: '', hasta: '', soloAutorizadas: false }
   showTable.value = false
   filas.value = []
+  porSustento.value = []
+  porTipo.value = []
+  porTarifa.value = []
   totales.value = null
   msg.value = null
 }
@@ -152,7 +172,11 @@ onMounted(cargarProveedores)
             <label class="kvs-lbl">Tipo:</label>
             <Select v-model="filtro.tipoComprobante" :options="tiposComprobante" optionLabel="label" optionValue="value" class="kvs-in" />
           </div>
-          <div v-if="tipo === 'compras'" class="kvs-row">
+          <label v-if="esVentas" style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer; margin-top: 6px;">
+            <Checkbox v-model="filtro.soloAutorizadas" binary input-id="sr-solo-aut" />
+            <span>Solo autorizadas por el SRI</span>
+          </label>
+          <div v-if="tipo === 'compras' || tipo === 'compras-sustento'" class="kvs-row">
             <label class="kvs-lbl">Proveedor:</label>
             <Select v-model="filtro.proveedorId" :options="[{ id: null, razon_social: 'Todos' }, ...proveedores]"
                     optionLabel="razon_social" optionValue="id" class="kvs-in" />
@@ -183,10 +207,13 @@ onMounted(cargarProveedores)
 
         <!-- Comprobantes -->
         <DataTable v-if="showTable && tipo === 'comprobantes'" :value="filas" size="small" stripedRows :paginator="true" :rows="20">
+          <Column field="tipo" header="Tipo" style="width: 120px;" />
           <Column field="numero" header="No." style="width: 150px;" />
           <Column field="cliente" header="Cliente" />
           <Column field="identificacion" header="Identificación" style="width: 130px;" />
           <Column field="fecha_emision" header="Fecha Emisión" style="width: 110px;" />
+          <Column field="factura_afectada" header="Factura afectada" style="width: 150px;" />
+          <Column field="origen" header="SRI/Interna" style="width: 90px;" />
           <Column header="Estado" style="width: 110px;">
             <template #body="{ data }">
               <span :style="{ color: colorEstado(data.estado), fontWeight: 600, textTransform: 'capitalize' }">
@@ -201,36 +228,77 @@ onMounted(cargarProveedores)
         </DataTable>
 
         <!-- Ventas -->
-        <DataTable v-if="showTable && tipo === 'ventas'" :value="filas" size="small" stripedRows :paginator="true" :rows="20">
-          <Column field="numero" header="No." style="width: 150px;" />
-          <Column field="cliente" header="Cliente" />
-          <Column field="identificacion" header="Identificación" style="width: 130px;" />
-          <Column field="fecha_emision" header="Fecha Emisión" style="width: 110px;" />
-          <Column header="Subtotal 15%" style="width: 110px;"><template #body="{ data }">{{ money(data.subtotal_15) }}</template></Column>
-          <Column header="Subtotal 0%" style="width: 110px;"><template #body="{ data }">{{ money(data.subtotal_0) }}</template></Column>
-          <Column header="IVA" style="width: 100px;"><template #body="{ data }">{{ money(data.iva) }}</template></Column>
-          <Column header="Total" style="width: 110px;"><template #body="{ data }">{{ money(data.total) }}</template></Column>
-          <template #footer>
-            <div v-if="totales" style="display: flex; justify-content: flex-end; gap: 20px; font-weight: 600;">
-              <span>Subtotal 15%: {{ money(totales.subtotal_15) }}</span>
-              <span>Subtotal 0%: {{ money(totales.subtotal_0) }}</span>
-              <span>IVA: {{ money(totales.iva) }}</span>
-              <span>Total: {{ money(totales.total) }}</span>
-            </div>
-          </template>
-        </DataTable>
+        <template v-if="showTable && tipo === 'ventas'">
+          <Message severity="info" :closable="false" style="margin-bottom: 10px;">
+            {{ filtro.soloAutorizadas
+              ? 'Solo facturas autorizadas por el SRI.'
+              : 'Incluye toda factura vigente: generada, firmada, enviada o autorizada. No incluye las anuladas ni las que el SRI rechazó, ni las notas de crédito o de débito.' }}
+          </Message>
+
+          <h4 style="margin: 0 0 6px;">Por tarifa de IVA</h4>
+          <DataTable :value="porTarifa" size="small" stripedRows style="margin-bottom: 16px;">
+            <Column field="etiqueta" header="Tarifa" />
+            <Column header="Facturas" style="width: 100px;"><template #body="{ data }">{{ data.facturas }}</template></Column>
+            <Column header="Base" style="width: 120px;"><template #body="{ data }">{{ money(data.base) }}</template></Column>
+            <Column header="IVA" style="width: 120px;"><template #body="{ data }">{{ money(data.iva) }}</template></Column>
+            <template #empty>No hay ventas en ese rango de fechas.</template>
+          </DataTable>
+
+          <DataTable :value="filas" size="small" stripedRows :paginator="true" :rows="20" scrollable>
+            <Column field="numero" header="No." style="width: 150px;" />
+            <Column field="cliente" header="Cliente" />
+            <Column field="identificacion" header="Identificación" style="width: 130px;" />
+            <Column field="fecha_emision" header="Fecha Emisión" style="width: 110px;" />
+            <Column header="Estado SRI" style="width: 110px;">
+              <template #body="{ data }">
+                <span :style="{ color: colorEstado(data.estado_sri), fontWeight: 600, textTransform: 'capitalize' }">{{ data.estado_sri }}</span>
+              </template>
+            </Column>
+            <Column header="Subtotal 15%" style="width: 110px;"><template #body="{ data }">{{ money(data.subtotal_15) }}</template></Column>
+            <Column v-if="totales?.subtotal_otras" header="Otras tarifas" style="width: 110px;"><template #body="{ data }">{{ money(data.subtotal_otras) }}</template></Column>
+            <Column header="Subtotal 0%" style="width: 110px;"><template #body="{ data }">{{ money(data.subtotal_0) }}</template></Column>
+            <Column v-if="totales?.no_objeto" header="No objeto IVA" style="width: 110px;"><template #body="{ data }">{{ money(data.no_objeto) }}</template></Column>
+            <Column v-if="totales?.exento" header="Exento" style="width: 100px;"><template #body="{ data }">{{ money(data.exento) }}</template></Column>
+            <Column header="IVA" style="width: 100px;"><template #body="{ data }">{{ money(data.iva) }}</template></Column>
+            <Column header="Total" style="width: 110px;"><template #body="{ data }">{{ money(data.total) }}</template></Column>
+            <template #footer>
+              <div v-if="totales" style="display: flex; justify-content: flex-end; gap: 20px; font-weight: 600; flex-wrap: wrap;">
+                <span>Subtotal 15%: {{ money(totales.subtotal_15) }}</span>
+                <span v-if="totales.subtotal_otras">Otras tarifas: {{ money(totales.subtotal_otras) }}</span>
+                <span>Subtotal 0%: {{ money(totales.subtotal_0) }}</span>
+                <span v-if="totales.no_objeto">No objeto IVA: {{ money(totales.no_objeto) }}</span>
+                <span v-if="totales.exento">Exento: {{ money(totales.exento) }}</span>
+                <span>IVA: {{ money(totales.iva) }}</span>
+                <span>Total: {{ money(totales.total) }}</span>
+              </div>
+            </template>
+          </DataTable>
+        </template>
 
         <!-- Ventas Detallada -->
-        <DataTable v-if="showTable && tipo === 'ventas-detalle'" :value="filas" size="small" stripedRows :paginator="true" :rows="20">
-          <Column field="numero" header="No. Factura" style="width: 150px;" />
-          <Column field="cliente" header="Cliente" />
-          <Column field="producto" header="Producto" />
-          <Column header="Cant." style="width: 80px;"><template #body="{ data }">{{ Number(data.cantidad).toFixed(2) }}</template></Column>
-          <Column header="P. Unit." style="width: 100px;"><template #body="{ data }">{{ money(data.precio_unitario) }}</template></Column>
-          <Column header="IVA" style="width: 70px;"><template #body="{ data }">{{ data.tarifa }}%</template></Column>
-          <Column header="Subtotal" style="width: 100px;"><template #body="{ data }">{{ money(data.subtotal) }}</template></Column>
-          <template #footer>Total: {{ filas.length }} línea(s)</template>
-        </DataTable>
+        <template v-if="showTable && tipo === 'ventas-detalle'">
+          <Message severity="info" :closable="false" style="margin-bottom: 10px;">
+            {{ filtro.soloAutorizadas
+              ? 'Solo facturas autorizadas por el SRI.'
+              : 'Incluye toda factura vigente: generada, firmada, enviada o autorizada. No incluye las anuladas ni las que el SRI rechazó.' }}
+          </Message>
+          <DataTable :value="filas" size="small" stripedRows :paginator="true" :rows="20">
+            <Column field="numero" header="No. Factura" style="width: 150px;" />
+            <Column field="cliente" header="Cliente" />
+            <Column header="Estado SRI" style="width: 110px;">
+              <template #body="{ data }">
+                <span :style="{ color: colorEstado(data.estado_sri), fontWeight: 600, textTransform: 'capitalize' }">{{ data.estado_sri }}</span>
+              </template>
+            </Column>
+            <Column field="producto" header="Producto" />
+            <Column header="Cant." style="width: 80px;"><template #body="{ data }">{{ Number(data.cantidad).toFixed(2) }}</template></Column>
+            <Column header="P. Unit." style="width: 100px;"><template #body="{ data }">{{ money(data.precio_unitario) }}</template></Column>
+            <Column header="Descuento" style="width: 100px;"><template #body="{ data }">{{ money(data.descuento) }}</template></Column>
+            <Column field="categoria" header="IVA" style="width: 130px;" />
+            <Column header="Subtotal" style="width: 100px;"><template #body="{ data }">{{ money(data.subtotal) }}</template></Column>
+            <template #footer>Total: {{ filas.length }} línea(s)</template>
+          </DataTable>
+        </template>
 
         <!-- Compras -->
         <DataTable v-if="showTable && tipo === 'compras'" :value="filas" size="small" stripedRows :paginator="true" :rows="20">
@@ -252,6 +320,41 @@ onMounted(cargarProveedores)
             </div>
           </template>
         </DataTable>
+        <!-- Compras por sustento tributario -->
+        <template v-if="showTable && tipo === 'compras-sustento'">
+          <h4 style="margin: 0 0 6px;">Por sustento tributario</h4>
+          <DataTable :value="porSustento" size="small" stripedRows>
+            <Column field="codigo" header="Código" style="width: 80px;"><template #body="{ data }">{{ data.codigo || '—' }}</template></Column>
+            <Column field="nombre" header="Sustento" />
+            <Column header="Comprobantes" style="width: 110px;"><template #body="{ data }">{{ data.comprobantes }}</template></Column>
+            <Column header="Subtotal 15%" style="width: 110px;"><template #body="{ data }">{{ money(data.subtotal_15) }}</template></Column>
+            <Column header="Subtotal 0%" style="width: 110px;"><template #body="{ data }">{{ money(data.subtotal_0) }}</template></Column>
+            <Column header="IVA" style="width: 100px;"><template #body="{ data }">{{ money(data.iva) }}</template></Column>
+            <Column header="Total" style="width: 110px;"><template #body="{ data }">{{ money(data.total) }}</template></Column>
+            <template #empty>No hay compras en ese rango de fechas.</template>
+          </DataTable>
+
+          <h4 style="margin: 18px 0 6px;">Por tipo de comprobante</h4>
+          <DataTable :value="porTipo" size="small" stripedRows>
+            <Column field="codigo" header="Código" style="width: 80px;" />
+            <Column field="nombre" header="Tipo de comprobante" />
+            <Column header="Comprobantes" style="width: 110px;"><template #body="{ data }">{{ data.comprobantes }}</template></Column>
+            <Column header="Subtotal 15%" style="width: 110px;"><template #body="{ data }">{{ money(data.subtotal_15) }}</template></Column>
+            <Column header="Subtotal 0%" style="width: 110px;"><template #body="{ data }">{{ money(data.subtotal_0) }}</template></Column>
+            <Column header="IVA" style="width: 100px;"><template #body="{ data }">{{ money(data.iva) }}</template></Column>
+            <Column header="Total" style="width: 110px;"><template #body="{ data }">{{ money(data.total) }}</template></Column>
+            <template #empty>No hay compras en ese rango de fechas.</template>
+          </DataTable>
+
+          <div v-if="totales" style="display: flex; justify-content: flex-end; gap: 20px; font-weight: 600; margin-top: 14px; padding: 10px 12px; background: #fff; border: 1px solid #e2e5ea;">
+            <span>Total general:</span>
+            <span>{{ totales.comprobantes }} comprobante(s)</span>
+            <span>Subtotal 15%: {{ money(totales.subtotal_15) }}</span>
+            <span>Subtotal 0%: {{ money(totales.subtotal_0) }}</span>
+            <span>IVA: {{ money(totales.iva) }}</span>
+            <span>Total: {{ money(totales.total) }}</span>
+          </div>
+        </template>
       </div>
     </div>
   </div>

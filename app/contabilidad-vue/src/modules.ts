@@ -26,6 +26,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'advances', label: 'Anticipos', icon: 'pi pi-arrow-down-left', component: 'Advances', feature: 'cartera' },
       { key: 'credit-notes', label: 'Notas de crédito', icon: 'pi pi-file-excel', component: 'CreditNotes', feature: 'cartera' },
       { key: 'receivables', label: 'Cuentas por cobrar', icon: 'pi pi-wallet', component: 'Receivables', feature: 'cartera' },
+      { key: 'estado-cuenta-clientes', label: 'Estado de cuenta de clientes', icon: 'pi pi-chart-bar', component: 'EstadoCuenta', feature: 'cartera' },
       { key: 'sales-ret', label: 'Retenciones recibidas', icon: 'pi pi-percentage', component: 'Withholdings', feature: 'ventas' },
       { key: 'notas-debito', label: 'Nota de Débito', icon: 'pi pi-file-edit', component: 'NotaDebito', feature: 'facturacion_sri' },
       { key: 'guias-remision', label: 'Guía de Remisión', icon: 'pi pi-truck', component: 'GuiaRemision', feature: 'facturacion_sri' },
@@ -41,6 +42,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'suppliers', label: 'Proveedores', icon: 'pi pi-truck', component: 'Suppliers', feature: 'compras' },
       { key: 'liquidacion-compra', label: 'Liq. de Compra', icon: 'pi pi-file', component: 'LiquidacionCompra', feature: 'facturacion_sri' },
       { key: 'payables', label: 'Cuentas por pagar', icon: 'pi pi-credit-card', component: 'Payables', feature: 'cartera' },
+      { key: 'estado-cuenta-proveedores', label: 'Estado de cuenta de proveedores', icon: 'pi pi-chart-bar', component: 'EstadoCuenta', feature: 'cartera' },
     ],
   },
   {
@@ -118,10 +120,10 @@ export const PERMISOS: Record<string, '*' | string[]> = {
   contador: [
     'inicio',
     'contacts', 'products', 'accounts',
-    'pos', 'invoices', 'quotes', 'advances', 'credit-notes', 'receivables',
+    'pos', 'invoices', 'quotes', 'advances', 'credit-notes', 'receivables', 'estado-cuenta-clientes',
     'sales-ret', 'notas-debito', 'guias-remision', 'mass-invoicing',
     'purchases', 'purchase-entry', 'batch-import', 'suppliers',
-    'liquidacion-compra', 'payables',
+    'liquidacion-compra', 'payables', 'estado-cuenta-proveedores',
     'inventory', 'warehouses', 'series', 'inventory-reports',
     'inventory-adjustment', 'inventory-transfer',
     'cash', 'banks', 'reconciliation', 'card-reconciliation',

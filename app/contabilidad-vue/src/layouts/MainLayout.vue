@@ -22,6 +22,7 @@ import Inventory from '../views/Inventory.vue'
 import Accounting from '../views/Accounting.vue'
 import Cash from '../views/Cash.vue'
 import Receivables from '../views/Receivables.vue'
+import EstadoCuenta from '../views/EstadoCuenta.vue'
 import Payables from '../views/Payables.vue'
 import Withholdings from '../views/Withholdings.vue'
 import SriDocuments from '../views/SriDocuments.vue'
@@ -69,7 +70,7 @@ const maximized = ref(false)
 
 const componentMap: Record<string, any> = {
   Home, SignatureConfig, Dashboard, Accounts, Placeholder, Contacts, Products, Banks, Pos,
-  Branches, Invoices, Purchases, PurchaseEntry, Inventory, Accounting, Cash, Receivables, Payables, Withholdings,
+  Branches, Invoices, Purchases, PurchaseEntry, Inventory, Accounting, Cash, Receivables, Payables, Withholdings, EstadoCuenta,
   SriDocuments, Quotes, Reconciliation, Ledger, Companies, EmissionPoints, Suppliers, InventoryReports,
   Series, Users, Audit, Advances, CreditNotes, BatchImport, Employees, Payroll, Warehouses,
   Taxes, InventoryAdjustment, InventoryTransfer, SalesReports, ArticleConversion,
