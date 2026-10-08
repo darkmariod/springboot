@@ -114,10 +114,10 @@ class InvoiceStockTest extends TestCase
             'company_id' => $company->id,
             'codigo' => 'P-SERIE',
             'descripcion' => 'Producto con series',
-            'stock' => 2,
-            'costo_promedio' => 10,
             'maneja_series' => true,
         ]);
+        // El stock sale del kárdex: el inventario inicial se registra como un ingreso, no escribiendo `stock`.
+        app(RegisterInventoryMovement::class)->handle($product, 'ingreso', 2, 10, 'Inventario inicial', '2025-12-31');
         ProductSerie::create(['company_id' => $company->id, 'product_id' => $product->id, 'serie' => 'SR-001', 'estado' => 'disponible']);
 
         $response = $this->postJson('/api/invoices', [

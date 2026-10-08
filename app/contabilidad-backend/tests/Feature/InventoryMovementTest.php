@@ -131,10 +131,10 @@ class InventoryMovementTest extends TestCase
             'company_id' => $company->id,
             'codigo' => 'P-SERIE',
             'descripcion' => 'Producto con series',
-            'stock' => 2,
-            'costo_promedio' => 10,
             'maneja_series' => true,
         ]);
+        // El stock sale del kárdex: el inventario inicial se registra como un ingreso, no escribiendo `stock`.
+        $this->servicio()->handle($product, 'ingreso', 2, 10, 'Inventario inicial', '2025-12-31');
         ProductSerie::create(['company_id' => $company->id, 'product_id' => $product->id, 'serie' => 'SR-001', 'estado' => 'disponible']);
         ProductSerie::create(['company_id' => $company->id, 'product_id' => $product->id, 'serie' => 'SR-002', 'estado' => 'disponible']);
 
@@ -181,10 +181,10 @@ class InventoryMovementTest extends TestCase
             'company_id' => $company->id,
             'codigo' => 'P-SERIE',
             'descripcion' => 'Producto con series',
-            'stock' => 1,
-            'costo_promedio' => 10,
             'maneja_series' => true,
         ]);
+        // Queda 1 unidad en stock (la otra ya se vendió con la serie SR-001): se registra como ingreso en el kárdex.
+        $this->servicio()->handle($product, 'ingreso', 1, 10, 'Inventario inicial', '2025-12-31');
         ProductSerie::create(['company_id' => $company->id, 'product_id' => $product->id, 'serie' => 'SR-001', 'estado' => 'vendida', 'invoice_id' => $invoice->id]);
 
         $this->servicio()->handle($product, 'ingreso', 1, 10, 'Devolución', '2026-01-02', null, ['SR-001']);

@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductSerie;
 use App\Models\User;
+use App\Services\RegisterInventoryMovement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -26,9 +27,10 @@ class CreditNoteStockTest extends TestCase
             'codigo' => 'PROD-NC',
             'descripcion' => 'Producto de prueba',
             'tipo' => 'bien',
-            'stock' => 10,
-            'costo_promedio' => 5,
         ]);
+        // El stock sale del kárdex (RegisterInventoryMovement lo reconstruye desde los movimientos),
+        // por eso el inventario inicial se registra como un ingreso y no escribiendo la columna `stock`.
+        app(RegisterInventoryMovement::class)->handle($product, 'ingreso', 10, 5, 'Inventario inicial', '2026-01-01');
 
         $invoice = $this->crearFactura($company, $contact, $product, 3);
 
