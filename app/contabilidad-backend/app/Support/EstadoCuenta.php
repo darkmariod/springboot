@@ -557,7 +557,7 @@ final class EstadoCuenta
     private static function formaLabel(?string $forma): string
     {
         $forma = (string) $forma;
-        $etiquetas = ['cruce' => 'Cruce de saldos', 'cheque' => 'Cheque', 'anticipo' => 'Anticipo', 'credito' => 'Crédito', 'tarjeta' => 'Tarjeta'];
+        $etiquetas = ['descuento_rol' => 'Descuento en el rol de pagos', 'cruce' => 'Cruce de saldos', 'cheque' => 'Cheque', 'anticipo' => 'Anticipo', 'credito' => 'Crédito', 'tarjeta' => 'Tarjeta'];
 
         return config("formas_pago.$forma.label") ?? $etiquetas[$forma] ?? ucfirst(str_replace('_', ' ', $forma));
     }

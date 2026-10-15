@@ -19,9 +19,11 @@ class UserController extends Controller {
             'password'=>['required','string','min:8'],
             'rol'=>['required','in:admin,contador,cajero'],
             'emission_point_id'=>['nullable','exists:emission_points,id'],
+            'activo'=>['sometimes','boolean'],
         ]);
         $d['password'] = Hash::make($d['password']);
-        return response()->json(User::create($d), 201);
+        // fresh(): la respuesta trae también lo que la base asigna por defecto (activo, rol)
+        return response()->json(User::create($d)->fresh(), 201);
     }
     public function update(Request $r, User $user) {
         $d = $r->validate([
@@ -32,6 +34,10 @@ class UserController extends Controller {
             'emission_point_id'=>['nullable','exists:emission_points,id'],
             'activo'=>['sometimes','boolean'],
         ]);
+        // Como en destroy: un administrador no se deja sin acceso a sí mismo
+        if (array_key_exists('activo', $d) && ! $d['activo'] && $user->id === auth()->id()) {
+            return response()->json(['message'=>'No puedes desactivar tu propio usuario.'], 422);
+        }
         if (! empty($d['password'])) $d['password'] = Hash::make($d['password']);
         else unset($d['password']);
         $user->update($d);

@@ -17,7 +17,7 @@ final class ContraAsiento
         $companyId = $original->company_id;
         $reves = JournalEntry::create([
             'company_id' => $companyId,
-            'numero' => 'AS-'.str_pad((string) (JournalEntry::where('company_id', $companyId)->count() + 1), 6, '0', STR_PAD_LEFT),
+            'numero' => NumeroAsiento::siguiente($companyId),
             'fecha' => now(),
             'concepto' => $concepto,
             'origen_type' => $origen ? $origen->getMorphClass() : $original->origen_type,

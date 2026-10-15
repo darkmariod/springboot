@@ -79,7 +79,7 @@ class TestEmisionSri extends Command
         if ($estado === 'AUTORIZADO') {
             $this->info('  ✅ AUTORIZADO — la emisión al SRI funciona perfecto.');
         } elseif ($doc->estado === 'generado') {
-            $this->warn('  ⚠️  Quedó en "generado" — falta cargar el .p12. Cárgalo y volvé a correr esto.');
+            $this->warn('  ⚠️  Quedó en "generado" — falta cargar el .p12. Cárgalo y vuelve a correr esto.');
         } else {
             $this->error('  ✗ No llegó a AUTORIZADO. Mira los mensajes del SRI arriba para el motivo.');
             $this->line('     Motivos comunes: certificado vencido, ambiente equivocado (pruebas vs producción),');

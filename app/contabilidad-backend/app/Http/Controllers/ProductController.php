@@ -7,9 +7,26 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    /**
+     * Listado de productos de la empresa. Con `serie` (mínimo 3 caracteres, parte del número, sin distinguir mayúsculas) trae
+     * solo los productos que tienen una serie así, cada uno con las series que coinciden en `series`: buscar «por nombre,
+     * código o número de serie» encuentra el equipo.
+     */
     public function index(Request $r)
     {
-        return Product::when($r->company_id, fn ($q, $id) => $q->where('company_id', $id))->orderBy('descripcion')->get();
+        $serie = null;
+        if ($r->filled('serie')) {
+            $serie = trim((string) $r->input('serie'));
+            if (mb_strlen($serie) < 3) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['serie' => ['Escribe al menos 3 caracteres del número de serie.']]);
+            }
+        }
+
+        return Product::when($r->company_id, fn ($q, $id) => $q->where('company_id', $id))
+            ->when($serie !== null, fn ($q) => $q
+                ->whereHas('series', fn ($s) => $s->serieContiene($serie))
+                ->with(['series' => fn ($s) => $s->serieContiene($serie)->select('id', 'product_id', 'serie', 'estado')->orderBy('serie')]))
+            ->orderBy('descripcion')->get();
     }
 
     public function store(Request $r)

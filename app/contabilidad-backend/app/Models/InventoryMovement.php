@@ -9,7 +9,8 @@ class InventoryMovement extends Model
 {
     use Auditable;
     protected $fillable = ['company_id', 'product_id', 'fecha', 'tipo', 'concepto', 'cantidad',
-        'costo_unitario', 'saldo_cantidad', 'saldo_costo_promedio', 'saldo_valor', 'warehouse_id', 'invoice_id', 'purchase_id'];
+        'costo_unitario', 'saldo_cantidad', 'saldo_costo_promedio', 'saldo_valor', 'warehouse_id', 'invoice_id', 'purchase_id',
+        'origen_type', 'origen_id'];
 
     public function invoice()
     {
@@ -19,5 +20,11 @@ class InventoryMovement extends Model
     public function purchase()
     {
         return $this->belongsTo(\App\Models\Purchase::class);
+    }
+
+    /** El documento interno que originó el movimiento (fraccionamiento o conversión); vacío en los demás. */
+    public function origen()
+    {
+        return $this->morphTo();
     }
 }

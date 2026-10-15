@@ -36,6 +36,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            // La API devuelve true/false (no 1/0): la casilla "Usuario activo" de la pantalla solo reconoce booleanos
+            'activo' => 'boolean',
         ];
     }
 }

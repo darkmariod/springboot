@@ -16,6 +16,14 @@ final class Sustentos
     /** Sustento cuando la factura lleva bienes que entran al inventario. */
     public const INVENTARIO = '06';
 
+    /** Sustentos de activo fijo: 03 (crédito tributario para IVA) y 04 (costo o gasto para IR). Una compra manual con uno de ellos se capitaliza. */
+    public const ACTIVO_FIJO = ['03', '04'];
+
+    public static function esActivoFijo(?string $codigo): bool
+    {
+        return in_array((string) $codigo, self::ACTIVO_FIJO, true);
+    }
+
     /** @return array<string,string> código => nombre */
     public static function catalogo(): array
     {

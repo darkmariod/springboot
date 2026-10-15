@@ -9,26 +9,42 @@ class PayrollCalculator {
     public const FONDOS_RESERVA  = 0.0833;
     public const VACACIONES      = 0.0417;
 
+    /**
+     * $extras (todo opcional):
+     *  - ingresos que entran a la materia gravada del IESS y a las provisiones, igual que las horas extra de siempre:
+     *    horas_extra, comisiones, otros_ingresos (bonos);
+     *  - permisos: descuento por permiso no remunerado (sueldo / 30 x días). Son días no trabajados, así que se restan
+     *    de la materia gravada (no se paga IESS ni provisiones sobre lo que no se pagó);
+     *  - descuentos que bajan el neto sin tocar la materia gravada: prestamos, anticipos, descuentos, consumos.
+     */
     public function forEmployee(Employee $e, float $sbu, array $extras = []): array {
-        $horasExtra = (float)($extras['horas_extra'] ?? 0);
-        $comisiones = (float)($extras['comisiones'] ?? 0);
-        $prestamos  = (float)($extras['prestamos'] ?? 0);
-        $anticipos  = (float)($extras['anticipos'] ?? 0);
+        $horasExtra = round((float)($extras['horas_extra'] ?? 0), 2);
+        $comisiones = round((float)($extras['comisiones'] ?? 0), 2);
+        $otrosIngresos = round((float)($extras['otros_ingresos'] ?? 0), 2);
+        $prestamos  = round((float)($extras['prestamos'] ?? 0), 2);
+        $anticipos  = round((float)($extras['anticipos'] ?? 0), 2);
+        $descuentos = round((float)($extras['descuentos'] ?? 0), 2);
+        $consumos   = round((float)($extras['consumos'] ?? 0), 2);
 
         $sueldo = (float)$e->sueldo;
-        $materiaGravada = $sueldo + $horasExtra + $comisiones;
+        $permisos = round(min(max((float)($extras['permisos'] ?? 0), 0), $sueldo), 2);
+        $materiaGravada = $sueldo - $permisos + $horasExtra + $comisiones + $otrosIngresos;
         $aportePersonal = round($materiaGravada * self::APORTE_PERSONAL, 2);
-        $ingresos = round($materiaGravada, 2);
-        $egresos  = round($aportePersonal + $prestamos + $anticipos, 2);
+        $ingresos = round($sueldo + $horasExtra + $comisiones + $otrosIngresos, 2);
+        $egresos  = round($aportePersonal + $permisos + $prestamos + $anticipos + $descuentos + $consumos, 2);
 
         return [
             'employee_id'      => $e->id,
             'sueldo'           => $sueldo,
             'horas_extra'      => $horasExtra,
             'comisiones'       => $comisiones,
+            'otros_ingresos'   => $otrosIngresos,
             'aporte_personal'  => $aportePersonal,
+            'permisos'         => $permisos,
             'prestamos'        => $prestamos,
             'anticipos'        => $anticipos,
+            'descuentos'       => $descuentos,
+            'consumos'         => $consumos,
             'neto'             => round($ingresos - $egresos, 2),
             'aporte_patronal'  => round($materiaGravada * self::APORTE_PATRONAL, 2),
             'decimo_tercero'   => round($materiaGravada * self::DECIMO_TERCERO, 2),

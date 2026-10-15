@@ -8,6 +8,7 @@ use App\Models\Contact;
 use App\Models\Invoice;
 use App\Services\SimpleEntry;
 use App\Support\AnulacionSri;
+use App\Support\ComprobanteSri;
 use App\Support\ContraAsiento;
 use App\Support\Cuentas;
 use Illuminate\Http\Request;
@@ -216,24 +217,29 @@ class NotaDebitoController extends Controller
         })->values()->all();
         $total = round($sinImpuestos + array_sum(array_column($impuestos, 'valor')), 2);
 
+        // El documento sustento es la FACTURA que se carga (su número y su fecha de emisión), no la nota
+        $factura = $notaDebito->factura_referencia_id ? Invoice::find($notaDebito->factura_referencia_id) : null;
+        $fechaSustento = ($factura?->fecha_emision ?? $notaDebito->fecha_emision ?? now())->format('Y-m-d');
+
         $payload = [
-            'infoTributaria' => ['codDoc' => '05'],
+            // Guardar la nota ya le reservó su número: la clave de acceso lleva ese mismo secuencial
+            'infoTributaria' => ComprobanteSri::infoTributaria('05', $notaDebito->numero),
             'infoNotaDebito' => [
                 'fechaEmision' => now()->format('Y-m-d'),
                 'dirEstablecimiento' => $company->dir_matriz,
-                'obligadoContabilidad' => $company->obligado_contabilidad === 'SI' ? 'SI' : 'NO',
+                'obligadoContabilidad' => $company->obligado_contabilidad ? 'SI' : 'NO',
                 'tipoIdentificacionComprador' => $contact->tipo_identificacion ?? '05',
                 'razonSocialComprador' => $contact->razon_social,
                 'identificacionComprador' => $contact->identificacion,
                 'codDocModificado' => '01',
-                'numDocModificado' => $notaDebito->numero_referencia ?? '',
-                'fechaEmisionDocSustento' => $notaDebito->fecha_emision ? $notaDebito->fecha_emision->format('Y-m-d') : now()->format('Y-m-d'),
+                'numDocModificado' => $notaDebito->numero_referencia ?? $factura?->numero ?? '',
+                'fechaEmisionDocSustento' => $fechaSustento,
                 'totalSinImpuestos' => number_format($sinImpuestos, 2, '.', ''),
                 'impuestos' => $impuestos,
                 'valorTotal' => number_format($total, 2, '.', ''),
                 'pagos' => [
                     [
-                        'formaPago' => $notaDebito->forma_pago ?? '01',
+                        'formaPago' => ComprobanteSri::formaPago($notaDebito->forma_pago),
                         'total' => number_format($total, 2, '.', ''),
                         'plazo' => '0',
                         'unidadTiempo' => 'dias',
@@ -241,19 +247,23 @@ class NotaDebitoController extends Controller
                 ],
             ],
             'motivos' => $motivos->map(fn($m) => ['razon' => $m['razon'], 'valor' => $m['valor']])->all(),
-            'infoAdicional' => [
-                'email' => $contact->email ?? '',
-                'telefono' => $contact->telefono ?? '',
-            ],
+            'infoAdicional' => ComprobanteSri::infoAdicional($contact->email ?? null, $contact->telefono ?? null),
         ];
 
         $sriDoc = app(EmitirSriDocument::class)->execute($notaDebito, 'notaDebito', $company, $payload);
-        $company->increment('secuencial');
+        // Una nota guardada con la versión anterior (sin número en el formato del SRI) toma el siguiente de la empresa
+        if (! ComprobanteSri::reservado($notaDebito->numero)) {
+            $notaDebito->update(['numero' => sprintf('%s-%s-%09d', $company->estab, $company->pto_emi, $company->secuencial)]);
+            $company->increment('secuencial');
+        }
 
         return response()->json([
             'ok' => true,
             'sri_document' => $sriDoc,
-            'mensaje' => 'Nota de débito emitida. Clave: ' . $sriDoc->clave_acceso,
+            // Sin certificado de firma el comprobante se genera pero no sale al SRI.
+            'mensaje' => strtolower((string) $sriDoc->estado) !== 'generado'
+                ? 'Nota de débito emitida al SRI. Clave de acceso: ' . $sriDoc->clave_acceso
+                : 'Nota de débito generada. Se enviará al SRI cuando cargues el certificado de firma. Clave de acceso: ' . $sriDoc->clave_acceso,
         ]);
     }
 }

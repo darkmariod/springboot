@@ -1,14 +1,18 @@
 <?php
 namespace App\Http\Controllers;
 use App\Models\Contact;
+use App\Models\FixedAsset;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Services\ParseSriPurchaseXml;
 use App\Services\RegisterInventoryMovement;
 use App\Services\GeneratePurchaseJournalEntry;
+use App\Support\ActivosFijos;
 use App\Support\ComprobantesCompra;
 use App\Support\CostosInventario;
+use App\Support\SeriesDeCompra;
+use App\Support\SeriesRequeridas;
 use App\Support\Sustentos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +29,10 @@ class PurchaseController extends Controller {
             ->when($r->company_id, fn($q,$id)=>$q->where('company_id',$id))->latest('fecha_emision')->get();
     }
 
-    /** Registro manual de compra (sin XML). */
+    /**
+     * Registro manual de compra (sin XML). Con sustento de activo fijo (03 o 04) la base se capitaliza: va a 1.2.01 Activos fijos y no
+     * entra al inventario ni al gasto; la ficha del activo se crea después desde Activos fijos, ligada a esta compra (T7.2).
+     */
     public function store(Request $r, RegisterInventoryMovement $inv, GeneratePurchaseJournalEntry $asiento) {
         $r->validate([
             'company_id' => ['required','exists:companies,id'],
@@ -40,8 +47,12 @@ class PurchaseController extends Controller {
             'items.*.precio_unitario' => ['required','numeric','gte:0'],
         ]);
         $companyId = (int)$r->company_id;
+        $capitalizar = Sustentos::esActivoFijo($r->input('sustento_tributario'));
+        // Un producto con series entra con una serie por unidad: se revisa todo antes de escribir nada.
+        // Un activo fijo no es mercadería: no entra al kárdex y no lleva series de venta.
+        if (! $capitalizar) SeriesDeCompra::validarManual($companyId, $r->items);
 
-        $purchase = DB::transaction(function () use ($r, $companyId, $inv, $asiento) {
+        $purchase = DB::transaction(function () use ($r, $companyId, $inv, $asiento, $capitalizar) {
             $items = collect($r->items)->map(fn($it) => [
                 'codigo_principal' => $it['codigo_principal'],
                 'descripcion' => $it['descripcion'] ?? $it['codigo_principal'],
@@ -50,7 +61,7 @@ class PurchaseController extends Controller {
                 'tarifa' => (float)($it['tarifa'] ?? 15),
                 'unidad' => $it['unidad'] ?? 'UNI',
                 'descuento' => (float)($it['descuento'] ?? 0),
-                'series' => $it['series'] ?? [],
+                'series' => SeriesDeCompra::limpiar($it['series'] ?? []),
             ])->toArray();
 
             $totalSinImp = collect($items)->sum(fn($it) => $it['cantidad'] * $it['precio_unitario'] - ($it['descuento'] ?? 0));
@@ -79,6 +90,12 @@ class PurchaseController extends Controller {
                 'saldo_pendiente' => $totalSinImp + $totalIva,
             ]);
 
+            // Activo fijo: Debe Activos fijos / Debe IVA / Haber CxP, sin inventario
+            if ($capitalizar) {
+                ActivosFijos::asentarCompra($purchase);
+                return $purchase;
+            }
+
             // Inventario: cada item con código ingresa stock
             foreach ($items as $item) {
                 $codigo = trim((string)($item['codigo_principal'] ?? ''));
@@ -90,19 +107,13 @@ class PurchaseController extends Controller {
                      'precio' => $item['precio_unitario'], 'tarifa_iva' => $item['tarifa']]
                 );
                 // Al kárdex entra el costo NETO (con el descuento de la línea): es el mismo valor que va a 1.1.05.
-                if ($product->tipo !== 'servicio')
-                    $inv->handle($product, 'ingreso', $cant, CostosInventario::costoUnitarioCompra($item),
+                if ($product->tipo !== 'servicio') {
+                    $mov = $inv->handle($product, 'ingreso', $cant, CostosInventario::costoUnitarioCompra($item),
                         'Compra ' . $purchase->numero, $purchase->fecha_emision->toDateString(),
                         $purchase->warehouse_id, [], null, $purchase->id);
-
-                // Series: registrar números de serie comprados (garantías)
-                foreach (($item['series'] ?? []) as $serieNum) {
-                    $serie = trim((string) $serieNum);
-                    if ($serie === '') continue;
-                    \App\Models\ProductSerie::firstOrCreate(
-                        ['company_id' => $companyId, 'serie' => $serie],
-                        ['product_id' => $product->id, 'purchase_id' => $purchase->id, 'estado' => 'disponible']
-                    );
+                    // Series: una por unidad, en la bodega a la que entró el stock (ya validadas arriba)
+                    if ($product->maneja_series)
+                        $inv->registrarSeriesNuevas($product, $item['series'], $purchase->id, $mov->warehouse_id);
                 }
             }
 
@@ -111,7 +122,7 @@ class PurchaseController extends Controller {
             return $purchase;
         });
 
-        return response()->json($purchase->load('contact'), 201);
+        return response()->json($purchase->load('contact')->toArray() + ['capitalizada' => $capitalizar], 201);
     }
 
     /** Actualización de compra manual. */
@@ -168,6 +179,13 @@ class PurchaseController extends Controller {
             ], 422);
         }
 
+        $ficha = FixedAsset::where('purchase_id', $purchase->id)->first();
+        if ($ficha) {
+            return response()->json([
+                'message' => "No se puede eliminar: esta compra tiene una ficha de activo fijo ({$ficha->codigo}). Elimina antes la ficha.",
+            ], 422);
+        }
+
         $vendidas = \App\Models\ProductSerie::where('purchase_id', $purchase->id)
             ->where('estado', '!=', 'disponible')->exists();
         if ($vendidas) {
@@ -220,6 +238,13 @@ class PurchaseController extends Controller {
 
         $sustento = $r->input('sustento_tributario') ?: Sustentos::predeterminado($companyId, $d['items']);
 
+        // Un producto con series no puede entrar sin ellas y el XML no las trae: llegan aparte (mapa código => series).
+        // Si faltan, 422 con las líneas que las necesitan para que la pantalla las pida y vuelva a mandar el archivo.
+        try { $d['items'] = SeriesDeCompra::repartirDelXml($companyId, $d['items'], SeriesDeCompra::mapa($r->input('series'))); }
+        catch (SeriesRequeridas $e) {
+            return response()->json(['message'=>$e->getMessage(), 'requiere_series'=>true, 'lineas'=>$e->lineas()], 422);
+        }
+
         $purchase = DB::transaction(function() use ($companyId,$d,$inv,$asiento,$sustento) {
             $proveedor = Contact::firstOrCreate(
                 ['company_id'=>$companyId,'identificacion'=>$d['proveedor']['identificacion']],
@@ -240,14 +265,23 @@ class PurchaseController extends Controller {
                 $product = Product::firstOrCreate(
                     ['company_id'=>$companyId,'codigo'=>$codigo],
                     ['descripcion'=>$item['descripcion'] ?? $codigo,'tipo'=>'bien','precio'=>$item['precio_unitario'] ?? 0,'tarifa_iva'=>$item['tarifa'] ?? 15]);
-                if ($product->tipo !== 'servicio')
-                    $inv->handle($product,'ingreso',$cant,CostosInventario::costoUnitarioCompra($item),'Compra '.$purchase->numero,$purchase->fecha_emision->toDateString(),
+                if ($product->tipo !== 'servicio') {
+                    $mov = $inv->handle($product,'ingreso',$cant,CostosInventario::costoUnitarioCompra($item),'Compra '.$purchase->numero,$purchase->fecha_emision->toDateString(),
                         null,[],null,$purchase->id);
+                    if (! empty($item['series']))
+                        $inv->registrarSeriesNuevas($product, $item['series'], $purchase->id, $mov->warehouse_id);
+                }
             }
             // Asiento contable (Fase 6)
             $asiento->handle($purchase);
             return $purchase;
         });
-        return response()->json($purchase->load('contact'), 201);
+        // Un activo fijo importado del XML conserva su asiento de siempre (inventario o gasto): solo se avisa cómo capitalizarlo
+        $respuesta = $purchase->load('contact')->toArray();
+        if (Sustentos::esActivoFijo($sustento)) {
+            $respuesta['aviso_activo_fijo'] = 'Esta compra tiene sustento de activo fijo, pero al importarla del XML quedó en inventario o gasto. '
+                .'Crea su ficha de activo fijo desde Contabilidad > Activos fijos y elige la cuenta donde se asentó: así se reclasifica a Activos fijos y empieza a depreciarse.';
+        }
+        return response()->json($respuesta, 201);
     }
 }

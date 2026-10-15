@@ -15,8 +15,8 @@ trait ExportsReports
     {
         $csv = ($bom ? "\xEF\xBB\xBF" : '') . $this->csvLine($headers);
         foreach ($rows as $row) {
-            // Una fila que es solo texto es el título de una sección del reporte
-            $csv .= $this->csvLine(is_array($row) ? $row : [$row]);
+            // Una fila que es solo texto es el título de una sección del reporte; ['__total' => [...]] es una fila de totales
+            $csv .= $this->csvLine(is_array($row) ? ($row['__total'] ?? $row) : [$row]);
         }
 
         return response($csv)
@@ -39,6 +39,11 @@ trait ExportsReports
                 $tbody .= '<tr class="seccion"><td colspan="' . count($headers) . '">' . htmlspecialchars((string) $row) . '</td></tr>';
                 continue;
             }
+            // ['__total' => [...]]: fila de totales dentro del cuerpo (en negrita y con línea arriba, como la del pie)
+            if (isset($row['__total'])) {
+                $tbody .= '<tr class="total">' . implode('', array_map(fn ($c) => "<td>{$c}</td>", $row['__total'])) . '</tr>';
+                continue;
+            }
             $tbody .= '<tr>' . implode('', array_map(fn ($c) => "<td>{$c}</td>", $row)) . '</tr>';
         }
         $tfoot = '';
@@ -56,10 +61,13 @@ trait ExportsReports
             .total td { font-weight: bold; border-top: 2px solid #333; }
             .seccion td { background: #e8eef7; font-weight: bold; padding-top: 6px; }
             </style></head><body>
-            <h1>" . strtoupper($titulo) . "</h1>
+            <h1>" . mb_strtoupper($titulo) . "</h1>
             <h2>Generado: " . now()->format('d/m/Y H:i') . "</h2>
             <table><thead><tr>{$thead}</tr></thead><tbody>{$tbody}{$tfoot}</tbody></table>
             </body></html>";
+
+        // dompdf usa Arial/Helvetica (cp1252) y dibuja "?" donde no hay glifo: el signo menos Unicode va como guion normal
+        $html = str_replace(['−', '–'], '-', $html);
 
         return \Barryvdh\DomPDF\Facade\Pdf::loadHtml($html)
             ->setPaper('letter', 'landscape')

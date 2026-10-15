@@ -168,7 +168,10 @@ class EmitirSriDocument {
             'codigoNumerico'=>str_pad((string)random_int(0,99999999),8,'0',STR_PAD_LEFT),
             'codDoc'=>$data['infoTributaria']['codDoc'] ?? '01', 'estab'=>$data['infoTributaria']['estab'] ?? $company->estab,
             'ptoEmi'=>$data['infoTributaria']['ptoEmi'] ?? $company->pto_emi,
-            'secuencial'=>str_pad((string)$company->secuencial,9,'0',STR_PAD_LEFT), 'dirMatriz'=>$company->dir_matriz, 'regimen'=>$company->regimen,
+            // Un documento que ya reservó su número al guardarse (nota de débito, liquidación, guía) lo trae en
+            // infoTributaria.secuencial: así el número que ve el usuario es el de la clave de acceso.
+            'secuencial'=>str_pad((string)($data['infoTributaria']['secuencial'] ?? $company->secuencial),9,'0',STR_PAD_LEFT),
+            'dirMatriz'=>$company->dir_matriz, 'regimen'=>$company->regimen,
         ];
         return array_replace_recursive($data, ['infoTributaria'=>$infoTributaria]);
     }

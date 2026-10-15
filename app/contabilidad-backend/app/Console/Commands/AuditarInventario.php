@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\InventoryMovement;
 use App\Models\Product;
+use App\Models\ProductSerie;
+use App\Models\Warehouse;
 use App\Models\WarehouseStock;
 use App\Services\RegisterInventoryMovement;
 use Illuminate\Console\Command;
@@ -72,11 +74,10 @@ class AuditarInventario extends Command
                 $problemas[] = [$p, "{$sinBodega} movimientos sin bodega asignada"];
             }
 
-            // 5. Un producto con series debe tener tantas disponibles como stock
+            // 5. Un producto con series debe tener, en CADA bodega, tantas series disponibles como unidades de stock
             if ($p->maneja_series) {
-                $disp = \App\Models\ProductSerie::where('product_id', $p->id)->where('estado', 'disponible')->count();
-                if (abs($disp - (float) $p->stock) > 0.0005) {
-                    $problemas[] = [$p, "hay {$disp} series disponibles y el stock dice {$p->stock}"];
+                foreach ($this->seriesContraStockPorBodega($p) as $detalle) {
+                    $problemas[] = [$p, $detalle];
                 }
             }
         }
@@ -129,5 +130,42 @@ class AuditarInventario extends Command
         $this->newLine();
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Series disponibles contra el stock de cada bodega (no contra el stock total: un total que cuadra puede esconder una
+     * serie anotada en otra bodega). Una serie sin bodega (de antes de las bodegas en las series) cuenta como de la
+     * bodega principal, y el stock anterior a las bodegas (movimientos sin bodega) también está en la principal: la misma
+     * regla de ProductSerie::bodegaPrincipalId y de SerieController::store. Devuelve una línea por cada bodega que no cuadra.
+     *
+     * @return list<string>
+     */
+    private function seriesContraStockPorBodega(Product $p): array
+    {
+        $principal = ProductSerie::bodegaPrincipalId((int) $p->company_id);
+        $stock = WarehouseStock::where('product_id', $p->id)->pluck('stock', 'warehouse_id')->map(fn ($s) => (float) $s)->all();
+        if ($principal) {
+            $sinBodega = max(0.0, (float) $p->stock - array_sum($stock));
+            $stock[$principal] = ($stock[$principal] ?? 0.0) + $sinBodega;
+        }
+
+        $series = [];
+        foreach (ProductSerie::where('product_id', $p->id)->where('estado', 'disponible')->get(['warehouse_id']) as $s) {
+            $bodega = $s->warehouse_id ?: $principal;
+            $series[$bodega] = ($series[$bodega] ?? 0) + 1;
+        }
+
+        $bodegas = Warehouse::whereIn('id', array_unique(array_merge(array_keys($stock), array_keys($series))))->get(['id', 'codigo', 'nombre'])->keyBy('id');
+        $lineas = [];
+        foreach ($bodegas->sortBy('codigo') as $id => $bodega) {
+            $disponibles = $series[$id] ?? 0;
+            $unidades = round($stock[$id] ?? 0.0, RegisterInventoryMovement::DEC_CANTIDAD);
+            if (abs($disponibles - $unidades) > 0.0005) {
+                $lineas[] = "bodega {$bodega->codigo} ({$bodega->nombre}): hay {$disponibles} series disponibles y el stock de esa bodega dice "
+                    .rtrim(rtrim(number_format($unidades, RegisterInventoryMovement::DEC_CANTIDAD, '.', ''), '0'), '.');
+            }
+        }
+
+        return $lineas;
     }
 }

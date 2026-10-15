@@ -14,6 +14,7 @@ use App\Services\DocumentCalculator;
 use App\Services\RegisterInventoryMovement;
 use App\Services\SimpleEntry;
 use App\Support\AnulacionSri;
+use App\Support\ComprobanteSri;
 use App\Support\ContraAsiento;
 use App\Support\CostosInventario;
 use App\Support\Cuentas;
@@ -55,6 +56,9 @@ class CreditNoteController extends Controller
             'items.*.cantidad' => ['required', 'numeric', 'min:0.01'],
             'items.*.precio_unitario' => ['required', 'numeric', 'min:0'],
             'items.*.tarifa' => ['sometimes', 'numeric', 'min:0'],
+            // Series que regresan, por línea: obligatorias para un producto con series si la devolución es parcial
+            'items.*.series' => ['sometimes', 'nullable', 'array'],
+            'items.*.series.*' => ['nullable', 'string'],
             'importe_total' => ['required_without:items', 'numeric', 'min:0.01'],
         ], [
             'invoice_id.required' => 'Selecciona la factura que corriges.',
@@ -96,6 +100,13 @@ class CreditNoteController extends Controller
                 ]]);
             }
 
+            // Series que regresan, por línea (las de la nota, o todas las vendidas si se devuelve la línea completa). Se revisan ANTES
+            // de crear nada: una devolución que no cuadra no deja ni la nota ni el asiento.
+            $seriesDevueltas = [];
+            if (! empty($d['items']) && ($d['devuelve_stock'] ?? true)) {
+                $seriesDevueltas = $this->seriesQueRegresan($invoice, $d['company_id'], $d['items']);
+            }
+
             $n = CreditNote::create([
                 'company_id' => $d['company_id'],
                 'contact_id' => $d['contact_id'],
@@ -117,7 +128,7 @@ class CreditNoteController extends Controller
             // Devolver stock y series si la nota trae items y devuelve mercadería (un descuento o ajuste de valor no la devuelve)
             if (! empty($d['items']) && ($d['devuelve_stock'] ?? true)) {
                 $itemsFinal = $d['items'];
-                foreach ($itemsFinal as &$item) {
+                foreach ($itemsFinal as $i => &$item) {
                     $codigo = trim((string) ($item['codigo_principal'] ?? ''));
                     $cant = (float) ($item['cantidad'] ?? 0);
                     if ($codigo === '' || $cant <= 0) {
@@ -126,13 +137,11 @@ class CreditNoteController extends Controller
 
                     $product = Product::where('company_id', $d['company_id'])->where('codigo', $codigo)->first();
                     if ($product && $product->tipo !== 'servicio') {
-                        // Si el ítem no trae series, tomarlas de la factura original (devolución por línea)
-                        $series = $item['series'] ?? [];
-                        if (empty($series)) {
-                            $invItem = collect($invoice->items ?? [])->firstWhere('codigo_principal', $codigo);
-                            $series = $invItem['series'] ?? [];
+                        // Producto con series: solo regresan las de esta devolución (ya revisadas arriba); las demás siguen vendidas
+                        $series = $seriesDevueltas[$i] ?? [];
+                        if ($series) {
+                            $item['series'] = $series; // persistir en la NC para que la anulación la revierta
                         }
-                        $item['series'] = $series; // persistir en la NC para que la anulación la revierta
 
                         // Vuelve al costo al que salió en la factura (no al promedio de hoy):
                         // así el costo de ventas que se revierte es el mismo que se asentó al vender.
@@ -141,9 +150,14 @@ class CreditNoteController extends Controller
                         $mov = app(RegisterInventoryMovement::class)->handle(
                             $product, 'ingreso', $cant, $costo,
                             'Devolución NC '.$n->id, $n->fecha->toDateString(),
-                            null, $series
+                            null, $series, origen: $n   // el kárdex dice de qué nota viene (los de antes se reconocen por el concepto)
                         );
                         $costoDevuelto += CostosInventario::valor($mov);
+                        if ($series) {
+                            // Para el historial de la serie: qué nota la devolvió
+                            \App\Models\ProductSerie::where('company_id', $d['company_id'])->where('product_id', $product->id)
+                                ->whereIn('serie', $series)->update(['credit_note_id' => $n->id]);
+                        }
                     }
                 }
                 unset($item);
@@ -182,6 +196,68 @@ class CreditNoteController extends Controller
 
             return response()->json($n, 201);
         });
+    }
+
+    /**
+     * Series que regresan con la nota, por posición de la línea ([índice => series]). Solo líneas de productos con series.
+     *  - La línea trae `series`: tantas como unidades devueltas, sin repetir, y todas deben seguir vendidas en ESTA factura.
+     *  - La línea no las trae: si se devuelven todas las unidades que siguen vendidas con series de la factura, regresan todas
+     *    (como antes); si es una devolución parcial, 422 pidiendo cuáles regresan (no se adivina).
+     * Lanza ValidationException (campo `series`) en español.
+     */
+    private function seriesQueRegresan(Invoice $invoice, int|string $companyId, array $items): array
+    {
+        $plan = [];
+        $yaElegidas = [];
+        foreach ($items as $i => $item) {
+            $codigo = trim((string) ($item['codigo_principal'] ?? ''));
+            $cant = (float) ($item['cantidad'] ?? 0);
+            if ($codigo === '' || $cant <= 0) {
+                continue;
+            }
+            $product = Product::where('company_id', $companyId)->where('codigo', $codigo)->first();
+            if (! $product || $product->tipo === 'servicio' || ! $product->maneja_series) {
+                continue;
+            }
+            $falla = fn (string $m) => ValidationException::withMessages(['series' => [$m]]);
+
+            if (abs($cant - round($cant)) > 0.0005) {
+                throw $falla("El producto {$codigo} maneja series: la cantidad debe ser un número entero de unidades.");
+            }
+            $n = (int) round($cant);
+            // Las unidades de este producto que esta factura vendió con series y siguen vendidas
+            $vendidas = \App\Models\ProductSerie::where('company_id', $companyId)->where('product_id', $product->id)
+                ->where('invoice_id', $invoice->id)->where('estado', 'vendida')->orderBy('serie')->pluck('serie')->all();
+            $vendidas = array_values(array_diff($vendidas, $yaElegidas));
+            $enviadas = \App\Support\SeriesDeCompra::limpiar($item['series'] ?? []);
+
+            if (! $enviadas) {
+                if (! $vendidas) {
+                    continue;   // la factura no vendió series de este producto (venta anterior al control de series): vuelve solo el stock
+                }
+                if ($n !== count($vendidas)) {
+                    throw $falla("Devuelves {$n} de ".count($vendidas)." unidades vendidas con series del producto {$codigo}: indica cuáles series regresan (".implode(', ', $vendidas).').');
+                }
+                $enviadas = $vendidas;
+            } else {
+                if (count($enviadas) !== $n) {
+                    throw $falla("El producto {$codigo}: devuelves {$n} unidades, indica exactamente {$n} series (se indicaron ".count($enviadas).').');
+                }
+                $repetidas = array_keys(array_filter(array_count_values($enviadas), fn ($c) => $c > 1));
+                if ($repetidas) {
+                    throw $falla('Hay series repetidas en la lista: '.implode(', ', $repetidas).'.');
+                }
+                foreach ($enviadas as $serie) {
+                    if (! in_array($serie, $vendidas, true)) {
+                        throw $falla("La serie {$serie} no se vendió en la factura {$invoice->numero} o ya fue devuelta.");
+                    }
+                }
+            }
+            $plan[$i] = $enviadas;
+            array_push($yaElegidas, ...$enviadas);
+        }
+
+        return $plan;
     }
 
     /** NCI-000001, NCI-000002… por empresa: el siguiente después del mayor que ya exista (las anuladas también cuentan). */
@@ -228,8 +304,13 @@ class CreditNoteController extends Controller
                             app(RegisterInventoryMovement::class)->handle(
                                 $product, 'egreso', $cant, (float) $product->costo_promedio,
                                 'Reverso NC anulada '.$nota->id, $nota->fecha->toDateString(),
-                                null, $item['series'] ?? []
+                                null, $item['series'] ?? [], origen: $nota
                             );
+                            // Las series vuelven a estar vendidas en la factura de la nota (el egreso no la conoce)
+                            if (! empty($item['series'])) {
+                                \App\Models\ProductSerie::where('company_id', $nota->company_id)->where('product_id', $product->id)
+                                    ->whereIn('serie', $item['series'])->update(['invoice_id' => $nota->invoice_id]);
+                            }
                         }
                     }
                 }
@@ -278,7 +359,10 @@ class CreditNoteController extends Controller
     }
 
     /**
-     * Emitir nota de crédito electrónica al SRI (codDoc 04)
+     * Emitir nota de crédito electrónica al SRI (codDoc 04).
+     * El comprobante modifica una factura: la librería necesita su número y su fecha de emisión (documento sustento), el valor
+     * de la modificación, el IVA agrupado por tarifa, el motivo y el detalle en el mismo formato que el de la factura
+     * (DocumentCalculator). Si la nota se creó por un valor suelto, sin líneas, sale una línea al 0% con el motivo.
      */
     public function emit(Request $r, CreditNote $creditNote)
     {
@@ -288,9 +372,23 @@ class CreditNoteController extends Controller
         if ($creditNote->sriDocument()->exists()) {
             return response()->json(['error' => 'Esta nota de crédito ya fue emitida al SRI.', 'message' => 'Esta nota de crédito ya fue emitida al SRI.'], 422);
         }
+        $invoice = $creditNote->invoice;
+        if (! $invoice) {
+            return response()->json(['message' => 'Esta nota de crédito no está ligada a una factura: el SRI exige el documento que modifica.'], 422);
+        }
 
         $company = Company::find($creditNote->company_id);
-        $invoice = $creditNote->invoice;
+        $contact = $creditNote->contact;
+
+        $lineas = $creditNote->items;
+        if (empty($lineas)) {
+            // Un valor suelto no trae líneas ni IVA: el comprobante lleva una sola, al 0%, con el motivo
+            $lineas = [[
+                'codigo_principal' => 'NC-VALOR', 'descripcion' => mb_substr((string) $creditNote->motivo, 0, 300),
+                'cantidad' => 1, 'precio_unitario' => (float) ($creditNote->total_sin_impuestos ?: $creditNote->importe_total), 'tarifa' => 0,
+            ]];
+        }
+        $calculo = app(DocumentCalculator::class)->fromItems($lineas);
 
         $payload = [
             'infoTributaria' => ['codDoc' => '04'],
@@ -298,23 +396,23 @@ class CreditNoteController extends Controller
                 'fechaEmision' => now()->format('Y-m-d'),
                 'dirEstablecimiento' => $company->dir_matriz,
                 'obligadoContabilidad' => $company->obligado_contabilidad ? 'SI' : 'NO',
-                'tipoIdentificacionComprador' => $creditNote->contact->tipo_identificacion ?? '05',
-                'razonSocialComprador' => $creditNote->contact->razon_social ?? '',
-                'identificacionComprador' => $creditNote->contact->identificacion ?? '',
+                'tipoIdentificacionComprador' => $contact->tipo_identificacion ?? '05',
+                'razonSocialComprador' => $contact->razon_social ?? '',
+                'identificacionComprador' => $contact->identificacion ?? '',
                 'codDocModificado' => '01',
-                'numDocModificado' => $invoice->numero ?? '',
-                'motivoModificacion' => $creditNote->motivo,
-                'totalSinImpuestos' => number_format($creditNote->total_sin_impuestos ?? $creditNote->importe_total, 2, '.', ''),
-                'totalDescuento' => '0.00',
-                'totalImpuesto' => number_format($creditNote->total_impuesto ?? 0, 2, '.', ''),
-                'importeTotal' => number_format($creditNote->importe_total, 2, '.', ''),
+                'numDocModificado' => $invoice->numero,
+                'fechaEmisionDocSustento' => ($invoice->fecha_emision ?? $creditNote->fecha)->format('Y-m-d'),
+                'totalSinImpuestos' => number_format($calculo['total_sin_impuestos'], 2, '.', ''),
+                'valorModificacion' => number_format($calculo['importe_total'], 2, '.', ''),
                 'moneda' => 'DOLAR',
+                'totalConImpuestos' => array_map(fn ($t) => [
+                    'codigo' => $t['codigo'], 'codigoPorcentaje' => $t['codigoPorcentaje'],
+                    'baseImponible' => number_format($t['baseImponible'], 2, '.', ''), 'valor' => number_format($t['valor'], 2, '.', ''),
+                ], $calculo['impuestos']),
+                'motivo' => $creditNote->motivo,
             ],
-            'detalle' => $creditNote->items ?? [],
-            'infoAdicional' => [
-                'email' => $creditNote->contact->email ?? null,
-                'telefono' => $creditNote->contact->telefono ?? null,
-            ],
+            'detalle' => $calculo['detalle'],
+            'infoAdicional' => ComprobanteSri::infoAdicional($contact->email ?? null, $contact->telefono ?? null),
         ];
 
         $emitir = app(EmitirSriDocument::class);
@@ -324,10 +422,15 @@ class CreditNoteController extends Controller
         $creditNote->update(['numero' => sprintf('%s-%s-%09d', $company->estab, $company->pto_emi, $company->secuencial)]);
         $company->increment('secuencial');
 
+        // Sin certificado de firma el comprobante se genera pero no sale al SRI: no se le dice al usuario que sí.
+        $salioAlSri = strtolower((string) $sriDoc->estado) !== 'generado';
+
         return response()->json([
             'ok' => true,
             'sri_document' => $sriDoc,
-            'mensaje' => 'Nota de crédito emitida al SRI. Clave de acceso: '.$sriDoc->clave_acceso,
+            'mensaje' => $salioAlSri
+                ? 'Nota de crédito emitida al SRI. Clave de acceso: '.$sriDoc->clave_acceso
+                : 'Nota de crédito generada. Se enviará al SRI cuando cargues el certificado de firma. Clave de acceso: '.$sriDoc->clave_acceso,
         ]);
     }
 }

@@ -38,6 +38,14 @@ class Invoice extends Model {
         if ($soloAutorizadas) {
             return $query->whereHas('sriDocument', fn ($sd) => $sd->whereRaw('UPPER(estado) = ?', ['AUTORIZADO']));
         }
+        return $query->sinRechazoSri();
+    }
+    /**
+     * Excluye las facturas cuyo comprobante el SRI rechazó (no autorizado, devuelto…): nunca fueron una venta.
+     * Las que no tienen comprobante (ventas internas) y las generadas, firmadas, enviadas o autorizadas se quedan.
+     * Lo usan ventasVigentes, el formulario 104 y el ATS, para que todos cuenten lo mismo.
+     */
+    public function scopeSinRechazoSri($query) {
         $rechazados = SriDocument::ESTADOS_RECHAZADO;
         return $query->whereDoesntHave('sriDocument', fn ($sd) => $sd->whereRaw(
             'UPPER(estado) in ('.implode(',', array_fill(0, count($rechazados), '?')).')', $rechazados));

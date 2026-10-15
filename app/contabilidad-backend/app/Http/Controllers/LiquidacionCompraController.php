@@ -6,6 +6,9 @@ use App\Actions\EmitirSriDocument;
 use App\Models\Company;
 use App\Models\Contact;
 use App\Models\Purchase;
+use App\Models\SriDocument;
+use App\Services\DocumentCalculator;
+use App\Support\ComprobanteSri;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -57,22 +60,34 @@ class LiquidacionCompraController extends Controller
 
     public function emit(Purchase $purchase)
     {
+        if ($purchase->tipo_comprobante !== 'liquidacion_compra') {
+            return response()->json(['message' => 'Este comprobante no es una liquidación de compra.'], 422);
+        }
+        if (SriDocument::where('documentable_type', $purchase->getMorphClass())->where('documentable_id', $purchase->id)->exists()) {
+            return response()->json(['message' => 'Esta liquidación de compra ya fue emitida al SRI.'], 422);
+        }
+
         $company = Company::find($purchase->company_id);
         $contact = Contact::find($purchase->contact_id);
+        $calculo = app(DocumentCalculator::class)->fromItems($this->lineas($purchase));
 
         $payload = [
-            'infoTributaria' => ['codDoc' => '03'],
+            // Guardar la liquidación ya le reservó su número: la clave de acceso lleva ese mismo secuencial
+            'infoTributaria' => ComprobanteSri::infoTributaria('03', $purchase->numero),
             'infoLiquidacionCompra' => [
                 'fechaEmision' => now()->format('Y-m-d'),
                 'dirEstablecimiento' => $company->dir_matriz,
-                'obligadoContabilidad' => $company->obligado_contabilidad === 'SI' ? 'SI' : 'NO',
+                'obligadoContabilidad' => $company->obligado_contabilidad ? 'SI' : 'NO',
                 'tipoIdentificacionProveedor' => $contact->tipo_identificacion ?? '05',
                 'razonSocialProveedor' => $contact->razon_social,
                 'identificacionProveedor' => $contact->identificacion,
                 'direccionProveedor' => $contact->direccion ?? '',
                 'totalSinImpuestos' => number_format($purchase->total_sin_impuestos, 2, '.', ''),
                 'totalDescuento' => '0.00',
-                'totalConImpuestos' => $this->buildTotalConImpuestos($purchase),
+                'totalConImpuestos' => array_map(fn ($t) => [
+                    'codigo' => $t['codigo'], 'codigoPorcentaje' => $t['codigoPorcentaje'],
+                    'baseImponible' => number_format($t['baseImponible'], 2, '.', ''), 'valor' => number_format($t['valor'], 2, '.', ''),
+                ], $calculo['impuestos']),
                 'propina' => '0.00',
                 'importeTotal' => number_format($purchase->importe_total, 2, '.', ''),
                 'moneda' => 'DOLAR',
@@ -81,15 +96,16 @@ class LiquidacionCompraController extends Controller
                     'total' => number_format($purchase->importe_total, 2, '.', ''),
                 ],
             ],
-            'detalle' => $this->buildDetalle($purchase),
-            'infoAdicional' => [
-                'email' => $contact->email ?? '',
-                'telefono' => $contact->telefono ?? '',
-            ],
+            'detalle' => $calculo['detalle'],
+            'infoAdicional' => ComprobanteSri::infoAdicional($contact->email ?? null, $contact->telefono ?? null),
         ];
 
         $sriDoc = app(EmitirSriDocument::class)->execute($purchase, 'liquidacionCompra', $company, $payload);
-        $company->increment('secuencial');
+        // Una liquidación guardada con la versión anterior (sin número en el formato del SRI) toma el siguiente de la empresa
+        if (! ComprobanteSri::reservado($purchase->numero)) {
+            $purchase->update(['numero' => sprintf('%s-%s-%09d', $company->estab, $company->pto_emi, $company->secuencial)]);
+            $company->increment('secuencial');
+        }
 
         return response()->json([
             'ok' => true,
@@ -98,55 +114,27 @@ class LiquidacionCompraController extends Controller
         ]);
     }
 
-    private function buildTotalConImpuestos(Purchase $purchase): array
+    /**
+     * Las líneas de la liquidación en el formato de DocumentCalculator (el mismo del que sale el detalle de una factura):
+     * el código de porcentaje del IVA sale de la tarifa (15% = 4, 5% = 5, 0% = 0) y lo que la línea trae como base
+     * imponible menos que cantidad × precio es el descuento.
+     */
+    private function lineas(Purchase $purchase): array
     {
-        $items = $purchase->items ?? [];
-        $impuestos = [];
-        foreach ($items as $item) {
-            $tarifa = $item['tarifa'] ?? 15;
-            $base = $item['base_imponible'] ?? ($item['precio_unitario'] * $item['cantidad']);
-            $valor = round($base * $tarifa / 100, 2);
-            $key = "2-" . ($tarifa == 0 ? '0' : ($tarifa == 5 ? '2' : ($tarifa == 15 ? '4' : '7')));
-            if (!isset($impuestos[$key])) {
-                $impuestos[$key] = [
-                    'codigo' => '2',
-                    'codigoPorcentaje' => $tarifa == 0 ? '0' : ($tarifa == 5 ? '2' : ($tarifa == 15 ? '4' : '7')),
-                    'baseImponible' => 0,
-                    'valor' => 0,
-                ];
-            }
-            $impuestos[$key]['baseImponible'] += $base;
-            $impuestos[$key]['valor'] += $valor;
-        }
-        return array_values(array_map(fn($v) => [
-            'codigo' => $v['codigo'],
-            'codigoPorcentaje' => $v['codigoPorcentaje'],
-            'baseImponible' => number_format($v['baseImponible'], 2, '.', ''),
-            'valor' => number_format($v['valor'], 2, '.', ''),
-        ], $impuestos));
-    }
-
-    private function buildDetalle(Purchase $purchase): array
-    {
-        $items = $purchase->items ?? [];
         return array_map(function ($item) {
-            $base = $item['base_imponible'] ?? ($item['precio_unitario'] * $item['cantidad']);
-            $tarifa = $item['tarifa'] ?? 15;
+            $cantidad = (float) ($item['cantidad'] ?? 1);
+            $precio = (float) ($item['precio_unitario'] ?? 0);
+            $bruto = round($cantidad * $precio, 2);
+            $base = isset($item['base_imponible']) ? round((float) $item['base_imponible'], 2) : $bruto;
+
             return [
-                'codigoPrincipal' => $item['codigo_principal'] ?? '',
-                'descripcion' => $item['descripcion'] ?? '',
-                'cantidad' => number_format($item['cantidad'], 2, '.', ''),
-                'precioUnitario' => number_format($item['precio_unitario'], 2, '.', ''),
-                'descuento' => '0.00',
-                'precioTotalSinImpuesto' => number_format($base, 2, '.', ''),
-                'impuesto' => [
-                    'codigo' => '2',
-                    'codigoPorcentaje' => $tarifa == 0 ? '0' : ($tarifa == 5 ? '2' : ($tarifa == 15 ? '4' : '7')),
-                    'tarifa' => (string)$tarifa,
-                    'baseImponible' => number_format($base, 2, '.', ''),
-                    'valor' => number_format(round($base * $tarifa / 100, 2), 2, '.', ''),
-                ],
+                'codigo_principal' => (string) ($item['codigo_principal'] ?? ''),
+                'descripcion' => (string) ($item['descripcion'] ?? ''),
+                'cantidad' => $cantidad,
+                'precio_unitario' => $precio,
+                'descuento' => max(0.0, round($bruto - $base, 2)),
+                'tarifa' => $item['tarifa'] ?? 15,
             ];
-        }, $items);
+        }, array_values($purchase->items ?? []));
     }
 }

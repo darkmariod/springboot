@@ -46,8 +46,9 @@ class AtsController extends Controller
         $add($iva, 'Mes', $mes);
         $add($iva, 'numEstabRuc', str_pad((string) \App\Models\Branch::where('company_id', $company->id)->count() ?: 1, 3, '0', STR_PAD_LEFT));
 
-        // Solo facturas: una nota de débito (SRI o interna) no es una venta ni va en el ATS
-        $ventas = Invoice::soloFacturas()->with('contact')->where('company_id', $company->id)
+        // Solo facturas: una nota de débito (SRI o interna) no es una venta ni va en el ATS.
+        // Una factura que el SRI rechazó nunca existió para el anexo: no es venta ni anulada.
+        $ventas = Invoice::soloFacturas()->sinRechazoSri()->with('contact')->where('company_id', $company->id)
             ->whereBetween('fecha_emision', [$desde, $hasta])->get();
         $compras = Purchase::with('contact')->where('company_id', $company->id)
             ->whereBetween('fecha_emision', [$desde, $hasta])->get();

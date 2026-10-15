@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Company;
 use App\Models\EmissionPoint;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Support\Cuentas;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -42,6 +43,9 @@ class DatabaseSeeder extends Seeder
             ['company_id' => $company->id, 'estab' => '001', 'punto' => '001'],
             ['nombre' => 'Caja principal', 'secuencial' => 1],
         );
+
+        // Bodega principal: sin una, Ajuste de inventario, Fraccionamiento y Conversión no tienen bodega que elegir
+        Warehouse::crearPrincipal($company);
 
         // Plan de cuentas básico (NIIF PYME): sale de config/cuentas.php, el único lugar
         // donde cada concepto contable tiene su código.

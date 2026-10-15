@@ -168,7 +168,7 @@ class EmpresaDemo
             'payment_splits', 'card_transactions', 'card_settlements', 'withholdings', 'sri_documents',
             'stock_reservations', 'advances', 'journal_entries', 'bank_movements', 'cash_sessions',
             'cash_registers', 'banks', 'inventory_movements', 'product_series', 'credit_notes', 'invoices',
-            'purchases', 'quotes', 'pending_imports', 'payrolls', 'employees', 'cost_centers', 'products',
+            'purchases', 'quotes', 'pending_imports', 'payrolls', 'employee_movements', 'employee_leaves', 'employees', 'cost_centers', 'products',
             'contacts', 'audit_logs',
         ];
         foreach ($orden as $tabla) {
@@ -404,11 +404,14 @@ class EmpresaDemo
         // Caja: sesión abierta con un ingreso y un egreso
         $this->en(1.0, function () use ($id) {
             $sesion = $this->api(CashController::class, 'open', ['company_id' => $id, 'saldo_inicial' => 500]);
+            // Cada movimiento lleva su contrapartida y su asiento: el aporte del socio es capital y la movilización es gasto
             $this->api(CashController::class, 'addMovement', [
-                'tipo' => 'ingreso', 'monto' => 50, 'concepto' => 'Reposición de caja chica',
+                'tipo' => 'ingreso', 'monto' => 50, 'concepto' => 'Aporte del socio para caja chica',
+                'cuenta_contrapartida_id' => Cuentas::cuenta($id, 'capital')->id,
             ], ['session' => CashSession::findOrFail($sesion['id'])]);
             $this->api(CashController::class, 'addMovement', [
                 'tipo' => 'egreso', 'monto' => 12.5, 'concepto' => 'Pago de movilización',
+                'cuenta_contrapartida_id' => Cuentas::cuenta($id, 'gastos_generales')->id,
             ], ['session' => CashSession::findOrFail($sesion['id'])]);
         });
     }
@@ -435,6 +438,8 @@ class EmpresaDemo
         return $this->api(BankMovementController::class, 'store', [
             'company_id' => $this->empresa->id, 'bank_id' => $this->banco->id, 'fecha' => now()->toDateString(),
             'tipo' => $tipo, 'monto' => $monto, 'concepto' => $concepto,
+            // El asiento del aporte ya se hizo arriba (SimpleEntry): el movimiento solo sirve para conciliar
+            'ya_contabilizado' => true,
         ]);
     }
 

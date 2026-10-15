@@ -75,7 +75,7 @@ class EstadoCuentaController extends Controller
         foreach ($data['notas_credito_a_favor'] as $n) {
             $rows[] = [$n['fecha'], 'Nota de crédito '.$n['numero'], '', '', '', '', '', '', $this->n(-$n['saldo']), ''];
         }
-        $rows[] = ['', 'SALDO NETO (saldo − saldos a favor)', '', '', '', '', '', '', $this->n($s['saldo_neto']), ''];
+        $rows[] = ['', 'SALDO NETO (saldo - saldos a favor)', '', '', '', '', '', '', $this->n($s['saldo_neto']), ''];
 
         return $this->entregar($r, $titulo, $headers, $rows, $archivo, $total);
     }
@@ -123,7 +123,7 @@ class EstadoCuentaController extends Controller
         foreach ($data['anticipos_sin_aplicar'] as $a) {
             $rows[] = [$a['fecha'], 'Anticipo ANT-'.$a['id'], '', '', '', '', $this->n(-$a['saldo']), ''];
         }
-        $rows[] = ['', 'SALDO NETO (saldo − anticipos sin aplicar)', '', '', '', '', $this->n($s['saldo_neto']), ''];
+        $rows[] = ['', 'SALDO NETO (saldo - anticipos sin aplicar)', '', '', '', '', $this->n($s['saldo_neto']), ''];
 
         return $this->entregar($r, $titulo, $headers, $rows, $archivo, $total);
     }

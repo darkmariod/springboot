@@ -3,17 +3,26 @@
 namespace App\Console\Commands;
 
 use App\Models\Account;
+use App\Models\AccountingPeriod;
 use App\Models\Advance;
+use App\Models\CardTransaction;
 use App\Models\Company;
 use App\Models\CreditNote;
+use App\Models\EmployeeMovement;
+use App\Models\FixedAsset;
+use App\Models\FixedAssetDepreciation;
 use App\Models\InventoryMovement;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
+use App\Models\PhysicalCount;
 use App\Models\Product;
 use App\Models\Purchase;
+use App\Models\StockTransformation;
+use App\Support\CostosInventario;
 use App\Support\Cuentas;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Accounting health check: run it any time to see if the books are sane
@@ -28,6 +37,8 @@ use Illuminate\Console\Command;
  * ecuación contable, stock negativo). La cartera contra el mayor y los movimientos de inventario
  * sin asiento se muestran siempre, pero solo hacen fallar con --estricto; el valor del inventario
  * contra el mayor es solo informativo (las compras anteriores a la cuenta 1.1.05 fueron a gasto).
+ * Los fraccionamientos y conversiones no llevan asiento: se revisa que lo que sale del inventario valga lo mismo
+ * que lo que entra (misma regla: solo hace fallar con --estricto).
  */
 class ChequeoContable extends Command
 {
@@ -99,7 +110,7 @@ class ChequeoContable extends Command
         $saldos = [];
         $rows = JournalEntryLine::join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.journal_entry_id')
             ->join('accounts', 'accounts.id', '=', 'journal_entry_lines.account_id')
-            ->where('journal_entries.company_id', $companyId)
+            ->where('journal_entries.company_id', $companyId)->where('journal_entries.estado', '!=', JournalEntry::BORRADOR)
             ->selectRaw('accounts.tipo, SUM(journal_entry_lines.debe) d, SUM(journal_entry_lines.haber) h')
             ->groupBy('accounts.tipo')->get();
         foreach ($rows as $r) {
@@ -124,6 +135,18 @@ class ChequeoContable extends Command
             $problemas++;
             $this->error("      ✗ NO CUADRA: activo $activo ≠ pasivo+patrimonio+utilidad $derecha");
             $this->line('        <fg=gray>Diferencia: $'.number_format($activo - $derecha, 2).'</>');
+        }
+
+        // 3b. Períodos cerrados: cerrar mayoriza todo lo del mes, así que dentro de un mes cerrado no debe quedar nada pendiente ni en borrador
+        $this->newLine();
+        $sueltos = $this->asientosSueltosEnPeriodosCerrados($companyId);
+        if (! $sueltos) {
+            $cerrados = AccountingPeriod::where('company_id', $companyId)->where('estado', AccountingPeriod::CERRADO)->count();
+            $this->info($cerrados ? "  ✓ Los $cerrados períodos cerrados no tienen asientos pendientes ni en borrador" : '  ✓ Ningún período está cerrado todavía');
+        } else {
+            $problemas++;
+            $this->error('  ✗ '.count($sueltos).' asientos sin mayorizar dentro de períodos cerrados:');
+            foreach (array_slice($sueltos, 0, 20) as $linea) $this->line("      $linea");
         }
 
         // 4. Stock negativo (mata la credibilidad en un demo)
@@ -152,6 +175,11 @@ class ChequeoContable extends Command
                 ['Asientos contables', JournalEntry::where('company_id', $companyId)->count()],
                 ['  · pendientes', JournalEntry::where('company_id', $companyId)->where('estado', 'pendiente')->count()],
                 ['  · mayorizados', JournalEntry::where('company_id', $companyId)->where('estado', 'mayorizado')->count()],
+                ['  · borradores (no cuentan en ningún reporte)', JournalEntry::where('company_id', $companyId)->where('estado', JournalEntry::BORRADOR)->count()],
+                ['  · manuales', JournalEntry::where('company_id', $companyId)->where('manual', true)->count()],
+                ['  · generados y editados a mano', JournalEntry::where('company_id', $companyId)->where('editado_manualmente', true)->count()],
+                ['  · de cierre de ejercicio', JournalEntry::where('company_id', $companyId)->where('es_cierre', true)->count()],
+                ['Períodos cerrados', AccountingPeriod::where('company_id', $companyId)->where('estado', AccountingPeriod::CERRADO)->count()],
                 ['Facturas de venta', \App\Models\Invoice::where('company_id', $companyId)->count()],
                 ['Compras', \App\Models\Purchase::where('company_id', $companyId)->count()],
                 ['Por cobrar', '$'.number_format(\App\Models\Invoice::where('company_id', $companyId)->sum('saldo_pendiente'), 2)],
@@ -170,6 +198,21 @@ class ChequeoContable extends Command
         $this->newLine();
 
         return $problemas;
+    }
+
+    /** @return array<int,string> "AS-000123 (2026-03-05) pendiente" de cada asiento que sigue sin mayorizar en un mes cerrado */
+    private function asientosSueltosEnPeriodosCerrados(int $companyId): array
+    {
+        $sueltos = [];
+        foreach (AccountingPeriod::where('company_id', $companyId)->where('estado', AccountingPeriod::CERRADO)->orderBy('anio')->orderBy('mes')->get() as $p) {
+            $inicio = sprintf('%04d-%02d-01', $p->anio, $p->mes);
+            $fin = date('Y-m-t', strtotime($inicio));
+            JournalEntry::where('company_id', $companyId)->where('estado', '!=', JournalEntry::MAYORIZADO)
+                ->whereDate('fecha', '>=', $inicio)->whereDate('fecha', '<=', $fin)->orderBy('id')->get()
+                ->each(function ($e) use (&$sueltos) { $sueltos[] = "{$e->numero} ({$e->fecha->toDateString()}) {$e->estado}"; });
+        }
+
+        return $sueltos;
     }
 
     /**
@@ -209,6 +252,17 @@ class ChequeoContable extends Command
         $anticipos = round((float) Advance::where('company_id', $companyId)->where('tipo', 'proveedor')->sum('saldo'), 2);
         $diferencias += $this->compararConMayor('Anticipos a proveedores', ['anticipos_proveedores'], $anticipos, 'anticipos abiertos', $companyId, 1);
 
+        // Anticipos y préstamos a empleados: el saldo (Debe - Haber) de 1.1.11 es lo que falta por descontar de los movimientos
+        // cuyo dinero entregó la empresa por el sistema (el rol de pagos acredita la cuenta al descontar cada cuota)
+        $aEmpleados = round((float) EmployeeMovement::where('company_id', $companyId)->where('entregado', true)
+            ->where('estado', EmployeeMovement::PENDIENTE)->sum('saldo'), 2);
+        if ($aEmpleados != 0.0 || $this->tieneMovimientos($companyId, 'anticipos_empleados')) {
+            $diferencias += $this->compararConMayor('Anticipos y préstamos a empleados', ['anticipos_empleados'], $aEmpleados, 'movimientos entregados por descontar', $companyId, 1);
+        }
+
+        // Activos fijos: la depreciación acumulada de las fichas contra la cuenta, y que ningún valor en libros sea negativo
+        $diferencias += $this->chequearActivosFijos($companyId);
+
         // Inventario: informativo, nunca falla
         $kardex = round((float) Product::where('company_id', $companyId)->where('tipo', '!=', 'servicio')
             ->get()->sum(fn ($p) => (float) $p->stock * (float) $p->costo_promedio), 2);
@@ -218,7 +272,22 @@ class ChequeoContable extends Command
             Cuentas::codigo('inventario'), number_format($kardex, 2), number_format($mayor, 2), number_format($dif, 2)));
         if (abs($dif) >= 0.005) {
             $this->line('        <fg=gray>Las compras anteriores a la cuenta de inventario se contabilizaron como gasto; no se corrigen hacia atrás.</>');
+            $this->pistaDeEdicionesManuales($companyId, ['inventario']);
         }
+
+        // Tarjetas por liquidar: informativo. Cada venta con tarjeta debita 1.1.08 y cada liquidación registrada (T5.3) la acredita;
+        // las liquidaciones anteriores no asentaron nada y los vouchers asignados a una liquidación aún sin asiento tampoco cuentan,
+        // por eso una diferencia aquí no hace fallar el chequeo.
+        $voucherPendiente = round((float) CardTransaction::where('company_id', $companyId)->whereNull('card_settlement_id')->sum('monto'), 2);
+        $mayorTarjetas = $this->saldoCuenta($companyId, 'tarjetas_por_liquidar');
+        if ($voucherPendiente != 0.0 || $mayorTarjetas != 0.0 || $this->tieneMovimientos($companyId, 'tarjetas_por_liquidar')) {
+            $this->line(sprintf('      INFORMATIVO  Tarjetas por liquidar (%s): ventas pendientes $%s · mayor $%s · diferencia $%s',
+                Cuentas::codigo('tarjetas_por_liquidar'), number_format($voucherPendiente, 2), number_format($mayorTarjetas, 2),
+                number_format(round($voucherPendiente - $mayorTarjetas, 2), 2)));
+        }
+
+        // Fraccionamientos y conversiones: lo que sale del inventario vale lo mismo que lo que entra
+        $diferencias += $this->chequearTransformaciones($companyId);
 
         // Movimientos de inventario sin documento de origen con asiento
         $sinAsiento = $this->movimientosSinAsiento($companyId);
@@ -269,8 +338,34 @@ class ChequeoContable extends Command
         }
         $this->error(sprintf('      ✗ DIFERENCIA  %s (%s): %s $%s ≠ mayor $%s (diferencia $%s)',
             $nombre, $codigo, $detalle, number_format($documentos, 2), number_format($mayor, 2), number_format($dif, 2)));
+        $this->pistaDeEdicionesManuales($companyId, $conceptos);
 
         return 1;
+    }
+
+    /**
+     * Una diferencia de cartera o inventario puede venir de una corrección hecha a mano: el contador mueve una línea
+     * del asiento de una factura a otra cuenta y el subauxiliar deja de coincidir con el mayor. No se bloquea (tiene derecho),
+     * pero el mensaje debe decirlo. Lista los asientos generados que se editaron y los manuales que mueven esas cuentas.
+     *
+     * @param  string[]  $conceptos
+     */
+    private function pistaDeEdicionesManuales(int $companyId, array $conceptos): void
+    {
+        $editados = JournalEntry::where('company_id', $companyId)->where('editado_manualmente', true)
+            ->where('estado', '!=', JournalEntry::BORRADOR)->orderBy('id')->pluck('numero')->all();
+        $codigos = array_map(fn ($c) => Cuentas::codigo($c), $conceptos);
+        $manuales = JournalEntry::where('company_id', $companyId)->where('manual', true)->where('estado', '!=', JournalEntry::BORRADOR)
+            ->whereHas('lines', fn ($q) => $q->whereHas('account', fn ($a) => $a->whereIn('codigo', $codigos)))
+            ->orderBy('id')->pluck('numero')->all();
+
+        if ($editados) {
+            $this->line('        <fg=gray>Posible causa: hay asientos editados a mano ('.implode(', ', $editados).'). Si movieron una línea de '
+                .implode(' / ', $codigos).' a otra cuenta, esa puede ser la causa de la diferencia.</>');
+        }
+        if ($manuales) {
+            $this->line('        <fg=gray>Hay asientos manuales que mueven '.implode(' / ', $codigos).' ('.implode(', ', $manuales).'): no pasan por los documentos.</>');
+        }
     }
 
     /** ¿La cuenta de ese concepto tiene al menos una línea de asiento en esta empresa? */
@@ -278,7 +373,8 @@ class ChequeoContable extends Command
     {
         $cuenta = Account::where('company_id', $companyId)->where('codigo', Cuentas::codigo($concepto))->first();
 
-        return $cuenta !== null && JournalEntryLine::where('account_id', $cuenta->id)->exists();
+        return $cuenta !== null && JournalEntryLine::join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.journal_entry_id')
+            ->where('journal_entry_lines.account_id', $cuenta->id)->where('journal_entries.estado', '!=', JournalEntry::BORRADOR)->exists();
     }
 
     /** Saldo Debe − Haber de la cuenta de un concepto del plan central. */
@@ -289,15 +385,117 @@ class ChequeoContable extends Command
             return 0.0;
         }
         $lineas = JournalEntryLine::join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.journal_entry_id')
-            ->where('journal_entries.company_id', $companyId)->where('journal_entry_lines.account_id', $cuenta->id);
+            ->where('journal_entries.company_id', $companyId)->where('journal_entries.estado', '!=', JournalEntry::BORRADOR)
+            ->where('journal_entry_lines.account_id', $cuenta->id);
 
         return round((float) $lineas->sum('journal_entry_lines.debe') - (float) (clone $lineas)->sum('journal_entry_lines.haber'), 2);
     }
 
     /**
+     * Activos fijos (T7.2). La suma de lo depreciado de las fichas que siguen activas debe ser el saldo de 1.2.02 Depreciación acumulada
+     * (las fichas dadas de baja ya salieron de la cuenta con su asiento de baja), y ningún activo puede tener un valor en libros negativo
+     * ni haber depreciado más que costo − valor residual. El costo de las fichas contra 1.2.01 es solo informativo: un activo que se
+     * registró sin asiento de alta o una compra capitalizada sin ficha todavía no cuadran y no son un error.
+     * Imprime OK / DIFERENCIA y devuelve cuántas DIFERENCIA hubo.
+     */
+    private function chequearActivosFijos(int $companyId): int
+    {
+        if (! Schema::hasTable('fixed_assets')) {
+            return 0;
+        }
+        $fichas = FixedAsset::where('company_id', $companyId)->orderBy('codigo')->get();
+        $enElMayor = $this->tieneMovimientos($companyId, 'depreciacion_acumulada') || $this->tieneMovimientos($companyId, 'activos_fijos');
+        if ($fichas->isEmpty() && ! $enElMayor) {
+            return 0;
+        }
+
+        $this->newLine();
+        $this->line('  <fg=yellow>ACTIVOS FIJOS</>');
+        $diferencias = 0;
+
+        // Lo depreciado de cada ficha, en centavos
+        $depreciado = [];
+        FixedAssetDepreciation::where('company_id', $companyId)->get(['fixed_asset_id', 'monto'])->each(function ($f) use (&$depreciado) {
+            $depreciado[$f->fixed_asset_id] = ($depreciado[$f->fixed_asset_id] ?? 0) + (int) round(((float) $f->monto) * 100);
+        });
+        $vigentes = $fichas->where('estado', FixedAsset::ACTIVO);
+
+        $enFichas = round($vigentes->sum(fn ($a) => $depreciado[$a->id] ?? 0) / 100, 2);
+        $diferencias += $this->compararConMayor('Depreciación acumulada de activos fijos', ['depreciacion_acumulada'], $enFichas, 'depreciación de las fichas activas', $companyId, -1);
+
+        $negativos = [];
+        foreach ($vigentes as $a) {
+            $hecho = $depreciado[$a->id] ?? 0;
+            $costo = (int) round(((float) $a->costo) * 100);
+            $residual = (int) round(((float) $a->valor_residual) * 100);
+            if ($costo - $hecho < 0 || $hecho > max(0, $costo - $residual)) {
+                $negativos[] = sprintf('          %s %s: costo $%s, depreciado $%s, residual $%s', $a->codigo, $a->nombre,
+                    number_format($costo / 100, 2), number_format($hecho / 100, 2), number_format($residual / 100, 2));
+            }
+        }
+        if (! $negativos) {
+            $this->info(sprintf('      ✓ OK  Valor en libros de %d activos: ninguno negativo ni por debajo de su valor residual', $vigentes->count()));
+        } else {
+            $diferencias++;
+            $this->error('      ✗ DIFERENCIA  Valor en libros negativo o por debajo del valor residual: '.count($negativos).' de '.$vigentes->count());
+            foreach (array_slice($negativos, 0, 20) as $linea) {
+                $this->line($linea);
+            }
+        }
+
+        $costoFichas = round($vigentes->sum(fn ($a) => (int) round(((float) $a->costo) * 100)) / 100, 2);
+        $mayor = $this->saldoCuenta($companyId, 'activos_fijos');
+        $this->line(sprintf('      INFORMATIVO  Activos fijos (%s): costo de las fichas activas $%s · mayor $%s · diferencia $%s',
+            Cuentas::codigo('activos_fijos'), number_format($costoFichas, 2), number_format($mayor, 2), number_format(round($costoFichas - $mayor, 2), 2)));
+
+        return $diferencias;
+    }
+
+    /**
+     * Un fraccionamiento o conversión no lleva asiento porque no cambia el valor del inventario: cada documento
+     * debe tener su salida y su entrada, y las dos deben valer lo mismo (diferencia máxima de un centavo).
+     * Imprime OK / DIFERENCIA y devuelve cuántas DIFERENCIA hubo.
+     */
+    private function chequearTransformaciones(int $companyId): int
+    {
+        $documentos = StockTransformation::where('company_id', $companyId)->orderBy('id')->get();
+        $movimientos = InventoryMovement::where('company_id', $companyId)
+            ->where('origen_type', (new StockTransformation)->getMorphClass())
+            ->whereIn('origen_id', $documentos->pluck('id'))->get()->groupBy('origen_id');
+
+        $malos = [];
+        foreach ($documentos as $t) {
+            $movs = $movimientos[$t->id] ?? collect();
+            $sale = round($movs->where('tipo', 'egreso')->sum(fn ($m) => CostosInventario::valor($m)), 2);
+            $entra = round($movs->where('tipo', 'ingreso')->sum(fn ($m) => CostosInventario::valor($m)), 2);
+            $incompleto = $movs->where('tipo', 'egreso')->isEmpty() || $movs->where('tipo', 'ingreso')->isEmpty();
+            if ($incompleto || round(abs($sale - $entra), 2) > 0.01) {
+                $malos[] = sprintf('          %s: sale $%s, entra $%s%s', $t->numero, number_format($sale, 2), number_format($entra, 2),
+                    $incompleto ? ' (le falta la salida o la entrada)' : '');
+            }
+        }
+
+        if (! $malos) {
+            $this->info(sprintf('      ✓ OK  Fraccionamientos y conversiones (%d): lo que sale del inventario es igual a lo que entra', $documentos->count()));
+
+            return 0;
+        }
+        $this->error(sprintf('      ✗ DIFERENCIA  Fraccionamientos y conversiones sin el mismo valor: %d de %d', count($malos), $documentos->count()));
+        foreach (array_slice($malos, 0, 20) as $linea) {
+            $this->line($linea);
+        }
+        if (count($malos) > 20) {
+            $this->line('          … y '.(count($malos) - 20).' más');
+        }
+
+        return 1;
+    }
+
+    /**
      * Cada movimiento del kárdex debe nacer de un documento con asiento: factura, compra, nota de
-     * crédito, anulación o el propio ajuste. Las transferencias, conversiones y fraccionamientos
-     * son internos (no cambian el valor del inventario) y no necesitan asiento.
+     * crédito, anulación, toma física (su asiento nace de la toma, no de cada movimiento) o el propio ajuste. Las transferencias y los fraccionamientos y conversiones
+     * (documento StockTransformation, y los anteriores por su concepto) son internos: no cambian el valor
+     * del inventario y no necesitan asiento.
      *
      * @return array{lista:\Illuminate\Support\Collection,revisados:int,internos:int}
      */
@@ -314,6 +512,9 @@ class ChequeoContable extends Command
         $compras = Purchase::where('company_id', $companyId)->pluck('id', 'numero');
 
         $codigos = Product::where('company_id', $companyId)->pluck('codigo', 'id');
+        $transformacion = (new StockTransformation)->getMorphClass();
+        $tomaFisica = (new PhysicalCount)->getMorphClass();
+        $notaCredito = (new CreditNote)->getMorphClass();
         $lista = collect();
         $revisados = 0;
         $internos = 0;
@@ -322,7 +523,8 @@ class ChequeoContable extends Command
             $m->codigo_producto = $codigos[$m->product_id] ?? '?';
             $concepto = (string) $m->concepto;
 
-            if (preg_match('/^(Transferencia|Conversión|Fraccionamiento)/u', $concepto)) {
+            // Los de ahora nacen de un StockTransformation; los anteriores solo se reconocen por el texto del concepto
+            if ($m->origen_type === $transformacion || preg_match('/^(Transferencia|Conversión|Fraccionamiento)/u', $concepto)) {
                 $internos++;
                 continue;
             }
@@ -331,6 +533,8 @@ class ChequeoContable extends Command
             $ok = $tiene(InventoryMovement::class, $m->id)               // ajuste: el asiento nace del propio movimiento
                 || ($m->invoice_id && $tiene(Invoice::class, $m->invoice_id))
                 || ($m->purchase_id && $tiene(Purchase::class, $m->purchase_id))
+                || ($m->origen_type === $tomaFisica && $tiene(PhysicalCount::class, $m->origen_id))      // toma física: UN asiento para toda la toma
+                || ($m->origen_type === $notaCredito && $tiene(CreditNote::class, $m->origen_id))
                 || (preg_match('/^(?:Devolución NC|Reverso NC anulada) (\d+)/u', $concepto, $x) && $tiene(CreditNote::class, (int) $x[1]))
                 || (preg_match('/^(?:Anulación|Venta combo|Venta) (.+)$/u', $concepto, $x) && $tiene(Invoice::class, $facturas[$x[1]] ?? null))
                 || (preg_match('/^Compra (.+)$/u', $concepto, $x) && $tiene(Purchase::class, $compras[$x[1]] ?? null));

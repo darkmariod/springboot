@@ -50,6 +50,9 @@ class InvoiceController extends Controller
             'items.*.descuento' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'items.*.codigo_porcentaje' => ['sometimes', 'nullable', 'string', 'in:'.implode(',', array_keys(DocumentCalculator::TARIFA_POR_CODIGO))],
             'items.*.series' => ['sometimes', 'array'],
+            'items.*.series.*' => ['nullable', 'string'],
+            // Bodega de la línea (la de venta): las series se validan contra ella. Sin ella sale de la bodega principal.
+            'items.*.warehouse_id' => ['sometimes', 'nullable', 'integer', 'exists:warehouses,id'],
         ]);
         $company = Company::findOrFail($data['company_id']);
         $user = $r->user();
@@ -150,14 +153,14 @@ class InvoiceController extends Controller
                             $inventario->handle($parte, 'ingreso', $cant * (float) $c->cantidad,
                                 CostosInventario::costoUnitarioFacturado($invoice->id, $parte->id) ?? (float) $parte->costo_promedio,
                                 'Anulación '.$invoice->numero,
-                                $invoice->fecha_emision->toDateString(), null, $item['series'] ?? []);
+                                $invoice->fecha_emision->toDateString(), $item['warehouse_id'] ?? null, $item['series'] ?? []);
                         }
                     }
                 } elseif ($product->tipo !== 'servicio') {
                     $inventario->handle($product, 'ingreso', $cant,
                         CostosInventario::costoUnitarioFacturado($invoice->id, $product->id) ?? (float) $product->costo_promedio,
                         'Anulación '.$invoice->numero, $invoice->fecha_emision->toDateString(),
-                        null, $item['series'] ?? []);
+                        $item['warehouse_id'] ?? null, $item['series'] ?? []);
                 }
             }
 

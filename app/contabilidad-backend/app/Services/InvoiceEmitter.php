@@ -25,6 +25,10 @@ class InvoiceEmitter
 
     public function emit(Company $company, Contact $contact, array $items, string $formaPago = 'efectivo', ?int $emissionPointId = null, ?int $branchId = null): Invoice
     {
+        // El comprobante se firma y se envía al SRI dentro de la transacción, antes de crear el asiento. Si el mes
+        // contable está cerrado hay que rechazar AHORA: lo que el SRI ya recibió no se deshace con un rollback.
+        \App\Models\AccountingPeriod::exigirAbierto($company->id, now());
+
         // Sin los datos de la empresa no se puede armar la clave de acceso.
         // Vale más un aviso claro que un error de PHP a mitad de una venta.
         $faltan = [];
@@ -43,6 +47,14 @@ class InvoiceEmitter
                 .implode(', ', $faltan).'.'
             );
         }
+
+        // Series y bodega de cada línea, ANTES de firmar y enviar al SRI (un error aquí no deja nada hecho).
+        foreach ($items as $item) {
+            if (($item['warehouse_id'] ?? null) && ! \App\Models\Warehouse::where('company_id', $company->id)->whereKey($item['warehouse_id'])->exists()) {
+                throw new \RuntimeException('La bodega de la línea '.($item['codigo_principal'] ?? '').' no existe en esta empresa.');
+            }
+        }
+        \App\Support\SeriesDeVenta::validar($company->id, $items);
 
         return $this->conReintentos(fn () => \DB::transaction(function () use ($company, $contact, $items, $formaPago, $emissionPointId, $branchId) {
             $formaPago = array_key_exists($formaPago, self::SRI_FORMA_PAGO) ? $formaPago : 'efectivo';
@@ -63,7 +75,13 @@ class InvoiceEmitter
                 if ($branch && $branch->company_id === $company->id) {
                     $estab = $branch->estab;
                 }
-            } elseif (! $emissionPointId) {
+            } elseif ($emissionPointId) {
+                // Punto de emisión (el del punto de venta) sin sucursal ligada: la sucursal es el establecimiento de ese punto.
+                // Antes la factura se quedaba sin sucursal y la pantalla de Sucursales la dejaba fuera de la cuenta.
+                $branch = \App\Models\Branch::where('company_id', $company->id)->where('estab', $estab)
+                    ->orderByDesc('es_matriz')->first();
+                $branchId = $branch?->id;
+            } else {
                 $branch = \App\Models\Branch::where('company_id', $company->id)
                     ->orderByDesc('es_matriz')->first();
                 if ($branch) { $estab = $branch->estab; $branchId = $branch->id; }
@@ -129,12 +147,12 @@ class InvoiceEmitter
                         if ($parte && $parte->tipo !== 'servicio') {
                             $this->inventario->handle($parte, 'egreso', $cant * (float) $c->cantidad,
                                 (float) $parte->costo_promedio, 'Venta combo '.$invoice->numero,
-                                $invoice->fecha_emision->toDateString(), null, [], $invoice->id);
+                                $invoice->fecha_emision->toDateString(), $item['warehouse_id'] ?? null, [], $invoice->id);
                         }
                     }
                 } elseif ($product->tipo !== 'servicio') {
                     $this->inventario->handle($product, 'egreso', $cant, (float) $product->costo_promedio, 'Venta '.$invoice->numero,
-                        $invoice->fecha_emision->toDateString(), null, $item['series'] ?? [], $invoice->id);
+                        $invoice->fecha_emision->toDateString(), $item['warehouse_id'] ?? null, $item['series'] ?? [], $invoice->id);
                 }
             }
 

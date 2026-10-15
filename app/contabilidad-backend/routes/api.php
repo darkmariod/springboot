@@ -56,6 +56,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/companies/{company}/plan', [CompanyController::class, 'cambiarPlan'])->middleware('rol:admin');
 
     Route::get('/accounts', [AccountController::class, 'index']);
+    // Código siguiente libre de un nivel del plan (sugerencia al crear una cuenta)
+    Route::get('/accounts/siguiente-codigo', [AccountController::class, 'siguienteCodigo']);
     Route::post('/accounts', [AccountController::class, 'store']);
     Route::put('/accounts/{account}', [AccountController::class, 'update']);
     Route::delete('/accounts/{account}', [AccountController::class, 'destroy']);
@@ -83,6 +85,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Ventas
     Route::apiResource('invoices', \App\Http\Controllers\InvoiceController::class)->only(['index', 'store']);
     Route::post("invoices/{invoice}/anular", [\App\Http\Controllers\InvoiceController::class, "anular"]);
+    // RIDE en PDF (representación impresa con los datos del emisor y de la autorización del SRI)
+    Route::get("invoices/{invoice}/ride", [\App\Http\Controllers\RideController::class, "factura"]);
+    Route::get("credit-notes/{creditNote}/ride", [\App\Http\Controllers\RideController::class, "notaCredito"]);
+    Route::get("notas-debito/{notaDebito}/ride", [\App\Http\Controllers\RideController::class, "notaDebito"]);
 
     // Compras
     Route::get("purchases", [\App\Http\Controllers\PurchaseController::class, "index"]);
@@ -95,11 +101,33 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("inventory/stock", [\App\Http\Controllers\InventoryController::class, "stock"]);
     Route::get("inventory/kardex/{product}", [\App\Http\Controllers\InventoryController::class, "kardex"]);
     Route::get("inventory/reorder", [\App\Http\Controllers\InventoryController::class, "reorder"]);
+    Route::get("inventory/movimientos", [\App\Http\Controllers\InventoryController::class, "movimientos"]);
 
     // Contabilidad
     Route::middleware('feature:contabilidad')->group(function () { Route::get("journal", [\App\Http\Controllers\AccountingController::class, "journal"]); });
-    Route::middleware('feature:contabilidad')->group(function () { Route::post("journal/mayorizar", [\App\Http\Controllers\AccountingController::class, "mayorizar"]); });
-    Route::middleware('feature:contabilidad')->group(function () { Route::post("journal/{entry}/desmayorizar", [\App\Http\Controllers\AccountingController::class, "desmayorizar"]); });
+    // Mayorizar, desmayorizar y los asientos manuales o corregidos a mano: solo administrador y contador
+    Route::middleware(['feature:contabilidad', 'rol:admin,contador'])->group(function () {
+        Route::post("journal/mayorizar", [\App\Http\Controllers\AccountingController::class, "mayorizar"]);
+        Route::post("journal-entries/mayorizar", [\App\Http\Controllers\AccountingController::class, "mayorizar"]);
+        Route::post("journal/{entry}/desmayorizar", [\App\Http\Controllers\AccountingController::class, "desmayorizar"]);
+        Route::post("journal-entries/{entry}/desmayorizar", [\App\Http\Controllers\AccountingController::class, "desmayorizar"]);
+        Route::post("journal-entries", [\App\Http\Controllers\JournalEntryController::class, "store"]);
+        Route::put("journal-entries/{entry}", [\App\Http\Controllers\JournalEntryController::class, "update"]);
+        Route::delete("journal-entries/{entry}", [\App\Http\Controllers\JournalEntryController::class, "destroy"]);
+        Route::post("journal-entries/{entry}/contabilizar", [\App\Http\Controllers\JournalEntryController::class, "contabilizar"]);
+    });
+    // Períodos contables (cerrar / reabrir), cierre del ejercicio y estados financieros por período con detalle por cuenta.
+    // Reabrir un período cerrado es solo del administrador; el resto, de administrador y contador.
+    Route::middleware(['feature:contabilidad', 'rol:admin,contador'])->group(function () {
+        Route::get("accounting/periodos", [\App\Http\Controllers\PeriodoContableController::class, "index"]);
+        Route::post("accounting/periodos/cerrar", [\App\Http\Controllers\PeriodoContableController::class, "cerrar"]);
+        Route::post("accounting/cierre-ejercicio", [\App\Http\Controllers\PeriodoContableController::class, "cerrarEjercicio"]);
+        Route::get("accounting/estado-resultados", [\App\Http\Controllers\EstadosFinancierosController::class, "resultados"]);
+        Route::get("accounting/balance-general", [\App\Http\Controllers\EstadosFinancierosController::class, "balance"]);
+    });
+    Route::middleware(['feature:contabilidad', 'rol:admin'])->group(function () {
+        Route::post("accounting/periodos/reabrir", [\App\Http\Controllers\PeriodoContableController::class, "reabrir"]);
+    });
     Route::get("income-statement", [\App\Http\Controllers\AccountingController::class, "incomeStatement"]);
     Route::get("balance-sheet", [\App\Http\Controllers\AccountingController::class, "balanceSheet"]);
     Route::middleware('feature:contabilidad')->group(function () { Route::get("ledger", [\App\Http\Controllers\AccountingController::class, "ledger"]); });
@@ -109,6 +137,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('feature:bancos')->group(function () { Route::post("cash/open", [\App\Http\Controllers\CashController::class, "open"]); });
     Route::middleware('feature:bancos')->group(function () { Route::post("cash/{session}/movements", [\App\Http\Controllers\CashController::class, "addMovement"]); });
     Route::middleware('feature:bancos')->group(function () { Route::post("cash/{session}/close", [\App\Http\Controllers\CashController::class, "close"]); });
+    // Comprobante de ingreso/egreso en PDF y depósito de caja a banco (T5.3)
+    Route::middleware('feature:bancos')->group(function () {
+        Route::get("cash-movements/{movement}/comprobante", [\App\Http\Controllers\CashController::class, "comprobante"]);
+        Route::get("deposits", [\App\Http\Controllers\DepositoController::class, "index"]);
+        Route::get("deposits/disponible", [\App\Http\Controllers\DepositoController::class, "disponible"]);
+        Route::post("deposits", [\App\Http\Controllers\DepositoController::class, "store"]);
+    });
 
     // Cartera
     Route::middleware('feature:cartera')->group(function () { Route::get("receivables", [\App\Http\Controllers\ReceivableController::class, "index"]); });
@@ -138,6 +173,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Cotizaciones
     Route::get("quotes", [\App\Http\Controllers\QuoteController::class, "index"]);
     Route::post("quotes", [\App\Http\Controllers\QuoteController::class, "store"]);
+    // Varias cotizaciones en UNA factura (vista previa de la unión y conversión); van antes de las rutas con {quote}
+    Route::post("quotes/merge-preview", [\App\Http\Controllers\QuoteController::class, "mergePreview"]);
+    Route::post("quotes/convert-many", [\App\Http\Controllers\QuoteController::class, "convertMany"]);
     Route::post("quotes/{quote}/convert", [\App\Http\Controllers\QuoteController::class, "convert"]);
     Route::put("quotes/{quote}", [\App\Http\Controllers\QuoteController::class, "update"]);
     Route::delete("quotes/{quote}", [\App\Http\Controllers\QuoteController::class, "destroy"]);
@@ -148,6 +186,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post("bank-movements", [\App\Http\Controllers\BankMovementController::class, "store"]);
         Route::post("bank-movements/{movement}/toggle", [\App\Http\Controllers\BankMovementController::class, "toggle"]);
         Route::post("bank-movements/auto-match", [\App\Http\Controllers\BankMovementController::class, "autoMatch"]);
+        Route::post("bank-movements/importar", [\App\Http\Controllers\BankMovementController::class, "importar"]);
+        Route::post("bank-movements/importar/aplicar", [\App\Http\Controllers\BankMovementController::class, "aplicarImportacion"]);
     });
 
     // Puntos de emisión + certificado
@@ -166,6 +206,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post("series", [\App\Http\Controllers\SerieController::class, "store"]);
         Route::get("series/lookup", [\App\Http\Controllers\SerieController::class, "lookup"]);
         Route::get("series/trace", [\App\Http\Controllers\SerieController::class, "trace"]);
+        Route::get("series/buscar", [\App\Http\Controllers\SerieController::class, "buscar"]);
         Route::put("series/{serie}", [\App\Http\Controllers\SerieController::class, "update"]);
         Route::delete("series/{serie}", [\App\Http\Controllers\SerieController::class, "destroy"]);
     });
@@ -186,7 +227,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('feature:cartera')->group(function () { Route::get("advances", [\App\Http\Controllers\AdvanceController::class, "index"]); });
     Route::middleware('feature:cartera')->group(function () { Route::post("advances", [\App\Http\Controllers\AdvanceController::class, "store"]); });
     Route::middleware('feature:cartera')->group(function () { Route::get("credit-notes", [\App\Http\Controllers\CreditNoteController::class, "index"]); });
-    Route::middleware('feature:cartera')->group(function () { Route::post("credit-notes", [\App\Http\Controllers\CreditNoteController::class, "store"]); });
+    // Las notas internas solo regulan saldos (cartera); la del SRI además exige facturación electrónica
+    Route::middleware('feature:cartera')->group(function () { Route::post("credit-notes", [\App\Http\Controllers\CreditNoteController::class, "store"])->middleware('feature:facturacion_sri,salvo_interna'); });
     Route::get("credits/available", [\App\Http\Controllers\CreditApplicationController::class, "available"]);
     Route::post("credits/apply/{invoice}", [\App\Http\Controllers\CreditApplicationController::class, "apply"]);
     // Anticipos a proveedores: los abiertos de un proveedor y su aplicación a una compra
@@ -199,9 +241,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('feature:facturacion_sri')->group(function () { Route::post('liquidacion-compra/{purchase}/emit', [LiquidacionCompraController::class, 'emit']); });
 
     // ── Nota de débito ──
-    Route::get('notas-debito', [NotaDebitoController::class, 'index']);
-    Route::post('notas-debito', [NotaDebitoController::class, 'store']);
-    Route::post('notas-debito/{notaDebito}/anular', [NotaDebitoController::class, 'anular']);
+    // Listar, crear y anular van con 'cartera' (las internas existen en planes sin facturación electrónica);
+    // crear una del SRI y emitirla exigen además 'facturacion_sri'.
+    Route::middleware('feature:cartera')->group(function () {
+        Route::get('notas-debito', [NotaDebitoController::class, 'index']);
+        Route::post('notas-debito', [NotaDebitoController::class, 'store'])->middleware('feature:facturacion_sri,salvo_interna');
+        Route::post('notas-debito/{notaDebito}/anular', [NotaDebitoController::class, 'anular']);
+    });
     Route::middleware('feature:facturacion_sri')->group(function () { Route::post('notas-debito/{notaDebito}/emit', [NotaDebitoController::class, 'emit']); });
 
     // ── Guía de remisión ──
@@ -216,14 +262,40 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('feature:import_lote')->group(function () { Route::post("pending-imports/{pending}/process", [\App\Http\Controllers\PendingImportController::class, "processOne"]); });
 
     // Fase 7 — Nómina
-    Route::middleware('feature:nomina')->group(function () {
+    // La nómina es del administrador y del contador: el cajero no ve sueldos ni toca roles (T7.1)
+    Route::middleware(['feature:nomina', 'rol:admin,contador'])->group(function () {
         Route::apiResource("employees", \App\Http\Controllers\EmployeeController::class)
             ->only(['index','store','update','destroy']);
         Route::get("payrolls", [\App\Http\Controllers\PayrollController::class, "index"]);
         Route::get("payrolls/{payroll}", [\App\Http\Controllers\PayrollController::class, "show"]);
         Route::post("payrolls/generate", [\App\Http\Controllers\PayrollController::class, "generate"]);
+        Route::post("payrolls/{payroll}/consumos", [\App\Http\Controllers\PayrollController::class, "consumos"]);
         Route::post("payrolls/{payroll}/close", [\App\Http\Controllers\PayrollController::class, "close"]);
+        Route::get("payrolls/{payroll}/rol/{employee}", [\App\Http\Controllers\PayrollController::class, "rolIndividual"]);
+        Route::get("payrolls/{payroll}/rol-general", [\App\Http\Controllers\PayrollController::class, "rolGeneral"]);
         Route::post("employees/{employee}/liquidacion", [\App\Http\Controllers\PayrollController::class, "liquidacion"]);
+        // Movimientos de empleado (anticipos, préstamos, descuentos, ingresos extra) y permisos y vacaciones
+        Route::get("employee-movements", [\App\Http\Controllers\EmployeeMovementController::class, "index"]);
+        Route::post("employee-movements", [\App\Http\Controllers\EmployeeMovementController::class, "store"]);
+        Route::post("employee-movements/{movement}/cancelar", [\App\Http\Controllers\EmployeeMovementController::class, "cancelar"]);
+        Route::get("employee-leaves", [\App\Http\Controllers\EmployeeLeaveController::class, "index"]);
+        Route::post("employee-leaves", [\App\Http\Controllers\EmployeeLeaveController::class, "store"]);
+        Route::put("employee-leaves/{leave}", [\App\Http\Controllers\EmployeeLeaveController::class, "update"]);
+        Route::get("employees/{employee}/vacaciones", [\App\Http\Controllers\EmployeeLeaveController::class, "vacaciones"]);
+    });
+
+    // Activos fijos (T7.2): ficha, depreciación mensual en línea recta y baja. Plan Completo; solo administrador y contador.
+    // Las rutas fijas van antes de {asset} para que «depreciar», «compras» y «siguiente-codigo» no se tomen por un id.
+    Route::middleware(['feature:activos_fijos', 'rol:admin,contador'])->group(function () {
+        Route::get("fixed-assets", [\App\Http\Controllers\FixedAssetController::class, "index"]);
+        Route::get("fixed-assets/siguiente-codigo", [\App\Http\Controllers\FixedAssetController::class, "siguienteCodigo"]);
+        Route::get("fixed-assets/compras", [\App\Http\Controllers\FixedAssetController::class, "compras"]);
+        Route::post("fixed-assets/depreciar", [\App\Http\Controllers\FixedAssetController::class, "depreciar"]);
+        Route::post("fixed-assets", [\App\Http\Controllers\FixedAssetController::class, "store"]);
+        Route::get("fixed-assets/{asset}", [\App\Http\Controllers\FixedAssetController::class, "show"]);
+        Route::put("fixed-assets/{asset}", [\App\Http\Controllers\FixedAssetController::class, "update"]);
+        Route::delete("fixed-assets/{asset}", [\App\Http\Controllers\FixedAssetController::class, "destroy"]);
+        Route::post("fixed-assets/{asset}/baja", [\App\Http\Controllers\FixedAssetController::class, "baja"]);
     });
 
     // Fase A — Catálogos (formas de pago, sustentos tributarios)
@@ -251,7 +323,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("inventory/stock-bodega", [\App\Http\Controllers\InventoryTransactionController::class, "stockBodega"]);
     Route::post("inventory/ajuste", [\App\Http\Controllers\InventoryTransactionController::class, "ajuste"]);
     Route::post("inventory/transferencia", [\App\Http\Controllers\InventoryTransactionController::class, "transferencia"]);
+    // Las compras y los ajustes validan las series aunque el plan no incluya la pantalla de Series: este aviso previo no se restringe
+    Route::post("series/existentes", [\App\Http\Controllers\SerieController::class, "existentes"]);
     Route::get("inventory/kardex/{product}/bodega", [\App\Http\Controllers\InventoryTransactionController::class, "kardexBodega"]);
+
+    // T5.2 — Toma física masiva (un borrador por bodega; al aplicarla crea los movimientos y UN asiento)
+    Route::middleware('feature:inventario')->group(function () {
+        Route::get("physical-counts", [\App\Http\Controllers\PhysicalCountController::class, "index"]);
+        Route::post("physical-counts", [\App\Http\Controllers\PhysicalCountController::class, "store"]);
+        Route::get("physical-counts/{physicalCount}", [\App\Http\Controllers\PhysicalCountController::class, "show"]);
+        Route::put("physical-counts/{physicalCount}", [\App\Http\Controllers\PhysicalCountController::class, "update"]);
+        Route::delete("physical-counts/{physicalCount}", [\App\Http\Controllers\PhysicalCountController::class, "destroy"]);
+        Route::post("physical-counts/{physicalCount}/aplicar", [\App\Http\Controllers\PhysicalCountController::class, "aplicar"]);
+        Route::get("physical-counts/{physicalCount}/hoja", [\App\Http\Controllers\PhysicalCountController::class, "hoja"]);
+    });
 
     // Reportes de ventas y compras (Excel/PDF por tipo)
     Route::get("reportes/comprobantes", [\App\Http\Controllers\ReportesController::class, "comprobantes"]);

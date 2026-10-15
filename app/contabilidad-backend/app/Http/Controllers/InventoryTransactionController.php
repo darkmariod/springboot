@@ -74,7 +74,7 @@ class InventoryTransactionController extends Controller
         $series = [];
         if ($product->maneja_series) {
             try {
-                $series = $this->validarSeriesDelAjuste($product, $tipo, $cant, $r->input('series'));
+                $series = $this->validarSeriesDelAjuste($product, $tipo, $cant, $r->input('series'), (int) $d['warehouse_id']);
             } catch (\InvalidArgumentException $e) {
                 return response()->json(['message' => $e->getMessage()], 422);
             }
@@ -101,7 +101,7 @@ class InventoryTransactionController extends Controller
                 );
                 // Sobrante: las series nuevas se crean junto con el ingreso
                 if ($tipo === 'ingreso' && $series) {
-                    $servicio->registrarSeriesNuevas($product, $series);
+                    $servicio->registrarSeriesNuevas($product, $series, null, (int) $d['warehouse_id']);
                 }
 
                 $as = app(GenerateAdjustmentJournalEntry::class)->handle($mov);
@@ -130,7 +130,7 @@ class InventoryTransactionController extends Controller
      * Series que acompañan un ajuste de producto con series. Devuelve la lista limpia o lanza
      * InvalidArgumentException con el motivo, en español, para devolverlo como 422.
      */
-    private function validarSeriesDelAjuste(Product $product, string $tipo, float $cant, mixed $enviadas): array
+    private function validarSeriesDelAjuste(Product $product, string $tipo, float $cant, mixed $enviadas, int $warehouseId): array
     {
         if (abs($cant - round($cant)) > 0.0005) {
             throw new \InvalidArgumentException("El producto {$product->codigo} maneja series: la diferencia debe ser un número entero de unidades.");
@@ -154,10 +154,14 @@ class InventoryTransactionController extends Controller
 
         if ($tipo === 'egreso') {
             foreach ($series as $serie) {
-                $disponible = ProductSerie::where('company_id', $product->company_id)->where('product_id', $product->id)
-                    ->where('serie', $serie)->where('estado', 'disponible')->exists();
-                if (! $disponible) {
+                $fila = ProductSerie::where('company_id', $product->company_id)->where('product_id', $product->id)
+                    ->where('serie', $serie)->where('estado', 'disponible')->first();
+                if (! $fila) {
                     throw new \InvalidArgumentException("La serie {$serie} no existe o no está disponible para este producto.");
+                }
+                // El faltante da de baja series de ESTA bodega: una serie que está en otra no se puede descontar aquí
+                if ($motivo = $fila->motivoFueraDeBodega($warehouseId)) {
+                    throw new \InvalidArgumentException($motivo);
                 }
             }
         } else {
@@ -173,6 +177,9 @@ class InventoryTransactionController extends Controller
     /**
      * Transferencia de mercadería entre bodegas.
      * Baja stock en origen y sube en destino.
+     *
+     * Producto con series: hay que elegir las series concretas que se mueven (`series`, tantas como `cantidad`), todas disponibles
+     * en la bodega de origen. Siguen disponibles; solo cambian de bodega. Si no cuadran, 422 con el motivo y no se mueve nada.
      */
     public function transferencia(Request $r)
     {
@@ -183,6 +190,8 @@ class InventoryTransactionController extends Controller
             'warehouse_destino_id' => ['required', 'exists:warehouses,id', 'different:warehouse_origen_id'],
             'cantidad' => ['required', 'numeric', 'min:0.01'],
             'motivo' => ['nullable', 'string', 'max:255'],
+            'series' => ['sometimes', 'nullable', 'array'],
+            'series.*' => ['nullable', 'string'],
         ]);
 
         $product = Product::find($d['product_id']);
@@ -192,39 +201,87 @@ class InventoryTransactionController extends Controller
             ->where('product_id', $d['product_id'])->first();
 
         if (!$wsOrigen || (float)$wsOrigen->stock < $d['cantidad']) {
-            return response()->json([
-                'error' => 'Stock insuficiente en bodega origen. Disponible: ' . ($wsOrigen ? $wsOrigen->stock : 0),
-            ], 422);
+            $mensaje = 'Stock insuficiente en bodega origen. Disponible: ' . ($wsOrigen ? $wsOrigen->stock : 0);
+            return response()->json(['error' => $mensaje, 'message' => $mensaje], 422);
         }
 
-        return DB::transaction(function () use ($d, $product, $wsOrigen) {
-            // Egreso de origen
-            $movOrigen = app(RegisterInventoryMovement::class)->handle(
-                $product, 'egreso', $d['cantidad'], (float)$product->costo_promedio,
-                'Transferencia salida: ' . ($d['motivo'] ?? ''),
-                now()->toDateString(), $d['warehouse_origen_id']
+        $series = [];
+        if ($product->maneja_series) {
+            try {
+                $series = $this->validarSeriesDeLaTransferencia($product, (float) $d['cantidad'], $r->input('series'), (int) $d['warehouse_origen_id']);
+            } catch (\InvalidArgumentException $e) {
+                return response()->json(['error' => $e->getMessage(), 'message' => $e->getMessage()], 422);
+            }
+        }
+
+        try {
+            return DB::transaction(function () use ($d, $product, $series) {
+                $servicio = app(RegisterInventoryMovement::class);
+                // Egreso de origen (las series solo se validan contra la bodega de origen: no se marcan vendidas)
+                $movOrigen = $servicio->handle(
+                    $product, 'egreso', $d['cantidad'], (float)$product->costo_promedio,
+                    'Transferencia salida: ' . ($d['motivo'] ?? ''),
+                    now()->toDateString(), $d['warehouse_origen_id'],
+                    $series, null, null, RegisterInventoryMovement::SALIDA_TRANSFERENCIA
+                );
+
+                // Ingreso en destino (las mismas series quedan disponibles en la bodega de destino)
+                $movDestino = $servicio->handle(
+                    $product, 'ingreso', $d['cantidad'], (float)$product->costo_promedio,
+                    'Transferencia entrada: ' . ($d['motivo'] ?? ''),
+                    now()->toDateString(), $d['warehouse_destino_id'], $series
+                );
+
+                $origen = Warehouse::find($d['warehouse_origen_id']);
+                $destino = Warehouse::find($d['warehouse_destino_id']);
+
+                return response()->json([
+                    'ok' => true,
+                    'producto' => $product->codigo,
+                    'cantidad' => $d['cantidad'],
+                    'series' => $series,
+                    'origen' => $origen->nombre,
+                    'destino' => $destino->nombre,
+                    'movimiento_salida' => $movOrigen->id,
+                    'movimiento_entrada' => $movDestino->id,
+                ]);
+            });
+        } catch (\RuntimeException $e) {
+            // Una serie que otra operación tomó mientras tanto, stock insuficiente, etc.: un aviso, no un error 500.
+            return response()->json(['error' => $e->getMessage(), 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    /** Series que viajan en una transferencia: tantas como unidades, sin repetir, todas disponibles en la bodega de origen. */
+    private function validarSeriesDeLaTransferencia(Product $product, float $cantidad, mixed $enviadas, int $origenId): array
+    {
+        if (abs($cantidad - round($cantidad)) > 0.0005) {
+            throw new \InvalidArgumentException("El producto {$product->codigo} maneja series: la cantidad debe ser un número entero de unidades.");
+        }
+        $n = (int) round($cantidad);
+        $series = collect(is_array($enviadas) ? $enviadas : [])->map(fn ($s) => trim((string) $s))->filter(fn ($s) => $s !== '')->values();
+
+        if ($series->count() !== $n) {
+            throw new \InvalidArgumentException(
+                "El producto {$product->codigo} maneja series: elige las {$n} series que se transfieren (se indicaron {$series->count()})."
             );
+        }
+        $repetidas = $series->duplicates()->unique()->values();
+        if ($repetidas->isNotEmpty()) {
+            throw new \InvalidArgumentException('Hay series repetidas en la lista: '.$repetidas->implode(', ').'.');
+        }
+        foreach ($series as $serie) {
+            $fila = ProductSerie::where('company_id', $product->company_id)->where('product_id', $product->id)
+                ->where('serie', $serie)->where('estado', 'disponible')->first();
+            if (! $fila) {
+                throw new \InvalidArgumentException("La serie {$serie} no existe o ya fue vendida.");
+            }
+            if ($motivo = $fila->motivoFueraDeBodega($origenId)) {
+                throw new \InvalidArgumentException($motivo);
+            }
+        }
 
-            // Ingreso en destino
-            $movDestino = app(RegisterInventoryMovement::class)->handle(
-                $product, 'ingreso', $d['cantidad'], (float)$product->costo_promedio,
-                'Transferencia entrada: ' . ($d['motivo'] ?? ''),
-                now()->toDateString(), $d['warehouse_destino_id']
-            );
-
-            $origen = Warehouse::find($d['warehouse_origen_id']);
-            $destino = Warehouse::find($d['warehouse_destino_id']);
-
-            return response()->json([
-                'ok' => true,
-                'producto' => $product->codigo,
-                'cantidad' => $d['cantidad'],
-                'origen' => $origen->nombre,
-                'destino' => $destino->nombre,
-                'movimiento_salida' => $movOrigen->id,
-                'movimiento_entrada' => $movDestino->id,
-            ]);
-        });
+        return $series->all();
     }
 
     /**
@@ -234,9 +291,9 @@ class InventoryTransactionController extends Controller
     {
         $r->validate(['warehouse_id' => ['required', 'exists:warehouses,id']]);
 
-        $movimientos = \App\Models\InventoryMovement::where('product_id', $product->id)
+        $movimientos = \App\Support\OrigenMovimiento::anotar(\App\Models\InventoryMovement::where('product_id', $product->id)
             ->where('warehouse_id', $r->warehouse_id)
-            ->orderBy('fecha')->orderBy('id')->get();
+            ->orderBy('fecha')->orderBy('id')->get());   // cada movimiento trae su origen (origen_label, origen_numero...)
 
         return [
             'producto' => ['codigo' => $product->codigo, 'descripcion' => $product->descripcion],

@@ -4,7 +4,7 @@
  * Tres planes:
  *   Básico   — inventario y punto de venta, SIN facturación electrónica.
  *   Negocio  — suma la facturación del SRI, conciliaciones y usuarios.
- *   Completo — suma contabilidad, nómina y multisucursales.
+ *   Completo — suma contabilidad, nómina, activos fijos y multisucursales.
  */
 return [
     'basico' => [
@@ -40,7 +40,7 @@ return [
             'facturacion_sri', 'import_lote', 'facturacion_masiva',
             'conciliacion', 'conciliacion_tarjetas', 'usuarios',
             'conversion_articulos', 'fraccionamiento', 'reservas_stock',
-            'contabilidad', 'nomina', 'sucursales',
+            'contabilidad', 'nomina', 'sucursales', 'activos_fijos',
         ],
     ],
 ];

@@ -25,6 +25,12 @@ class RegisterInventoryMovement
     public const DEC_COSTO    = 4;
     public const DEC_VALOR    = 2;
 
+    /**
+     * Estado de salida con el que una transferencia entre bodegas retira las series de la bodega de origen: se validan
+     * contra esa bodega pero siguen disponibles (el ingreso de destino las cambia de bodega).
+     */
+    public const SALIDA_TRANSFERENCIA = 'transferencia';
+
     public function handle(
         Product $p,
         string $tipo,
@@ -36,7 +42,8 @@ class RegisterInventoryMovement
         array $series = [],
         ?int $invoiceId = null,
         ?int $purchaseId = null,
-        string $estadoSerieSalida = 'vendida'
+        string $estadoSerieSalida = 'vendida',
+        ?\Illuminate\Database\Eloquent\Model $origen = null
     ): InventoryMovement {
         if (! in_array($tipo, ['ingreso', 'egreso'], true)) {
             throw new \InvalidArgumentException("Tipo de movimiento inválido: {$tipo}");
@@ -49,10 +56,9 @@ class RegisterInventoryMovement
 
         // Sin bodega explícita se usa la de la empresa. Antes, las ventas no la
         // informaban: descontaban del stock total pero no del stock por bodega.
-        $warehouseId = $warehouseId ?: \App\Models\Warehouse::where('company_id', $p->company_id)
-            ->orderByDesc('por_defecto')->value('id');
+        $warehouseId = $warehouseId ?: ProductSerie::bodegaPrincipalId($p->company_id);
 
-        return $this->conReintentos(fn () => DB::transaction(function () use ($p, $tipo, $cant, $costo, $concepto, $fecha, $warehouseId, $series, $invoiceId, $purchaseId, $estadoSerieSalida) {
+        return $this->conReintentos(fn () => DB::transaction(function () use ($p, $tipo, $cant, $costo, $concepto, $fecha, $warehouseId, $series, $invoiceId, $purchaseId, $estadoSerieSalida, $origen) {
             $p = Product::whereKey($p->id)->lockForUpdate()->firstOrFail();
 
             if ($tipo === 'egreso' && round((float) $p->stock - $cant, self::DEC_CANTIDAD) < 0) {
@@ -61,7 +67,7 @@ class RegisterInventoryMovement
                 );
             }
 
-            $this->moverSeries($p, $tipo, $series, $invoiceId, $estadoSerieSalida);
+            $this->moverSeries($p, $tipo, $cant, $series, $invoiceId, $estadoSerieSalida, $warehouseId);
 
             // Los saldos se escriben en la reconstrucción de abajo.
             $mov = InventoryMovement::create([
@@ -78,6 +84,9 @@ class RegisterInventoryMovement
                 'warehouse_id'         => $warehouseId,
                 'invoice_id'           => $invoiceId,
                 'purchase_id'          => $purchaseId,
+                // Fraccionamiento / conversión: el documento interno que lo originó
+                'origen_type'          => $origen?->getMorphClass(),
+                'origen_id'            => $origen?->getKey(),
             ]);
 
             // reconstruirKardex también rehace el stock por bodega desde el kárdex,
@@ -153,65 +162,88 @@ class RegisterInventoryMovement
     }
 
     /**
-     * Da de alta series NUEVAS de un producto que ya entró por el kárdex (p. ej. el sobrante de un
-     * ajuste). Es el complemento del ingreso: el stock lo mueve handle(), aquí solo se crean las series
-     * para que stock y series disponibles no se separen. Si alguna ya existe, no se crea ninguna.
+     * Da de alta series NUEVAS de un producto que ya entró por el kárdex (una compra, el sobrante de un ajuste). Es el
+     * complemento del ingreso: el stock lo mueve handle(), aquí solo se crean las series (en la bodega a la que entró el
+     * stock) para que stock y series disponibles no se separen. Si alguna ya existe o se repite, no se crea ninguna.
      */
-    public function registrarSeriesNuevas(Product $p, array $series, ?int $purchaseId = null): void
+    public function registrarSeriesNuevas(Product $p, array $series, ?int $purchaseId = null, ?int $warehouseId = null): void
     {
         $series = array_values(array_filter(array_map('trim', $series), fn ($s) => $s !== ''));
 
+        $repetidas = array_keys(array_filter(array_count_values($series), fn ($n) => $n > 1));
+        if ($repetidas) {
+            throw new \RuntimeException('Hay series repetidas en la lista: '.implode(', ', $repetidas).'.');
+        }
         $existentes = ProductSerie::where('company_id', $p->company_id)->whereIn('serie', $series)->pluck('serie')->all();
         if ($existentes) {
             throw new \RuntimeException('Estas series ya existen en el sistema: '.implode(', ', $existentes).'.');
         }
+        $warehouseId = $warehouseId ?: ProductSerie::bodegaPrincipalId($p->company_id);
         foreach ($series as $serie) {
             ProductSerie::create([
-                'company_id'  => $p->company_id,
-                'product_id'  => $p->id,
-                'serie'       => $serie,
-                'estado'      => 'disponible',
-                'purchase_id' => $purchaseId,
+                'company_id'   => $p->company_id,
+                'product_id'   => $p->id,
+                'serie'        => $serie,
+                'estado'       => 'disponible',
+                'purchase_id'  => $purchaseId,
+                'warehouse_id' => $warehouseId,
             ]);
         }
     }
 
     /**
-     * Egreso: las series salen del inventario. Por defecto se marcan 'vendida' (con la factura);
-     * un ajuste las da de baja con otro estado ('danado') porque no se vendieron.
+     * Series de un movimiento de un producto que las maneja.
+     *
+     * Bodega de la serie (warehouse_id): donde está la unidad; si ya salió (vendida, dañada) queda la bodega de la que salió.
+     * Una serie anterior sin bodega cuenta como de la bodega principal (ver ProductSerie::scopeEnBodega).
+     *
+     * Egreso: tantas series DISPONIBLES de esa bodega como unidades salen. Por defecto se marcan 'vendida' (con la factura);
+     *   un ajuste las da de baja con otro estado ('danado') porque no se vendieron; una transferencia solo las valida.
+     * Ingreso: las series que regresan (devolución, anulación) vuelven a estar disponibles, en la bodega del ingreso.
      */
-    private function moverSeries(Product $p, string $tipo, array $series, ?int $invoiceId, string $estadoSalida = 'vendida'): void
+    private function moverSeries(Product $p, string $tipo, float $cant, array $series, ?int $invoiceId, string $estadoSalida, ?int $warehouseId): void
     {
         if (! $p->maneja_series) {
             return;
         }
+        $series = array_values(array_filter(array_map(fn ($s) => trim((string) $s), $series), fn ($s) => $s !== ''));
 
         if ($tipo === 'egreso') {
             if (empty($series)) {
                 throw new \RuntimeException("El producto {$p->codigo} maneja series; indique las series a vender.");
             }
+            if (abs($cant - round($cant)) > 0.0005 || count($series) !== (int) round($cant)) {
+                throw new \RuntimeException("El producto {$p->codigo} maneja series: salen {$cant} unidades y se indicaron ".count($series).' series; deben coincidir.');
+            }
+            $repetidas = array_keys(array_filter(array_count_values($series), fn ($n) => $n > 1));
+            if ($repetidas) {
+                throw new \RuntimeException('Hay series repetidas en la lista: '.implode(', ', $repetidas).'.');
+            }
             foreach ($series as $serie) {
-                $existe = ProductSerie::where('company_id', $p->company_id)
-                    ->where('product_id', $p->id)->where('serie', trim($serie))
-                    ->where('estado', 'disponible')->exists();
-                if (! $existe) {
+                $fila = ProductSerie::where('company_id', $p->company_id)
+                    ->where('product_id', $p->id)->where('serie', $serie)
+                    ->where('estado', 'disponible')->first();
+                if (! $fila) {
                     throw new \RuntimeException("Serie {$serie} no existe o ya fue vendida.");
                 }
+                if ($motivo = $fila->motivoFueraDeBodega($warehouseId)) {
+                    throw new \RuntimeException($motivo);
+                }
             }
-            foreach ($series as $serie) {
-                ProductSerie::where('company_id', $p->company_id)
-                    ->where('product_id', $p->id)->where('serie', trim($serie))
-                    ->where('estado', 'disponible')
-                    ->update(['estado' => $estadoSalida, 'invoice_id' => $invoiceId]);
+            if ($estadoSalida === self::SALIDA_TRANSFERENCIA) {
+                return;
             }
+            ProductSerie::where('company_id', $p->company_id)->where('product_id', $p->id)
+                ->whereIn('serie', $series)->where('estado', 'disponible')
+                ->update(['estado' => $estadoSalida, 'invoice_id' => $invoiceId, 'credit_note_id' => null, 'warehouse_id' => $warehouseId]);
 
             return;
         }
 
-        foreach ($series as $serie) {
-            ProductSerie::where('company_id', $p->company_id)
-                ->where('product_id', $p->id)->where('serie', trim($serie))
-                ->update(['estado' => 'disponible', 'invoice_id' => null]);
+        if ($series) {
+            ProductSerie::where('company_id', $p->company_id)->where('product_id', $p->id)
+                ->whereIn('serie', $series)
+                ->update(['estado' => 'disponible', 'invoice_id' => null, 'warehouse_id' => $warehouseId]);
         }
     }
 
