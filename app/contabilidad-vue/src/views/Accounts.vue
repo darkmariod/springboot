@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import TreeTable from 'primevue/treetable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
@@ -26,6 +26,9 @@ const dialog = ref(false)
 const form = ref<any>({})
 const msg = ref<any>(null)
 const guardando = ref(false)
+// Código siguiente sugerido al elegir la cuenta padre (T4.3c)
+const sugerencia = ref<{ codigo: string; advertencia: string | null; hermanas: number } | null>(null)
+const errorSugerencia = ref('')
 
 const tipos = [
   { label: 'Activo', value: 'activo' },
@@ -67,13 +70,38 @@ async function load() {
     loading.value = false
   }
 }
+// Cuentas que pueden ser padre, en orden de código: "1.1.01 — Caja"
+const opcionesPadre = computed(() =>
+  [...lista.value].sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
+    .map((a) => ({ label: `${a.codigo} — ${a.nombre}`, value: a.id })))
+
+// Al elegir la cuenta padre se pide el código siguiente libre de ese nivel y se pone en el cuadro (se puede cambiar)
+async function sugerir(padreId: number | null) {
+  sugerencia.value = null
+  errorSugerencia.value = ''
+  const padre = padreId ? lista.value.find((a) => a.id === padreId) : null
+  try {
+    const res = await api.get('/accounts/siguiente-codigo', {
+      params: { company_id: company.activeId, ...(padre ? { padre: padre.codigo } : {}) },
+    })
+    sugerencia.value = res.data
+    form.value.codigo = res.data.codigo
+    if (padre && res.data.tipo) form.value.tipo = res.data.tipo
+  } catch (err: any) {
+    errorSugerencia.value = err.response?.data?.message ?? 'No se pudo sugerir el código.'
+  }
+}
 function nueva() {
-  form.value = { codigo: '', nombre: '', tipo: 'activo' }
+  form.value = { codigo: '', nombre: '', tipo: 'activo', parent_id: null }
+  sugerencia.value = null
+  errorSugerencia.value = ''
   msg.value = null
   dialog.value = true
 }
 function editar(a: Account) {
   form.value = { ...a }
+  sugerencia.value = null
+  errorSugerencia.value = ''
   msg.value = null
   dialog.value = true
 }
@@ -85,6 +113,8 @@ async function guardar() {
     codigo: form.value.codigo,
     nombre: form.value.nombre,
     tipo: form.value.tipo,
+    // La cuenta padre solo se elige al crear; al editar la cuenta conserva la que tenía
+    ...(form.value.id ? {} : { parent_id: form.value.parent_id ?? null }),
   }
   try {
     if (form.value.id) await api.put('/accounts/' + form.value.id, payload)
@@ -159,10 +189,22 @@ onShortcut('guardar', () => guardar())
       <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom:12px;">{{ msg.text }}</Message>
 
       <div style="display:flex; flex-direction:column; gap:12px;">
+        <label v-if="!form.id" style="display:flex; flex-direction:column; gap:4px; font-size:13px;">
+          Cuenta padre
+          <Select v-model="form.parent_id" :options="opcionesPadre" optionLabel="label" optionValue="value" filter showClear
+                  placeholder="Ninguna (cuenta de nivel superior)" fluid inputId="cuenta-padre" @update:modelValue="sugerir" />
+          <small style="color:#94a3b8;">Elígela y te propongo el código siguiente de ese nivel.</small>
+        </label>
         <label style="display:flex; flex-direction:column; gap:4px; font-size:13px;">
           Código *
-          <InputText v-model="form.codigo" placeholder="1.1.01" fluid />
-          <small style="color:#94a3b8;">El punto marca el nivel: 1.1.01 cuelga de 1.1</small>
+          <InputText v-model="form.codigo" placeholder="1.1.01" fluid data-test="codigo" />
+          <small v-if="sugerencia" style="color:#166534;" data-test="sugerido">
+            Código siguiente sugerido: <b>{{ sugerencia.codigo }}</b>
+            <a v-if="form.codigo !== sugerencia.codigo" href="#" style="margin-left:6px;" @click.prevent="form.codigo = sugerencia.codigo">Usar</a>
+          </small>
+          <small v-if="sugerencia?.advertencia" style="color:#d97706;">{{ sugerencia.advertencia }}</small>
+          <small v-if="errorSugerencia" style="color:#b91c1c;">{{ errorSugerencia }}</small>
+          <small v-if="!sugerencia && !errorSugerencia" style="color:#94a3b8;">El punto marca el nivel: 1.1.01 cuelga de 1.1</small>
         </label>
         <label style="display:flex; flex-direction:column; gap:4px; font-size:13px;">
           Nombre *

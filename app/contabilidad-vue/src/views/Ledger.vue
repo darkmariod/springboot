@@ -21,7 +21,7 @@ onMounted(async () => {
 <template>
   <div style="padding:20px;">
     <h2 style="margin:0 0 4px;">Libro mayor</h2>
-    <p style="color:#94a3b8; font-size:13px; margin:0 0 14px;">Movimientos agrupados por cuenta contable</p>
+    <p style="color:#94a3b8; font-size:13px; margin:0 0 14px;">Movimientos agrupados por cuenta contable. Cuenta los asientos pendientes y mayorizados; los borradores no cuentan.</p>
     <DataTable :value="rows" :loading="loading" size="small" stripedRows>
       <Column field="codigo" header="Código" />
       <Column field="nombre" header="Cuenta" />

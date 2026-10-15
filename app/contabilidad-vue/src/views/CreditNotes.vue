@@ -7,14 +7,19 @@ import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
+import MultiSelect from 'primevue/multiselect'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Checkbox from 'primevue/checkbox'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import { usePlanStore } from '../stores/plan'
 
 const company = useCompanyStore()
+const plan = usePlanStore()
+// Sin facturación electrónica del SRI solo existen las notas internas (regulan saldos y no se envían)
+const sinSri = computed(() => !plan.tiene('facturacion_sri'))
 const rows = ref<any[]>([])
 const contacts = ref<any[]>([])
 const facturas = ref<any[]>([])
@@ -42,7 +47,7 @@ const estados = [
 const nuevoForm = () => ({
   contact_id: null as number | null,
   invoice_id: null as number | null,
-  interna: false,
+  interna: !plan.tiene('facturacion_sri'),
   devuelve_stock: false,
   motivo: '',
   lineas: [] as any[],
@@ -76,8 +81,26 @@ const saldoFactura = computed(() => Number(facturaElegida.value?.saldo_pendiente
 const baja = computed(() => redondear(Math.min(total.value, Math.max(saldoFactura.value, 0))))
 const saldoDespues = computed(() => redondear(saldoFactura.value - baja.value))
 const sobra = computed(() => redondear(total.value - baja.value))
+// Productos con series: al devolver mercadería hay que elegir CUÁLES series regresan (tantas como unidades).
+// Una línea tiene `seriesVendidas` cuando la factura la vendió con series que siguen vendidas.
+const llevaSeries = (l: any) => (l.seriesVendidas?.length ?? 0) > 0
+const hayLineasConSeries = computed(() => form.value.lineas.some(llevaSeries))
+const pideSeries = computed(() => form.value.devuelve_stock && hayLineasConSeries.value)
+// Las que otra línea del mismo producto ya eligió no se ofrecen otra vez
+const opcionesDe = (l: any) => (l.seriesVendidas ?? []).filter((s: string) =>
+  !form.value.lineas.some((o: any) => o !== l && o.codigo_principal === l.codigo_principal && (o.series ?? []).includes(s)))
+const seriesOk = (l: any) => !(form.value.devuelve_stock && llevaSeries(l))
+  || (Number.isInteger(l.cantidad) && (l.series ?? []).length === l.cantidad)
+const seriesCompletas = computed(() => form.value.lineas.every(seriesOk))
+/** Devolver TODO lo vendido con series marca todas; con una cantidad menor se conservan solo las que caben. */
+function ajustarSeries(l: any, cantidad: number) {
+  const todas: string[] = l.seriesVendidas ?? []
+  if (!todas.length) return
+  if (cantidad === todas.length) l.series = [...todas]
+  else l.series = (l.series ?? []).filter((s: string) => todas.includes(s)).slice(0, Math.max(0, Math.floor(cantidad || 0)))
+}
 const puedeGuardar = computed(() => !!form.value.contact_id && !!form.value.invoice_id && form.value.motivo.trim() !== ''
-  && form.value.lineas.length > 0 && total.value > 0)
+  && form.value.lineas.length > 0 && total.value > 0 && seriesCompletas.value)
 
 function mensajeDeError(err: any, porDefecto: string) {
   const e = err?.response?.data?.errors
@@ -104,8 +127,10 @@ async function alElegirCliente() {
   facturas.value = (await api.get('/invoices', { params: { company_id: company.activeId, contact_id: form.value.contact_id } })).data
 }
 // Las líneas salen de la factura: se puede quitar una o bajar su cantidad (nunca subirla)
-function alElegirFactura() {
+let seqFactura = 0
+async function alElegirFactura() {
   const f = facturaElegida.value
+  const seq = ++seqFactura
   form.value.lineas = (f?.items ?? []).map((it: any) => ({
     codigo_principal: it.codigo_principal,
     descripcion: it.descripcion,
@@ -114,8 +139,27 @@ function alElegirFactura() {
     precio_unitario: Number(it.precio_unitario),
     descuento: Number(it.descuento ?? 0),
     tarifa: it.tarifa ?? 15,
+    seriesVendidas: [] as string[],
+    series: [] as string[],
   }))
   if (!form.value.motivo) form.value.motivo = 'Corrección de la factura ' + f?.numero
+  await cargarSeriesVendidas(seq)
+}
+/** Las series que esta factura vendió y siguen vendidas, agrupadas por producto, para elegir las que regresan. */
+async function cargarSeriesVendidas(seq: number) {
+  if (!form.value.invoice_id || !plan.tiene('series')) return
+  try {
+    const { data } = await api.get('/series', { params: { company_id: company.activeId, invoice_id: form.value.invoice_id, estado: 'vendida' } })
+    if (seq !== seqFactura) return           // se eligió otra factura mientras llegaba la respuesta
+    const porProducto: Record<string, string[]> = {}
+    for (const s of data as any[]) (porProducto[s.product?.codigo] ??= []).push(s.serie)
+    for (const l of form.value.lineas) {
+      l.seriesVendidas = porProducto[l.codigo_principal] ?? []
+      ajustarSeries(l, l.cantidad)
+    }
+  } catch {
+    // Sin la lista no se ofrece el selector; el servidor valida igual y responde con las series vendidas si falta alguna
+  }
 }
 async function guardar() {
   error.value = ''
@@ -131,6 +175,7 @@ async function guardar() {
       items: form.value.lineas.map((l: any) => ({
         codigo_principal: l.codigo_principal, descripcion: l.descripcion, cantidad: l.cantidad,
         precio_unitario: l.precio_unitario, descuento: descuentoLinea(l), tarifa: l.tarifa,
+        ...(form.value.devuelve_stock && llevaSeries(l) ? { series: l.series } : {}),
       })),
     })
     dialog.value = false
@@ -180,6 +225,26 @@ async function confirmarAnular() {
   }
 }
 const estadoSri = (r: any) => r.sri_document?.estado ?? null
+
+// RIDE en PDF (lo arma el servidor con los datos del emisor y de la autorización). Una nota interna no tiene comprobante del SRI.
+const rideBusy = ref<number | null>(null)
+async function descargarRide(r: any) {
+  if (r.interna || rideBusy.value !== null) return
+  rideBusy.value = r.id
+  try {
+    const res = await api.get(`/credit-notes/${r.id}/ride`, { params: { company_id: company.activeId }, responseType: 'blob' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    a.download = 'RIDE-' + (r.numero ?? r.id) + '.pdf'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } catch {
+    msg.value = 'No se pudo generar el RIDE en PDF. Inténtalo de nuevo.'
+    msgOk.value = false
+  } finally {
+    rideBusy.value = null
+  }
+}
 onMounted(load)
 </script>
 
@@ -221,26 +286,31 @@ onMounted(load)
         <Tag v-else-if="estadoSri(data)" :value="estadoSri(data)" severity="success" />
         <span v-else style="color:#94a3b8;">Sin emitir</span>
       </template></Column>
-      <Column header="" style="width:200px"><template #body="{ data }">
+      <Column header="" style="width:260px"><template #body="{ data }">
         <Button v-if="data.tipo === 'sri' && !data.sri_document" label="Emitir" icon="pi pi-send" size="small"
                 :loading="emitiendo === data.id" @click="emitir(data)" />
+        <!-- El span lleva el aviso: un botón deshabilitado no recibe el ratón -->
+        <span :title="data.interna ? 'Una nota interna no se envía al SRI, por eso no tiene RIDE.' : 'Descargar RIDE (PDF)'">
+          <Button icon="pi pi-file-pdf" size="small" text aria-label="Descargar RIDE (PDF)" label="RIDE"
+                  :loading="rideBusy === data.id" :disabled="data.interna" @click="descargarRide(data)" />
+        </span>
         <Button v-if="data.tipo !== 'anulado'" label="Anular" icon="pi pi-ban" size="small" severity="danger" text
                 @click="pedirAnular(data)" />
       </template></Column>
       <template #empty>Todavía no hay notas de crédito.</template>
     </DataTable>
 
-    <Dialog v-model:visible="dialog" modal header="Nueva nota de crédito" style="width:720px">
+    <Dialog v-model:visible="dialog" modal header="Nueva nota de crédito" :style="{ width: pideSeries ? '980px' : '720px' }">
       <Message v-if="error" severity="error" :closable="false" style="margin-bottom:10px;">{{ error }}</Message>
       <fieldset class="kvs-fieldset" style="margin-top:14px;">
         <legend>Factura que corriges</legend>
         <div class="kvs-row">
-          <label class="kvs-lbl"><span class="req">*</span> Cliente:</label>
+          <label class="kvs-lbl"><span class="req-star">*</span> Cliente:</label>
           <Select v-model="form.contact_id" :options="clientes" optionLabel="razon_social" optionValue="id" filter
                   placeholder="Elige el cliente" class="kvs-in" @change="alElegirCliente" />
         </div>
         <div class="kvs-row">
-          <label class="kvs-lbl"><span class="req">*</span> Factura:</label>
+          <label class="kvs-lbl"><span class="req-star">*</span> Factura:</label>
           <Select v-model="form.invoice_id" :options="facturasDelCliente" optionLabel="etiqueta" optionValue="id" filter
                   :disabled="!form.contact_id" placeholder="Elige la factura que corriges" class="kvs-in"
                   emptyMessage="Este cliente no tiene facturas vigentes" @change="alElegirFactura" />
@@ -254,13 +324,14 @@ onMounted(load)
         <legend>Datos de la nota</legend>
         <div class="kvs-row">
           <label class="kvs-lbl">Interna (no se envía al SRI):</label>
-          <ToggleSwitch v-model="form.interna" />
+          <ToggleSwitch v-model="form.interna" :disabled="sinSri" />
           <span style="font-size:12px; color:#64748b;">
-            {{ form.interna ? 'Solo regula saldos: sin comprobante electrónico ni secuencial del SRI.' : 'Comprobante electrónico: se emite al SRI desde la lista.' }}
+            <template v-if="sinSri">Tu plan no incluye la facturación electrónica: la nota es interna, solo regula saldos.</template>
+            <template v-else>{{ form.interna ? 'Solo regula saldos: sin comprobante electrónico ni secuencial del SRI.' : 'Comprobante electrónico: se emite al SRI desde la lista.' }}</template>
           </span>
         </div>
         <div class="kvs-row">
-          <label class="kvs-lbl"><span class="req">*</span> Motivo:</label>
+          <label class="kvs-lbl"><span class="req-star">*</span> Motivo:</label>
           <InputText v-model="form.motivo" placeholder="Devolución de mercadería / descuento" class="kvs-in" />
         </div>
         <div class="kvs-row">
@@ -275,7 +346,19 @@ onMounted(load)
         <DataTable :value="form.lineas" size="small">
           <Column field="descripcion" header="Descripción" />
           <Column header="Cantidad" style="width:120px"><template #body="{ data }">
-            <InputNumber v-model="data.cantidad" :min="0.01" :max="data.maximo" :maxFractionDigits="4" style="width:100px" />
+            <InputNumber v-model="data.cantidad" :min="0.01" :max="data.maximo" :maxFractionDigits="4" style="width:100px"
+                         @update:modelValue="(v: number) => ajustarSeries(data, v)" />
+          </template></Column>
+          <Column v-if="pideSeries" header="Series que regresan" style="width:270px"><template #body="{ data }">
+            <template v-if="llevaSeries(data)">
+              <MultiSelect v-model="data.series" :options="opcionesDe(data)" filter display="chip" :maxSelectedLabels="2"
+                           :selectionLimit="Math.floor(data.cantidad || 0)" placeholder="Elige las series" style="width:250px"
+                           :aria-label="'Series que regresan de ' + data.descripcion" />
+              <div style="font-size:11px; margin-top:2px;" :style="{ color: seriesOk(data) ? '#166534' : '#b45309' }">
+                {{ (data.series ?? []).length }} de {{ data.cantidad }} serie(s)
+              </div>
+            </template>
+            <span v-else style="color:#94a3b8; font-size:12px;">Sin series</span>
           </template></Column>
           <Column header="Precio" style="width:120px"><template #body="{ data }">
             <InputNumber v-model="data.precio_unitario" :min="0" :minFractionDigits="2" :maxFractionDigits="4" style="width:100px" />
@@ -291,6 +374,9 @@ onMounted(load)
           <div>IVA: <b>{{ money(iva) }}</b></div>
           <div style="font-size:15px;">Total de la nota: <b>{{ money(total) }}</b></div>
         </div>
+        <Message v-if="pideSeries && !seriesCompletas" severity="warn" :closable="false" style="margin-top:10px;">
+          Los productos con series necesitan que elijas <b>exactamente</b> las series que regresan: una por cada unidad devuelta.
+        </Message>
         <Message v-if="total > 0" severity="info" :closable="false" style="margin-top:10px;">
           La factura {{ facturaElegida?.numero }} debe hoy {{ money(saldoFactura) }} y quedará debiendo <b>{{ money(saldoDespues) }}</b>.
           <span v-if="sobra > 0"> Sobran <b>{{ money(sobra) }}</b> a favor del cliente, que se pueden usar en otra factura desde Cuentas por cobrar.</span>

@@ -61,6 +61,8 @@ async function pagar() {
     errorPago.value = mensajeError(err, 'No se pudo registrar el pago.')
     return
   }
+  const pagado = pago.value.pagos.reduce((s: number, p: any) => s + (Number(p.valor) || 0), 0)
+  aviso.value = 'Pago registrado: compra ' + pago.value.purchase.numero + ' por ' + money(pagado) + '.'
   pago.value = null; load()
 }
 
@@ -236,7 +238,7 @@ onMounted(load)
           <Column header="Disponible"><template #body="{ data: a }">{{ money(a.disponible) }}</template></Column>
         </DataTable>
         <div v-if="usarDialog.seleccion" class="kvs-row">
-          <label class="kvs-lbl"><span class="req">*</span> Monto a aplicar:</label>
+          <label class="kvs-lbl"><span class="req-star">*</span> Monto a aplicar:</label>
           <InputNumber v-model="usarDialog.monto" mode="currency" currency="USD" :min="0" :max="montoAnticipoMax"
                        @focus="($event: Event) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
         </div>

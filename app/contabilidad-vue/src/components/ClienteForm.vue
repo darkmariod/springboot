@@ -129,10 +129,10 @@ async function onSriLookup() {
   <div v-else>
     <!-- Row 1: Identification type + Identification number -->
     <div class="kvs-row">
-      <label class="kvs-lbl"><span class="req">*</span> Tipo ID:</label>
+      <label class="kvs-lbl"><span class="req-star">*</span> Tipo ID:</label>
       <Select v-model="local.tipo_identificacion" :options="tipos" optionLabel="label" optionValue="value"
               :disabled="readonly" class="kvs-in" style="max-width:160px" />
-      <label class="kvs-lbl" style="margin-left:12px;"><span class="req">*</span> Identificación:</label>
+      <label class="kvs-lbl" style="margin-left:12px;"><span class="req-star">*</span> Identificación:</label>
       <div class="kvs-in" style="display:flex; align-items:center; gap:6px;">
         <InputText v-model="local.identificacion" :disabled="readonly" @blur="onSriLookup" @keydown.enter.prevent="onSriLookup" style="flex:1" />
         <i v-if="sriLoading" class="pi pi-spin pi-spinner" style="color:#3d8b8b;" />
@@ -147,7 +147,7 @@ async function onSriLookup() {
 
     <!-- Row 2: Business name -->
     <div class="kvs-row">
-      <label class="kvs-lbl"><span class="req">*</span> Razón social:</label>
+      <label class="kvs-lbl"><span class="req-star">*</span> Razón social:</label>
       <InputText v-model="local.razon_social" :disabled="readonly" class="kvs-in" />
     </div>
 

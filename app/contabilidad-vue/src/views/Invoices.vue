@@ -14,11 +14,13 @@ import Checkbox from 'primevue/checkbox'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { useTabsStore } from '../stores/tabs'
+import { usePlanStore } from '../stores/plan'
 import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 import { onShortcut } from '../composables/useShortcuts'
 
 const company = useCompanyStore()
 const tabs = useTabsStore()
+const plan = usePlanStore()
 const rows = ref<any[]>([])
 const loading = ref(true)
 const preview = ref<any>(null)
@@ -31,6 +33,9 @@ const anularError = ref('')
 const confirmaSri = ref(false)
 // Aviso que queda en pantalla hasta que se cierre (la respuesta del servidor dice si hace falta anular también en el SRI)
 const avisoAnulacion = ref<{ texto: string; requiere: boolean } | null>(null)
+// Descarga del RIDE en PDF (lo arma el servidor con los datos del emisor y de la autorización del SRI)
+const rideBusy = ref(false)
+const rideError = ref('')
 
 // Filtros
 const filtro = ref({ anio: '', numero: '', cliente: '', identificacion: '', valor: '', estado: '' })
@@ -119,10 +124,58 @@ function fechaHora(v: any) {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
+async function descargarRide(r: any) {
+  if (!r || rideBusy.value) return
+  rideBusy.value = true
+  rideError.value = ''
+  try {
+    const res = await api.get(`/invoices/${r.id}/ride`, { params: { company_id: company.activeId }, responseType: 'blob' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    a.download = 'RIDE-' + r.numero + '.pdf'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } catch {
+    rideError.value = 'No se pudo generar el RIDE en PDF. Inténtalo de nuevo.'
+  } finally {
+    rideBusy.value = false
+  }
+}
+
+// Solo un comprobante AUTORIZADO tiene número y fecha de autorización; si no, el RIDE lo dice y no inventa nada
+const leyendaPendiente = 'Documento pendiente de autorización del SRI — sin validez tributaria hasta ser autorizado'
+const leyendaPreview = (r: any) => {
+  const e = String(r?.sri_document?.estado ?? '')
+  if (!r?.sri_document) return 'Documento sin comprobante electrónico del SRI — sin validez tributaria'
+  if (esAutorizada(r)) return ''
+  if (['NO AUTORIZADO', 'NO AUTORIZADA', 'RECHAZADO', 'RECHAZADA', 'DEVUELTA', 'DEVUELTO'].includes(e.toUpperCase())) return 'El SRI no autorizó este comprobante — sin validez tributaria'
+  return leyendaPendiente
+}
+
+// Totales del RIDE por tarifa y descuento, a partir de las líneas guardadas en la factura
+const redondear = (n: number) => Math.round(n * 100) / 100
+const totalesPreview = computed(() => {
+  const items: any[] = preview.value?.items ?? []
+  let base15 = 0, base0 = 0, descuento = 0
+  for (const it of items) {
+    const desc = Number(it.descuento ?? 0)
+    const neto = Number(it.cantidad ?? 0) * Number(it.precio_unitario ?? 0) - desc
+    descuento += desc
+    // Sin tarifa la línea cuenta como 15%, igual que al emitir; el 6 y el 7 (no objeto / exento) no cobran IVA
+    if (Number(it.tarifa ?? 15) > 0 && !['6', '7'].includes(String(it.codigo_porcentaje ?? ''))) base15 += neto
+    else base0 += neto
+  }
+  return { base15: redondear(base15), base0: redondear(base0), descuento: redondear(descuento) }
+})
+
 function ver(r: any) { seleccion.value = r; preview.value = r }
 function editar(r: any) { seleccion.value = r; ver(r) }
 function nuevo() {
   tabs.open({ key: 'pos', label: 'Ventas (POS)', icon: 'pi pi-shopping-cart', component: 'Pos' })
+}
+// Facturación masiva vive dentro de Facturas: abre la misma pantalla del módulo (sin duplicar la pestaña)
+function masiva() {
+  tabs.open({ key: 'mass-invoicing', label: 'Facturación Masiva', icon: 'pi pi-copy', component: 'MassInvoicing' })
 }
 function salir() { tabs.close(tabs.activeKey ?? 'invoices') }
 
@@ -156,7 +209,7 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
 
 <template>
   <div class="invoices-layout">
-    <KvsModuleHeader module-name="Facturas de Venta" :company="{ ruc: company.activeId, razon_social: 'Listado' }" subtitle="Electrónicas SRI" />
+    <KvsModuleHeader module-name="Facturas de Venta" :company="{ ruc: company.activeRuc, razon_social: 'Listado' }" subtitle="Electrónicas SRI" />
     <!-- ══ Cabecera de filtros ══ -->
     <div class="invoices-toolbar">
       <div class="invoices-filters">
@@ -171,14 +224,21 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
                 size="small" style="width:120px" aria-label="Estado de la factura" />
         <div style="flex:1"></div>
         <Button label="Nuevo" icon="pi pi-plus" size="small" @click="nuevo" />
+        <Button label="Facturación masiva" icon="pi pi-copy" size="small" severity="secondary"
+                :disabled="!plan.tiene('facturacion_masiva')"
+                :title="plan.tiene('facturacion_masiva') ? 'Emitir un lote de facturas' : 'Tu plan no incluye la facturación masiva'"
+                @click="masiva" />
         <Button label="Editar" icon="pi pi-pencil" size="small" outlined
                 :disabled="!seleccion" @click="seleccion && editar(seleccion)" />
+        <Button label="Descargar RIDE (PDF)" icon="pi pi-file-pdf" size="small" outlined
+                :loading="rideBusy" :disabled="!seleccion" @click="seleccion && descargarRide(seleccion)" />
         <Button label="Anular" icon="pi pi-ban" size="small" outlined severity="danger"
                 :disabled="!seleccion || seleccion?.estado === 'anulado'" @click="seleccion && pedirAnular(seleccion)" />
         <Button label="Salir" icon="pi pi-times" size="small" text @click="salir" />
       </div>
     </div>
 
+    <Message v-if="rideError" severity="error" :closable="true" style="margin:8px 12px 0;" @close="rideError = ''">{{ rideError }}</Message>
     <Message v-if="avisoAnulacion" :severity="avisoAnulacion.requiere ? 'warn' : 'info'" :closable="true"
              style="margin:8px 12px 0;" @close="avisoAnulacion = null">{{ avisoAnulacion.texto }}</Message>
 
@@ -203,7 +263,7 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
             <th style="width:60px">Asiento</th>
             <th style="width:104px">Creado</th>
             <th style="width:104px">Editado</th>
-            <th style="width:52px"></th>
+            <th style="width:84px"></th>
           </tr>
         </thead>
         <tbody>
@@ -233,6 +293,7 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
             <td style="font-size:11px; color:#64748b;">{{ fechaCorta(r.updated_at) }}</td>
             <td>
               <Button icon="pi pi-eye" size="small" text @click.stop="ver(r)" title="Ver RIDE" />
+              <Button icon="pi pi-file-pdf" size="small" text :disabled="rideBusy" @click.stop="descargarRide(r)" title="Descargar RIDE (PDF)" />
             </td>
           </tr>
           <tr v-if="!filtrados.length">
@@ -279,11 +340,15 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
     <!-- ══ Preview RIDE ══ -->
     <Dialog :visible="!!preview" modal :header="'Factura ' + (preview?.numero ?? '')"
             style="width:760px" @update:visible="preview = null">
-      <div v-if="preview" style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+      <div v-if="preview" style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:10px;">
+        <Button label="Descargar RIDE (PDF)" icon="pi pi-file-pdf" size="small" outlined
+                :loading="rideBusy" @click="descargarRide(preview)" />
         <Button label="Imprimir / PDF" icon="pi pi-print" size="small" outlined @click="imprimir" />
       </div>
 
       <div v-if="preview" ref="docRef" class="ride">
+        <!-- Sin autorización del SRI el RIDE lo dice claro (también al imprimirlo) -->
+        <div v-if="leyendaPreview(preview)" class="ride-leyenda">{{ leyendaPreview(preview) }}</div>
         <!-- ══ Cabecera: emisor (con logo del cliente) + datos del comprobante ══ -->
         <div class="ride-top">
           <div class="ride-emisor">
@@ -310,14 +375,14 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
             <div class="ride-num">No. {{ preview.numero }}</div>
 
             <div class="ride-f"><span>NÚMERO DE AUTORIZACIÓN</span>
-              <em class="mono">{{ preview.sri_document?.numero_autorizacion ?? 'PENDIENTE DE AUTORIZACIÓN' }}</em></div>
+              <em class="mono">{{ esAutorizada(preview) ? (preview.sri_document?.numero_autorizacion ?? 'No disponible') : 'PENDIENTE DE AUTORIZACIÓN' }}</em></div>
             <div class="ride-2c">
               <div class="ride-f"><span>AMBIENTE DE AUTORIZACIÓN</span>
                 <em>{{ Number(empresa?.ambiente) === 2 ? 'PRODUCCIÓN' : 'PRUEBAS' }}</em></div>
               <div class="ride-f"><span>TIPO DE EMISIÓN</span><em>NORMAL</em></div>
             </div>
             <div class="ride-f"><span>FECHA Y HORA DE AUTORIZACIÓN</span>
-              <em>{{ fechaHora(preview.sri_document?.updated_at ?? preview.fecha_emision) }}</em></div>
+              <em>{{ esAutorizada(preview) ? fechaHora(preview.sri_document?.updated_at) : '—' }}</em></div>
             <div class="ride-f"><span>CLAVE DE ACCESO</span>
               <em class="mono">{{ preview.sri_document?.clave_acceso ?? '—' }}</em></div>
             <div class="ride-f"><span>GUÍA DE REMISIÓN</span><em>NO ENVIADA</em></div>
@@ -349,7 +414,7 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
               <td>{{ it.descripcion }}</td>
               <td class="c">U</td>
               <td class="d">{{ Number(it.precio_unitario).toFixed(2) }}</td>
-              <td class="d">{{ (Number(it.cantidad) * Number(it.precio_unitario)).toFixed(2) }}</td>
+              <td class="d">{{ (Number(it.cantidad) * Number(it.precio_unitario) - Number(it.descuento ?? 0)).toFixed(2) }}</td>
             </tr>
           </tbody>
         </table>
@@ -367,10 +432,10 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
           </div>
 
           <table class="ride-tot">
-            <tr><td>SUBTOTAL 15%</td><td class="d mono">{{ Number(preview.total_sin_impuestos ?? 0).toFixed(2) }}</td></tr>
-            <tr><td>SUBTOTAL 0%</td><td class="d mono">0.00</td></tr>
+            <tr><td>SUBTOTAL 15%</td><td class="d mono">{{ totalesPreview.base15.toFixed(2) }}</td></tr>
+            <tr><td>SUBTOTAL 0%</td><td class="d mono">{{ totalesPreview.base0.toFixed(2) }}</td></tr>
             <tr><td>SUBTOTAL</td><td class="d mono">{{ Number(preview.total_sin_impuestos ?? 0).toFixed(2) }}</td></tr>
-            <tr><td>DESCUENTO</td><td class="d mono">0.00</td></tr>
+            <tr><td>DESCUENTO</td><td class="d mono">{{ totalesPreview.descuento.toFixed(2) }}</td></tr>
             <tr><td>IVA 15%</td><td class="d mono">{{ Number(preview.total_impuesto ?? 0).toFixed(2) }}</td></tr>
             <tr class="ride-total"><td>VALOR TOTAL</td>
               <td class="d mono">{{ Number(preview.importe_total ?? 0).toFixed(2) }}</td></tr>
@@ -391,6 +456,8 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
 .ride .c { text-align: center; }
 .ride .d { text-align: right; }
 
+.ride-leyenda { border-bottom: 1px solid #000; background: #fef2f2; color: #991b1b; font-weight: 700;
+  font-size: 10px; text-align: center; padding: 6px 10px; }
 .ride-top { display: flex; border-bottom: 1px solid #000; }
 .ride-emisor { flex: 1.05; padding: 10px 12px; border-right: 1px solid #000; }
 .ride-logo { max-width: 150px; max-height: 62px; object-fit: contain; margin-bottom: 8px; display: block; }

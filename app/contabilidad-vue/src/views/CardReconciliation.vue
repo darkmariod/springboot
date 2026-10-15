@@ -12,6 +12,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import DatePicker from 'primevue/datepicker'
+import Select from 'primevue/select'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 import api from '../lib/api'
@@ -24,11 +25,22 @@ const resumen = ref<any>({})
 const seleccion = ref<any[]>([])
 const activa = ref<any>(null)          // liquidación que se está conciliando
 const dialog = ref<any>(null)
+const bancos = ref<any[]>([])
 const msg = ref<any>(null)
 const loading = ref(true)
 
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 const fecha = (d: any) => (d ? new Date(d).toLocaleDateString('es-EC') : '—')
+const isoLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const centavos = (n: any) => Math.round(Number(n ?? 0) * 100)
+
+// Bruto = neto + comisión + retenciones. El neto se calcula, y si lo corriges a mano (lo que dice tu banco) el servidor revisa el cuadre.
+const netoCalculado = computed(() => dialog.value
+  ? (centavos(dialog.value.monto_bruto) - centavos(dialog.value.comision) - centavos(dialog.value.retencion_iva) - centavos(dialog.value.retencion_renta)) / 100
+  : 0)
+const descuadre = computed(() => dialog.value && dialog.value.monto_neto !== null
+  ? centavos(dialog.value.monto_bruto) - centavos(dialog.value.monto_neto) - centavos(dialog.value.comision) - centavos(dialog.value.retencion_iva) - centavos(dialog.value.retencion_renta)
+  : 0)
 
 const sumaSeleccion = computed(() =>
   seleccion.value.reduce((s, t) => s + Number(t.monto), 0))
@@ -39,27 +51,33 @@ async function cargar() {
   loading.value = true
   try {
     const id = company.activeId
-    const [p, l, r] = await Promise.all([
+    const [p, l, r, b] = await Promise.all([
       api.get('/card/pendientes', { params: { company_id: id } }),
       api.get('/card/settlements', { params: { company_id: id } }),
       api.get('/card/resumen', { params: { company_id: id } }),
+      api.get('/banks', { params: { company_id: id } }),
     ])
     pendientes.value = p.data
     liquidaciones.value = l.data
     resumen.value = r.data
+    bancos.value = b.data
   } finally { loading.value = false }
 }
 
 function nuevaLiquidacion() {
-  dialog.value = { fecha: new Date(), procesador: 'Datafast', lote: '', monto_bruto: null, comision: null, notas: '' }
+  dialog.value = { fecha: new Date(), bank_id: bancos.value[0]?.id ?? null, procesador: 'Datafast', lote: '', monto_bruto: null, comision: null,
+    retencion_iva: null, retencion_renta: null, monto_neto: null, notas: '' }
 }
+
+// Mientras no corrijas el neto a mano, sigue al cálculo
+watch(netoCalculado, (n) => { if (dialog.value && !dialog.value.neto_manual) dialog.value.monto_neto = dialog.value.monto_bruto ? n : null })
 
 async function guardarLiquidacion() {
   try {
-    const d = { ...dialog.value, company_id: company.activeId,
-      fecha: new Date(dialog.value.fecha).toISOString().slice(0, 10) }
-    await api.post('/card/settlements', d)
-    msg.value = { type: 'success', text: 'Liquidación registrada.' }
+    const { neto_manual, ...resto } = dialog.value
+    const d = { ...resto, company_id: company.activeId, fecha: isoLocal(new Date(dialog.value.fecha)) }
+    const { data } = await api.post('/card/settlements', d)
+    msg.value = { type: 'success', text: `Liquidación ${data.numero} registrada y asentada: ${money(data.monto_neto)} acreditados al banco.` }
     dialog.value = null
     await cargar()
   } catch (err: any) {
@@ -104,7 +122,10 @@ async function eliminar(l: any) {
     msg.value = { type: 'success', text: 'Liquidación eliminada; sus cobros vuelven a pendientes.' }
     if (activa.value?.id === l.id) activa.value = null
     await cargar()
-  } catch { msg.value = { type: 'error', text: 'No se pudo eliminar.' } }
+  } catch (err: any) {
+    const e = err.response?.data?.errors
+    msg.value = { type: 'error', text: e ? Object.values(e).flat().join(' · ') : 'No se pudo eliminar.' }
+  }
 }
 
 watch(() => company.activeId, cargar)
@@ -116,7 +137,7 @@ onMounted(cargar)
     <header class="cr-head">
       <div>
         <h2>Conciliación de tarjetas</h2>
-        <p>Cruzá los cobros con tarjeta contra lo que efectivamente depositó el procesador.</p>
+        <p>Cruza los cobros con tarjeta contra lo que efectivamente depositó el procesador.</p>
       </div>
       <Button label="Registrar liquidación" icon="pi pi-plus" size="small" @click="nuevaLiquidacion" />
     </header>
@@ -141,6 +162,7 @@ onMounted(cargar)
         <DataTable :value="liquidaciones" :loading="loading" size="small" stripedRows
                    :rowClass="(d) => activa?.id === d.id ? 'fila-activa' : ''">
           <Column header="Fecha" style="width:100px"><template #body="{ data }">{{ fecha(data.fecha) }}</template></Column>
+          <Column header="N.º" style="width:112px"><template #body="{ data }"><span class="mono" style="white-space:nowrap">{{ data.numero ?? '—' }}</span></template></Column>
           <Column field="procesador" header="Procesador" />
           <Column header="Bruto" style="width:96px"><template #body="{ data }">{{ money(data.monto_bruto) }}</template></Column>
           <Column header="Comisión" style="width:96px"><template #body="{ data }">
@@ -155,7 +177,7 @@ onMounted(cargar)
             <Button icon="pi pi-trash" size="small" text severity="danger" @click="eliminar(data)" />
           </template></Column>
           <template #empty><div class="vacio">
-            Registrá la liquidación que te envía Datafast, Medianet o tu banco.</div></template>
+            Registra la liquidación que te envía Datafast, Medianet o tu banco.</div></template>
         </DataTable>
       </section>
 
@@ -197,13 +219,18 @@ onMounted(cargar)
     <Dialog :visible="!!dialog" modal header="Registrar liquidación del procesador"
             style="width:520px" @update:visible="dialog = null">
       <div v-if="dialog">
-        <p class="ayuda">Copiá los datos del comprobante que te envía el procesador o del depósito en tu banco.</p>
+        <p class="ayuda">Copia los datos del comprobante que te envía el procesador o del depósito en tu banco.
+          Al guardar se asienta: Debe Bancos (neto), Comisiones y Retenciones / Haber Tarjetas por liquidar (bruto).</p>
         <fieldset class="kvs-fieldset">
           <legend>Datos del depósito</legend>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Fecha:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Banco:</label>
+            <Select v-model="dialog.bank_id" :options="bancos" optionLabel="nombre" optionValue="id" placeholder="Banco donde se acreditó" class="kvs-in" data-testid="liq-banco" />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl"><span class="req-star">*</span> Fecha:</label>
             <DatePicker v-model="dialog.fecha" dateFormat="dd/mm/yy" showIcon class="kvs-in" style="max-width:180px" />
-            <label class="kvs-lbl" style="margin-left:14px;"><span class="req">*</span> Procesador:</label>
+            <label class="kvs-lbl" style="margin-left:14px;"><span class="req-star">*</span> Procesador:</label>
             <InputText v-model="dialog.procesador" class="kvs-in" placeholder="Datafast, Medianet…" />
           </div>
           <div class="kvs-row">
@@ -211,7 +238,7 @@ onMounted(cargar)
             <InputText v-model="dialog.lote" class="kvs-in" style="max-width:160px" />
           </div>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Monto bruto:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Monto bruto:</label>
             <InputNumber v-model="dialog.monto_bruto" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" locale="en-US"
                          class="kvs-in" style="max-width:170px" />
             <label class="kvs-lbl" style="margin-left:14px;">Comisión:</label>
@@ -219,15 +246,30 @@ onMounted(cargar)
                          class="kvs-in" style="max-width:170px" />
           </div>
           <div class="kvs-row">
+            <label class="kvs-lbl">Retención IVA:</label>
+            <InputNumber v-model="dialog.retencion_iva" mode="currency" currency="USD" @focus="($event: Event) => ($event.target as HTMLInputElement).select()" locale="en-US"
+                         class="kvs-in" style="max-width:170px" />
+            <label class="kvs-lbl" style="margin-left:14px;">Retención renta:</label>
+            <InputNumber v-model="dialog.retencion_renta" mode="currency" currency="USD" @focus="($event: Event) => ($event.target as HTMLInputElement).select()" locale="en-US"
+                         class="kvs-in" style="max-width:170px" />
+          </div>
+          <div class="kvs-row">
+            <label class="kvs-lbl"><span class="req-star">*</span> Neto depositado:</label>
+            <InputNumber v-model="dialog.monto_neto" mode="currency" currency="USD" locale="en-US" class="kvs-in" style="max-width:170px" data-testid="liq-neto"
+                         @focus="($event: Event) => ($event.target as HTMLInputElement).select()" @input="dialog.neto_manual = true" />
+            <Button label="Calcular" size="small" text @click="dialog.neto_manual = false; dialog.monto_neto = dialog.monto_bruto ? netoCalculado : null" />
+          </div>
+          <div class="kvs-row">
             <label class="kvs-lbl">Notas:</label>
             <InputText v-model="dialog.notas" class="kvs-in" />
           </div>
         </fieldset>
-        <p class="neto">Se depositará: <b>{{ money((dialog.monto_bruto ?? 0) - (dialog.comision ?? 0)) }}</b></p>
+        <p class="neto">Se depositará: <b>{{ money(dialog.monto_neto ?? netoCalculado) }}</b>
+          <span v-if="descuadre !== 0" class="dif no" data-testid="liq-descuadre">No cuadra: el bruto debe ser neto + comisión + retenciones (diferencia {{ money(Math.abs(descuadre) / 100) }})</span></p>
       </div>
       <template #footer>
         <Button label="Cancelar" text @click="dialog = null" />
-        <Button label="Guardar" icon="pi pi-save" @click="guardarLiquidacion" />
+        <Button label="Guardar" icon="pi pi-save" :disabled="!dialog || !dialog.bank_id || !dialog.monto_bruto || descuadre !== 0" @click="guardarLiquidacion" />
       </template>
     </Dialog>
   </div>

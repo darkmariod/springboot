@@ -29,6 +29,8 @@ import SriDocuments from '../views/SriDocuments.vue'
 import Quotes from '../views/Quotes.vue'
 import Reconciliation from '../views/Reconciliation.vue'
 import Ledger from '../views/Ledger.vue'
+import EstadosFinancieros from '../views/EstadosFinancieros.vue'
+import PeriodosContables from '../views/PeriodosContables.vue'
 import Companies from '../views/Companies.vue'
 import Branches from '../views/Branches.vue'
 import EmissionPoints from '../views/EmissionPoints.vue'
@@ -38,7 +40,7 @@ import Series from '../views/Series.vue'
 import Users from '../views/Users.vue'
 import Audit from '../views/Audit.vue'
 import Advances from '../views/Advances.vue'
-import CreditNotes from '../views/CreditNotes.vue'
+import NotasCreditoDebito from '../views/NotasCreditoDebito.vue'
 import BatchImport from '../views/BatchImport.vue'
 import Employees from '../views/Employees.vue'
 import Payroll from '../views/Payroll.vue'
@@ -52,10 +54,11 @@ import ArticleConversion from '../views/ArticleConversion.vue'
 import CardReconciliation from '../views/CardReconciliation.vue'
 import MassInvoicing from '../views/MassInvoicing.vue'
 import LiquidacionCompra from '../views/LiquidacionCompra.vue'
-import NotaDebito from '../views/NotaDebito.vue'
 import GuiaRemision from '../views/GuiaRemision.vue'
 import Fractionation from '../views/Fractionation.vue'
 import StockReservations from '../views/StockReservations.vue'
+import TomaFisica from '../views/TomaFisica.vue'
+import FixedAssets from '../views/FixedAssets.vue'
 import { actionFor, emitShortcut, LAYOUT_ACTIONS } from '../composables/useShortcuts'
 
 const auth = useAuthStore()
@@ -72,10 +75,10 @@ const componentMap: Record<string, any> = {
   Home, SignatureConfig, Dashboard, Accounts, Placeholder, Contacts, Products, Banks, Pos,
   Branches, Invoices, Purchases, PurchaseEntry, Inventory, Accounting, Cash, Receivables, Payables, Withholdings, EstadoCuenta,
   SriDocuments, Quotes, Reconciliation, Ledger, Companies, EmissionPoints, Suppliers, InventoryReports,
-  Series, Users, Audit, Advances, CreditNotes, BatchImport, Employees, Payroll, Warehouses,
+  Series, Users, Audit, Advances, NotasCreditoDebito, BatchImport, Employees, Payroll, Warehouses,
   Taxes, InventoryAdjustment, InventoryTransfer, SalesReports, ArticleConversion,
-  CardReconciliation, MassInvoicing, LiquidacionCompra, NotaDebito, GuiaRemision,
-  Fractionation, StockReservations,
+  CardReconciliation, MassInvoicing, LiquidacionCompra, GuiaRemision,
+  Fractionation, StockReservations, EstadosFinancieros, PeriodosContables, TomaFisica, FixedAssets,
 }
 
 onMounted(async () => {
@@ -99,7 +102,13 @@ function onKeydown(e: KeyboardEvent) {
   // no la pantalla: nadie quiere perder el formulario por cerrar un combo.
   const t = e.target as HTMLElement | null
   const escribiendo = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
-  if (hit.action === 'cancelar' && escribiendo) return
+  // Lo mismo con Alt+←/→: dentro de un campo con texto mueven el cursor entre palabras. En un campo VACÍO
+  // (por ejemplo el buscador del lanzador) no hay nada que mover, así que sí navegan.
+  const campoVacio = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement
+    ? t.value === ''
+    : !(t?.textContent ?? '').trim()
+  const esNavegacion = hit.action === 'atras' || hit.action === 'adelante'
+  if (escribiendo && (hit.action === 'cancelar' || (esNavegacion && !campoVacio))) return
 
   if (LAYOUT_ACTIONS.includes(hit.action)) {
     e.preventDefault()
@@ -119,8 +128,7 @@ function onKeydown(e: KeyboardEvent) {
 async function cambiarEmpresa(id: number) {
   company.setActive(id)
   await plan.load(id)
-  tabs.tabs.splice(0)
-  tabs.activeKey = null
+  tabs.reset()
   tabs.open(HOME)
   nextTick(() => emitShortcut('buscar'))
 }
@@ -133,6 +141,8 @@ function atajoDeLayout(action: string, payload?: unknown) {
     nextTick(() => emitShortcut('buscar'))
   }
   else if (action === 'cerrar-pestana' && tabs.activeKey) tabs.close(tabs.activeKey)
+  else if (action === 'atras') tabs.atras()
+  else if (action === 'adelante') tabs.adelante()
   else if (action === 'pestana') {
     const t = tabs.tabs[payload as number]
     if (t) tabs.activeKey = t.key
@@ -173,6 +183,17 @@ function atajoDeLayout(action: string, payload?: unknown) {
       <div class="body">
         <div class="workspace">
         <div v-if="tabs.tabs.length" class="tabbar">
+          <!-- Atrás / Adelante: recorren las pantallas en el orden en que se visitaron -->
+          <div class="navegar">
+            <button class="nav-btn" title="Atrás: pantalla anterior (Alt + ←)" aria-label="Atrás"
+                    :disabled="!tabs.puedeAtras" @click="tabs.atras()">
+              <i class="pi pi-arrow-left" />
+            </button>
+            <button class="nav-btn" title="Adelante: pantalla siguiente (Alt + →)" aria-label="Adelante"
+                    :disabled="!tabs.puedeAdelante" @click="tabs.adelante()">
+              <i class="pi pi-arrow-right" />
+            </button>
+          </div>
           <button
             v-for="t in tabs.tabs"
             :key="t.key"
@@ -205,11 +226,11 @@ function atajoDeLayout(action: string, payload?: unknown) {
           <template v-for="t in tabs.tabs" :key="t.key">
             <KeepAlive>
               <component v-if="tabs.activeKey === t.key" :is="componentMap[t.component] ?? Placeholder"
-                         :titulo="t.label" />
+                         :titulo="t.label" v-bind="t.params" />
             </KeepAlive>
           </template>
           <div v-if="!tabs.tabs.length" class="empty">
-            Abrá un módulo del menú para empezar.
+            Abre un módulo del menú para empezar.
           </div>
         </div>
         </div>
@@ -317,6 +338,19 @@ function atajoDeLayout(action: string, payload?: unknown) {
 .cerrar-todas:hover { background: #fbe3e1; color: #d93025; }
 .tabcontent { flex: 1; overflow: auto; background: #fff; }
 .empty { padding: 60px; text-align: center; color: #94a3b8; }
+
+/* Atrás / Adelante: pegados a la izquierda de la barra, siempre visibles al hacer scroll */
+.navegar {
+  position: sticky; left: 0; z-index: 1; flex-shrink: 0; align-self: center;
+  display: flex; gap: 2px; padding: 0 6px 0 0; margin-bottom: 3px; background: #e4e9f1;
+}
+.nav-btn {
+  border: 0; background: transparent; color: #475569; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; font-size: 13px;
+}
+.nav-btn:hover:not(:disabled) { background: #fff; color: #16202e; }
+.nav-btn:focus-visible { outline: 2px solid var(--hr-blue); outline-offset: 1px; }
+.nav-btn:disabled { color: #aab3c0; cursor: default; }
 
 /* Sticky: con muchas pestañas abiertas sigue visible a la derecha */
 .maximizar {

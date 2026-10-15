@@ -130,7 +130,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
 
           <div v-show="tab === 'general'">
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Nombre:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Nombre:</label>
               <InputText v-model="form.nombre" :disabled="!editando" class="kvs-in" />
             </div>
             <div class="kvs-row">

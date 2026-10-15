@@ -130,7 +130,7 @@ onMounted(load)
           <Column header="Disponible"><template #body="{ data: s }">{{ money(s.disponible) }}</template></Column>
         </DataTable>
         <div v-if="usarDialog.seleccion" class="kvs-row">
-          <label class="kvs-lbl"><span class="req">*</span> Monto a cruzar:</label>
+          <label class="kvs-lbl"><span class="req-star">*</span> Monto a cruzar:</label>
           <InputNumber v-model="usarDialog.monto" mode="currency" currency="USD" @focus="($event: Event) => ($event.target as HTMLInputElement).select()" class="kvs-in" />
         </div>
       </div>

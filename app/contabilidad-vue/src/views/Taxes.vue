@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import Button from 'primevue/button'
@@ -14,7 +14,56 @@ import { useCompanyStore } from '../stores/company'
 
 const company = useCompanyStore()
 
-const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
+const money = (n: any) => (Number(n ?? 0) < 0 ? '-$' : '$') + Math.abs(Number(n ?? 0)).toFixed(2)
+
+// La API del 104 devuelve los datos agrupados (ventas, compras, retenciones, calculo_iva, resumen).
+// `ventas.*` ya viene neto de notas de crédito (lo que se declara); `ventas_12`/`compras_12` son nombres históricos:
+// hoy corresponden a la tarifa general (15%).
+interface Fila104 { concepto: string; valor: any; fuerte?: boolean }
+const v104 = computed(() => f104Data.value?.ventas ?? {})
+const c104 = computed(() => f104Data.value?.compras ?? {})
+const r104 = computed(() => f104Data.value?.retenciones ?? {})
+const calc104 = computed(() => f104Data.value?.calculo_iva ?? {})
+const fac104 = computed(() => v104.value.facturas ?? {})
+const notas104 = computed(() => v104.value.notas_credito ?? {})
+const neg = (n: any) => -Number(n ?? 0)
+
+const filasVentas104 = computed<Fila104[]>(() => [
+  { concepto: 'Facturas del período (con IVA)', valor: fac104.value.total_ventas },
+  { concepto: 'Menos: notas de crédito del período (con IVA)', valor: neg(notas104.value.total) },
+  { concepto: 'Ventas netas (con IVA)', valor: v104.value.total_ventas, fuerte: true },
+  { concepto: 'Base neta con tarifa general (15%)', valor: v104.value.ventas_12 },
+  { concepto: 'Base neta con tarifa 0%', valor: v104.value.ventas_0 },
+])
+const filasCompras104 = computed<Fila104[]>(() => [
+  { concepto: 'Total compras (con IVA)', valor: c104.value.total_compras },
+  { concepto: 'Base con tarifa general (15%)', valor: c104.value.compras_12 },
+  { concepto: 'Base con tarifa 0%', valor: c104.value.compras_0 },
+  { concepto: 'IVA pagado en compras (crédito tributario)', valor: c104.value.iva_pagado, fuerte: true },
+])
+// Las dos primeras entran al saldo del IVA; las demás son informativas (renta: ver el formulario 103 y el impuesto a la renta)
+const filasRetenciones104 = computed<Fila104[]>(() => {
+  const filas: Fila104[] = [
+    { concepto: 'Retenciones de IVA recibidas (restan del IVA)', valor: r104.value.recibidas_iva },
+    { concepto: 'Retenciones de IVA emitidas como agente de retención (se pagan con esta declaración)', valor: r104.value.emitidas_iva },
+    { concepto: 'Retenciones de renta recibidas (crédito para el impuesto a la renta; no afectan el IVA)', valor: r104.value.recibidas_renta },
+    { concepto: 'Retenciones de renta emitidas (van al formulario 103; no afectan el IVA)', valor: r104.value.emitidas_renta },
+  ]
+  if (Number(r104.value.recibidas_otras ?? 0) > 0) {
+    filas.push({ concepto: 'Retenciones recibidas sin clasificar (revisa el comprobante; no afectan el IVA)', valor: r104.value.recibidas_otras })
+  }
+  return filas
+})
+// El saldo línea por línea: las filas suman exactamente el valor "A pagar"
+const filasSaldo104 = computed<Fila104[]>(() => [
+  { concepto: 'IVA cobrado en facturas', valor: calc104.value.iva_cobrado_facturas },
+  { concepto: 'Menos: IVA de las notas de crédito del período', valor: neg(calc104.value.menos_iva_notas_credito) },
+  { concepto: 'IVA cobrado neto', valor: calc104.value.iva_cobrado_neto, fuerte: true },
+  { concepto: 'Menos: IVA pagado en compras (crédito tributario)', valor: neg(calc104.value.menos_credito_tributario_compras) },
+  { concepto: 'Menos: retenciones de IVA recibidas', valor: neg(calc104.value.menos_retenciones_iva_recibidas) },
+  { concepto: 'Más: retenciones de IVA emitidas como agente de retención', valor: calc104.value.mas_retenciones_iva_emitidas },
+])
+const saldo104 = computed(() => Number(calc104.value.a_pagar ?? f104Data.value?.saldo_iva ?? 0))
 
 // ─── Formulario 104 ───
 const f104Desde = ref<Date | null>(null)
@@ -53,10 +102,34 @@ async function consultar104() {
 }
 
 // ─── ATS Anual ───
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const anio = ref<number>(new Date().getFullYear())
 const atsLoading = ref(false)
 const atsData = ref<any>(null)
 const atsError = ref<string | null>(null)
+
+// `ventas_mensuales` y `compras_mensuales` llegan como objetos indexados por el número de mes
+const atsMeses = computed(() => {
+  const ventas: Record<string, any> = atsData.value?.ventas_mensuales ?? {}
+  const compras: Record<string, any> = atsData.value?.compras_mensuales ?? {}
+  return Array.from({ length: 12 }, (_, i) => {
+    const v = ventas[i + 1] ?? ventas[String(i + 1)] ?? {}
+    const c = compras[i + 1] ?? compras[String(i + 1)] ?? {}
+    const ivaCobrado = Number(v.iva_cobrado ?? 0)
+    const ivaPagado = Number(c.iva_pagado ?? 0)
+    return {
+      mes: MESES[i],
+      num_facturas: Number(v.num_facturas ?? 0),
+      total_ventas: Number(v.total_ventas ?? 0),
+      iva_cobrado: ivaCobrado,
+      num_compras: Number(c.num_compras ?? 0),
+      total_compras: Number(c.total_compras ?? 0),
+      iva_pagado: ivaPagado,
+      saldo_iva: Math.round((ivaCobrado - ivaPagado) * 100) / 100,
+    }
+  })
+})
+const atsResumen = computed(() => atsData.value?.resumen_anual ?? null)
 
 async function consultarATS() {
   atsError.value = null
@@ -86,11 +159,11 @@ async function consultarATS() {
           <legend>Consulta por período</legend>
           <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
             <div class="kvs-row" style="margin-bottom: 0;">
-              <label class="kvs-lbl" style="min-width: auto;"><span class="req">*</span> Desde:</label>
+              <label class="kvs-lbl" style="min-width: auto;"><span class="req-star">*</span> Desde:</label>
               <DatePicker v-model="f104Desde" dateFormat="dd/mm/yy" showIcon style="width: 160px;" />
             </div>
             <div class="kvs-row" style="margin-bottom: 0;">
-              <label class="kvs-lbl" style="min-width: auto;"><span class="req">*</span> Hasta:</label>
+              <label class="kvs-lbl" style="min-width: auto;"><span class="req-star">*</span> Hasta:</label>
               <DatePicker v-model="f104Hasta" dateFormat="dd/mm/yy" showIcon style="width: 160px;" />
             </div>
             <Button label="Consultar" icon="pi pi-search" :loading="f104Loading" @click="consultar104" />
@@ -106,15 +179,10 @@ async function consultarATS() {
           <Card>
             <template #title>Ventas</template>
             <template #content>
-              <DataTable :value="[
-                { concepto: 'Total ventas', valor: f104Data.total_ventas },
-                { concepto: 'Ventas al 0%', valor: f104Data.ventas_0 },
-                { concepto: 'Ventas al 12%', valor: f104Data.ventas_12 },
-                { concepto: 'IVA cobrado', valor: f104Data.iva_cobrado },
-              ]" size="small" stripedRows>
+              <DataTable :value="filasVentas104" size="small" stripedRows>
                 <Column field="concepto" header="Concepto" />
                 <Column header="Valor">
-                  <template #body="{ data }">{{ money(data.valor) }}</template>
+                  <template #body="{ data }"><strong v-if="data.fuerte">{{ money(data.valor) }}</strong><span v-else>{{ money(data.valor) }}</span></template>
                 </Column>
               </DataTable>
             </template>
@@ -124,15 +192,10 @@ async function consultarATS() {
           <Card>
             <template #title>Compras</template>
             <template #content>
-              <DataTable :value="[
-                { concepto: 'Total compras', valor: f104Data.total_compras },
-                { concepto: 'Compras al 0%', valor: f104Data.compras_0 },
-                { concepto: 'Compras al 12%', valor: f104Data.compras_12 },
-                { concepto: 'IVA pagado', valor: f104Data.iva_pagado },
-              ]" size="small" stripedRows>
+              <DataTable :value="filasCompras104" size="small" stripedRows>
                 <Column field="concepto" header="Concepto" />
                 <Column header="Valor">
-                  <template #body="{ data }">{{ money(data.valor) }}</template>
+                  <template #body="{ data }"><strong v-if="data.fuerte">{{ money(data.valor) }}</strong><span v-else>{{ money(data.valor) }}</span></template>
                 </Column>
               </DataTable>
             </template>
@@ -142,10 +205,7 @@ async function consultarATS() {
           <Card>
             <template #title>Retenciones</template>
             <template #content>
-              <DataTable :value="[
-                { concepto: 'Retenciones recibidas', valor: f104Data.retenciones_recibidas },
-                { concepto: 'Retenciones emitidas', valor: f104Data.retenciones_emitidas },
-              ]" size="small" stripedRows>
+              <DataTable :value="filasRetenciones104" size="small" stripedRows>
                 <Column field="concepto" header="Concepto" />
                 <Column header="Valor">
                   <template #body="{ data }">{{ money(data.valor) }}</template>
@@ -158,17 +218,29 @@ async function consultarATS() {
           <Card>
             <template #title>Saldo del IVA</template>
             <template #content>
+              <Message v-if="Number(notas104.sin_emitir ?? 0) > 0" severity="warn" :closable="false" style="margin-bottom: 8px;">
+                Hay {{ notas104.sin_emitir }} nota(s) de crédito del SRI guardada(s) sin emitir: ya restan en este cálculo, pero el SRI aún no las conoce. Emítelas antes de declarar.
+              </Message>
+              <DataTable :value="filasSaldo104" size="small" stripedRows>
+                <Column field="concepto" header="Concepto" />
+                <Column header="Valor">
+                  <template #body="{ data }"><strong v-if="data.fuerte">{{ money(data.valor) }}</strong><span v-else>{{ money(data.valor) }}</span></template>
+                </Column>
+              </DataTable>
               <div style="text-align: center; padding: 12px 0;">
                 <div style="font-size: 12px; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">
-                  {{ (f104Data.saldo_iva ?? 0) >= 0 ? 'A pagar' : 'Devolución' }}
+                  {{ saldo104 >= 0 ? 'A pagar' : 'Saldo a favor' }}
                 </div>
                 <div :style="{
                   fontSize: '28px',
                   fontWeight: '700',
-                  color: (f104Data.saldo_iva ?? 0) >= 0 ? '#ef4444' : '#22c55e',
+                  color: saldo104 >= 0 ? '#ef4444' : '#22c55e',
                 }">
-                  {{ money(Math.abs(f104Data.saldo_iva ?? 0)) }}
+                  {{ money(Math.abs(saldo104)) }}
                 </div>
+              </div>
+              <div style="font-size: 12px; color: #64748b; line-height: 1.6;">
+                Retenciones de renta recibidas: {{ money(r104.recibidas_renta) }}. Son crédito para el impuesto a la renta y no restan del IVA.
               </div>
             </template>
           </Card>
@@ -181,7 +253,7 @@ async function consultarATS() {
           <legend>Consulta ATS anual</legend>
           <div style="display: flex; gap: 12px; align-items: center;">
             <div class="kvs-row" style="margin-bottom: 0;">
-              <label class="kvs-lbl" style="min-width: auto;"><span class="req">*</span> Año:</label>
+              <label class="kvs-lbl" style="min-width: auto;"><span class="req-star">*</span> Año:</label>
               <InputNumber v-model="anio" :min="2010" :max="2099" style="width: 120px;" />
             </div>
             <Button label="Consultar" icon="pi pi-search" :loading="atsLoading" @click="consultarATS" />
@@ -192,28 +264,50 @@ async function consultarATS() {
           {{ atsError }}
         </Message>
 
-        <DataTable v-if="atsData?.meses" :value="atsData.meses" size="small" stripedRows>
-          <Column field="mes" header="Mes" />
-          <Column header="Ventas">
-            <template #body="{ data }">{{ money(data.ventas) }}</template>
-          </Column>
-          <Column header="Compras">
-            <template #body="{ data }">{{ money(data.compras) }}</template>
-          </Column>
-          <Column header="Ret. recibidas">
-            <template #body="{ data }">{{ money(data.retenciones_recibidas) }}</template>
-          </Column>
-          <Column header="Ret. emitidas">
-            <template #body="{ data }">{{ money(data.retenciones_emitidas) }}</template>
-          </Column>
-          <Column header="Saldo IVA">
-            <template #body="{ data }">
-              <span :style="{ fontWeight: '600', color: (data.saldo_iva ?? 0) >= 0 ? '#ef4444' : '#22c55e' }">
-                {{ money(data.saldo_iva) }}
-              </span>
+        <template v-if="atsData?.ventas_mensuales">
+          <DataTable :value="atsMeses" size="small" stripedRows>
+            <Column field="mes" header="Mes" />
+            <Column field="num_facturas" header="N.° facturas" />
+            <Column header="Ventas">
+              <template #body="{ data }">{{ money(data.total_ventas) }}</template>
+            </Column>
+            <Column header="IVA cobrado">
+              <template #body="{ data }">{{ money(data.iva_cobrado) }}</template>
+            </Column>
+            <Column field="num_compras" header="N.° compras" />
+            <Column header="Compras">
+              <template #body="{ data }">{{ money(data.total_compras) }}</template>
+            </Column>
+            <Column header="IVA pagado">
+              <template #body="{ data }">{{ money(data.iva_pagado) }}</template>
+            </Column>
+            <Column header="Saldo IVA">
+              <template #body="{ data }">
+                <span :style="{ fontWeight: '600', color: (data.saldo_iva ?? 0) >= 0 ? '#ef4444' : '#22c55e' }">
+                  {{ money(data.saldo_iva) }}
+                </span>
+              </template>
+            </Column>
+          </DataTable>
+
+          <Card v-if="atsResumen" style="margin-top: 14px;">
+            <template #title>Resumen anual {{ atsData.anio }}</template>
+            <template #content>
+              <DataTable :value="[
+                { concepto: 'Total ventas', valor: atsResumen.total_ventas },
+                { concepto: 'IVA cobrado', valor: atsResumen.total_iva_cobrado },
+                { concepto: 'Total compras', valor: atsResumen.total_compras },
+                { concepto: 'IVA pagado', valor: atsResumen.total_iva_pagado },
+                { concepto: 'Saldo de IVA del año', valor: atsResumen.saldo_iva_anual },
+              ]" size="small" stripedRows>
+                <Column field="concepto" header="Concepto" />
+                <Column header="Valor">
+                  <template #body="{ data }">{{ money(data.valor) }}</template>
+                </Column>
+              </DataTable>
             </template>
-          </Column>
-        </DataTable>
+          </Card>
+        </template>
       </TabPanel>
     </TabView>
   </div>

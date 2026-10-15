@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
+import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
 import Message from 'primevue/message'
 import api from '../lib/api'
@@ -34,7 +35,47 @@ const form = ref<{
 const selectedProduct = computed(() =>
   products.value.find((p) => p.id === form.value.product_id) ?? null,
 )
-const stockOrigen = computed(() => selectedProduct.value?.stock ?? 0)
+// Stock del producto en la bodega de ORIGEN (el que valida el servidor); mientras no se conozca, el total del producto.
+const stockBodega = ref<number | null>(null)
+const stockOrigen = computed(() => stockBodega.value ?? selectedProduct.value?.stock ?? 0)
+
+// Producto con series: se eligen las series concretas que viajan (tantas como unidades), entre las disponibles en la bodega de origen.
+const manejaSeries = computed(() => !!selectedProduct.value?.maneja_series)
+const seriesDisponibles = ref<string[]>([])
+const seriesElegidas = ref<string[]>([])
+const cantidadEntera = computed(() => form.value.cantidad != null && Number.isInteger(form.value.cantidad))
+const seriesCompletas = computed(
+  () => !manejaSeries.value || (cantidadEntera.value && seriesElegidas.value.length === form.value.cantidad),
+)
+
+// Si cambia rápido de producto o de bodega, solo vale la última respuesta.
+let contextoSeq = 0
+async function cargarContexto() {
+  const seq = ++contextoSeq
+  stockBodega.value = null
+  seriesDisponibles.value = []
+  seriesElegidas.value = []
+  const { product_id, warehouse_origen_id } = form.value
+  if (!product_id || !warehouse_origen_id) return
+  try {
+    const [stock, series] = await Promise.all([
+      api.get('/inventory/stock-bodega', { params: { product_id, warehouse_id: warehouse_origen_id } }),
+      manejaSeries.value
+        ? api.get('/series', { params: { company_id: company.activeId, product_id, estado: 'disponible', warehouse_id: warehouse_origen_id } })
+        : Promise.resolve({ data: [] as any[] }),
+    ])
+    if (seq !== contextoSeq) return
+    stockBodega.value = Number(stock.data.stock_bodega ?? 0)
+    seriesDisponibles.value = (series.data as any[]).map((s) => s.serie)
+  } catch {
+    // Sin el dato de la bodega se usa el stock del producto; el servidor valida igual al transferir.
+  }
+}
+watch(() => [form.value.product_id, form.value.warehouse_origen_id], cargarContexto)
+// Si baja la cantidad, las series elegidas no pueden pasarse
+watch(() => form.value.cantidad, (c) => {
+  if (c != null && seriesElegidas.value.length > c) seriesElegidas.value = seriesElegidas.value.slice(0, c)
+})
 
 async function load() {
   loading.value = true
@@ -57,6 +98,15 @@ async function transferir() {
     msg.value = { type: 'warn', text: 'La bodega de origen y destino no pueden ser la misma.' }
     return
   }
+  if (!seriesCompletas.value) {
+    msg.value = {
+      type: 'warn',
+      text: cantidadEntera.value
+        ? `Este producto maneja series: elige exactamente ${form.value.cantidad} serie(s) de la bodega de origen.`
+        : 'Este producto maneja series: la cantidad debe ser un número entero de unidades.',
+    }
+    return
+  }
   submitting.value = true
   try {
     await api.post('/inventory/transferencia', {
@@ -66,11 +116,14 @@ async function transferir() {
       warehouse_destino_id: form.value.warehouse_destino_id,
       cantidad: form.value.cantidad,
       motivo: form.value.motivo,
+      ...(manejaSeries.value ? { series: seriesElegidas.value } : {}),
     })
     msg.value = { type: 'success', text: 'Transferencia registrada correctamente.' }
     form.value = { product_id: null, warehouse_origen_id: null, warehouse_destino_id: null, cantidad: null, motivo: '' }
+    // El stock cambió: se refresca la lista para no mostrar el valor anterior.
+    products.value = (await api.get('/products?company_id=' + company.activeId)).data
   } catch (err: any) {
-    msg.value = { type: 'error', text: err.response?.data?.message ?? 'No se pudo registrar la transferencia.' }
+    msg.value = { type: 'error', text: err.response?.data?.message ?? err.response?.data?.error ?? 'No se pudo registrar la transferencia.' }
   } finally {
     submitting.value = false
   }
@@ -138,7 +191,9 @@ onMounted(load)
           </label>
 
           <div v-if="form.product_id" style="padding: 10px; background: #f1f5f9; border-radius: 6px;">
-            <span style="font-size: 12px; color: #94a3b8;">Stock actual del producto:</span>
+            <span style="font-size: 12px; color: #94a3b8;">
+              {{ stockBodega != null ? 'Stock en la bodega de origen:' : 'Stock actual del producto:' }}
+            </span>
             <span style="margin-left: 8px; font-weight: 700; font-size: 16px;">
               {{ stockOrigen.toLocaleString() }}
             </span>
@@ -148,6 +203,34 @@ onMounted(load)
             <span style="font-size: 12px; color: #94a3b8;">Cantidad a transferir</span>
             <InputNumber v-model="form.cantidad" :min="1" fluid />
           </label>
+
+          <div v-if="manejaSeries && form.warehouse_origen_id" style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12px; color: #94a3b8;">Series que se transfieren</span>
+            <MultiSelect
+              v-model="seriesElegidas"
+              :options="seriesDisponibles"
+              filter
+              display="chip"
+              :selectionLimit="form.cantidad ?? 0"
+              :maxSelectedLabels="3"
+              placeholder="Seleccione las series de la bodega de origen"
+              :disabled="!form.cantidad"
+              fluid
+            />
+            <div v-if="form.cantidad" style="font-size: 12px;"
+              :style="{ color: seriesCompletas ? '#166534' : '#b45309' }">
+              <template v-if="!cantidadEntera">La cantidad debe ser un número entero de unidades.</template>
+              <template v-else>
+                Elige exactamente {{ form.cantidad }} serie(s) disponible(s) en esta bodega: {{ seriesElegidas.length }} de {{ form.cantidad }}.
+                <span v-if="seriesDisponibles.length < form.cantidad" style="color: #991b1b;">
+                  Solo hay {{ seriesDisponibles.length }} serie(s) disponible(s) en la bodega de origen.
+                </span>
+              </template>
+            </div>
+            <div v-else style="font-size: 12px; color: #64748b;">
+              Este producto maneja series: escribe la cantidad y elige qué series viajan.
+            </div>
+          </div>
 
           <label style="display: flex; flex-direction: column; gap: 4px;">
             <span style="font-size: 12px; color: #94a3b8;">Motivo</span>
@@ -159,7 +242,7 @@ onMounted(load)
               label="Transferir"
               icon="pi pi-arrow-right-arrow-left"
               :loading="submitting"
-              :disabled="!form.product_id || !form.warehouse_origen_id || !form.warehouse_destino_id || !form.cantidad || !form.motivo"
+              :disabled="!form.product_id || !form.warehouse_origen_id || !form.warehouse_destino_id || !form.cantidad || !form.motivo || !seriesCompletas"
               @click="transferir"
             />
           </div>

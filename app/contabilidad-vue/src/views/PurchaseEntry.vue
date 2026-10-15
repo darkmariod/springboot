@@ -13,6 +13,7 @@ import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import ClienteForm from '../components/ClienteForm.vue'
 import RetencionCompra from '../components/RetencionCompra.vue'
+import SeriesInput from '../components/SeriesInput.vue'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { usePlanStore } from '../stores/plan'
@@ -176,6 +177,47 @@ function updateItems(newItems: any[]) {
   items.value = newItems
 }
 
+// ── Series: un producto que las maneja entra con una serie por unidad ──
+const productoDe = (it: any) =>
+  products.value.find((p: any) => p.id === it.producto_id || p.codigo === it.codigo_principal)
+const manejaSeries = (it: any) => {
+  const p = productoDe(it)
+  return !!p?.maneja_series && p.tipo !== 'servicio'
+}
+// Compra nueva: las líneas con series incompletas bloquean el guardado (una compra ya guardada solo cambia su cabecera)
+const seriesPendientes = computed(() => {
+  if (form.value.id) return []
+  return items.value
+    .map((it: any, indice: number) => ({ it, indice }))
+    .filter(({ it }: any) => manejaSeries(it) && Number(it.cantidad) > 0 && (it.series ?? []).length !== Number(it.cantidad))
+    .map(({ it, indice }: any) => ({ indice, codigo: it.codigo_principal, tiene: (it.series ?? []).length, necesita: Number(it.cantidad) }))
+})
+
+const seriesDialog = ref<{ index: number; series: string[]; valido: boolean } | null>(null)
+const lineaDeSeries = computed(() => (seriesDialog.value ? items.value[seriesDialog.value.index] : null))
+function abrirSeries(index: number) {
+  const it = items.value[index]
+  if (!it) return
+  if (!manejaSeries(it)) {
+    msg.value = {
+      type: 'warn',
+      text: 'Este artículo no maneja series. Si debe manejarlas, activa «Aplica Serie» en el artículo.',
+    }
+    return
+  }
+  seriesDialog.value = { index, series: [...(it.series ?? [])], valido: false }
+}
+function setSeriesValidas(v: boolean) {
+  if (seriesDialog.value) seriesDialog.value.valido = v
+}
+function aceptarSeries() {
+  if (!seriesDialog.value) return
+  const nuevos = [...items.value]
+  nuevos[seriesDialog.value.index] = { ...nuevos[seriesDialog.value.index], series: [...seriesDialog.value.series] }
+  items.value = nuevos
+  seriesDialog.value = null
+}
+
 async function guardar() {
   msg.value = null
   if (!form.value.contact_id) {
@@ -184,6 +226,11 @@ async function guardar() {
   }
   if (!items.value.length) {
     msg.value = { type: 'warn', text: 'Agrega al menos un ítem.' }
+    return
+  }
+  if (seriesPendientes.value.length) {
+    tab.value = 'items'
+    msg.value = { type: 'warn', text: 'Faltan series: ' + seriesPendientes.value.map((x: any) => `${x.codigo} (${x.tiene} de ${x.necesita})`).join(', ') + '.' }
     return
   }
 
@@ -295,7 +342,7 @@ onMounted(load)
 
 <template>
   <div style="display:flex; flex-direction:column; height:100%;">
-    <KvsModuleHeader module-name="Compras" :company="{ ruc: company.activeId, razon_social: 'Compras' }" subtitle="Registro/Modificación" />
+    <KvsModuleHeader module-name="Compras" :company="{ ruc: company.activeRuc, razon_social: 'Compras' }" subtitle="Registro/Modificación" />
     <div class="kvs-split" style="flex:1; min-height:0;">
     <!-- ══ Listado de Compras ══ -->
     <section class="kvs-panel kvs-panel--list">
@@ -353,7 +400,7 @@ onMounted(load)
           <!-- Datos del Comprobante -->
           <div v-show="tab === 'datos'">
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Proveedor:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Proveedor:</label>
               <Select v-model="form.contact_id" :options="contacts" optionValue="id"
                       optionLabel="razon_social" placeholder="Buscar proveedor..." filter
                       :disabled="!editando" class="kvs-in" style="flex:1" />
@@ -361,7 +408,7 @@ onMounted(load)
                       title="Proveedor nuevo" @click="nuevoProveedor" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> No. Comprobante:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> No. Comprobante:</label>
               <InputText v-model="form.numero" :disabled="!editando" class="kvs-in" style="max-width:180px" />
               <label class="kvs-lbl" style="margin-left:12px;">Fecha Emisión:</label>
               <InputText v-model="form.fecha_emision" type="date" :disabled="!editando" class="kvs-in" style="max-width:160px" />
@@ -381,7 +428,7 @@ onMounted(load)
               <InputText v-model="form.clave_acceso" :disabled="!editando" class="kvs-in" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Sustento Tributario:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Sustento Tributario:</label>
               <Select v-model="form.sustento_tributario" :options="sustentos" optionLabel="label"
                       optionValue="value" :disabled="!editando" class="kvs-in" style="max-width:340px" />
             </div>
@@ -399,17 +446,24 @@ onMounted(load)
 
           <!-- Detalle de Artículos -->
           <div v-show="tab === 'items'">
+            <Message v-if="editando && seriesPendientes.length" severity="warn" :closable="false" style="margin-bottom:8px;">
+              Los artículos con serie necesitan una serie por unidad antes de guardar:
+              <Button v-for="x in seriesPendientes" :key="x.indice" size="small" outlined icon="pi pi-tag" style="margin:4px 6px 0 0;"
+                      :label="`Series de ${x.codigo} (${x.tiene} de ${x.necesita})`" :data-series-linea="x.indice"
+                      @click="abrirSeries(x.indice)" />
+            </Message>
             <KvsDocGrid
               :items="items"
               :readonly="!editando"
               :product-options="products"
               :warehouse-options="warehouses"
               show-series
-              show-warehouse
+              :show-warehouse="false"
               show-discount
               @update:items="updateItems"
               @add-item="agregarItem"
               @remove-item="removeItem"
+              @scan-serie="abrirSeries"
             />
           </div>
 
@@ -434,7 +488,7 @@ onMounted(load)
         <KvsToolbar
           :buttons="[
             { icon: 'pi pi-times', label: 'Cancelar', action: 'cancelar', visible: editando },
-            { icon: 'pi pi-save', label: 'Guardar', action: 'guardar', disabled: !editando },
+            { icon: 'pi pi-save', label: 'Guardar', action: 'guardar', disabled: !editando || seriesPendientes.length > 0 },
             { icon: 'pi pi-pencil', label: 'Editar', action: 'editar', disabled: editando || !seleccion },
             { icon: 'pi pi-trash', label: 'Eliminar', action: 'eliminar', severity: 'danger',
               visible: !editando, disabled: !seleccion },
@@ -446,6 +500,30 @@ onMounted(load)
     </section>
     </div>
   </div>
+
+  <Dialog :visible="!!seriesDialog" modal :header="'Series de ' + (lineaDeSeries?.descripcion || lineaDeSeries?.codigo_principal || 'el artículo')"
+          style="width:520px;" @update:visible="(v: boolean) => { if (!v) seriesDialog = null }">
+    <template v-if="seriesDialog && lineaDeSeries">
+      <p style="margin:0 0 10px; font-size:13px; color:#475569;">
+        <b>{{ lineaDeSeries.codigo_principal }}</b> · {{ Number(lineaDeSeries.cantidad) }} unidad(es): una serie por unidad.
+      </p>
+      <SeriesInput v-if="editando && !form.id" v-model="seriesDialog.series" :cantidad="Number(lineaDeSeries.cantidad)"
+                   @valido="setSeriesValidas" />
+      <ul v-else style="margin:0; padding-left:18px; font-family:monospace; font-size:13px;">
+        <li v-for="s in seriesDialog.series" :key="s">{{ s }}</li>
+        <li v-if="!seriesDialog.series.length" style="list-style:none; margin-left:-18px; font-family:inherit; color:#64748b;">
+          Esta compra no tiene series guardadas.
+        </li>
+      </ul>
+    </template>
+    <template #footer>
+      <div class="kvs-footer">
+        <Button :label="editando && !form.id ? 'Cancelar' : 'Cerrar'" text @click="seriesDialog = null" />
+        <Button v-if="editando && !form.id" label="Aceptar series" icon="pi pi-check"
+                :disabled="!seriesDialog?.valido" @click="aceptarSeries" />
+      </div>
+    </template>
+  </Dialog>
 
   <Dialog v-model:visible="nuevoProveedorDialog" modal header="Nuevo Proveedor" style="width:520px;">
     <ClienteForm v-model="nuevoProveedorForm" />

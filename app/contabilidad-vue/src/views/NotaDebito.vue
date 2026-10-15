@@ -43,10 +43,15 @@
           <span v-else style="color: #94a3b8">Sin emitir</span>
         </template>
       </Column>
-      <Column header="Acciones" style="width: 200px">
+      <Column header="Acciones" style="width: 260px">
         <template #body="{ data }">
           <Button v-if="!data.interna && data.estado !== 'anulado' && !data.sri_document" icon="pi pi-send" size="small" label="Emitir"
                   @click="emitir(data)" :loading="emitting === data.id" />
+          <!-- El span lleva el aviso: un botón deshabilitado no recibe el ratón -->
+          <span :title="data.interna ? 'Una nota interna no se envía al SRI, por eso no tiene RIDE.' : 'Descargar RIDE (PDF)'">
+            <Button icon="pi pi-file-pdf" size="small" text aria-label="Descargar RIDE (PDF)" label="RIDE"
+                    :loading="rideBusy === data.id" :disabled="data.interna" @click="descargarRide(data)" />
+          </span>
           <Button v-if="data.estado !== 'anulado'" icon="pi pi-ban" size="small" label="Anular" severity="danger" text
                   @click="pedirAnular(data)" />
         </template>
@@ -58,7 +63,7 @@
       <Message v-if="error" severity="error" :closable="false" style="margin-bottom: 10px">{{ error }}</Message>
       <div class="kvs-fieldset">
         <div class="kvs-row">
-          <label class="kvs-lbl"><span class="req">*</span> Factura a la que se carga</label>
+          <label class="kvs-lbl"><span class="req-star">*</span> Factura a la que se carga</label>
           <Select v-model="form.invoice_id" :options="facturasVigentes" optionLabel="etiqueta" optionValue="id" filter
                   class="kvs-in" placeholder="Elige la factura" emptyMessage="No hay facturas vigentes" />
         </div>
@@ -67,9 +72,10 @@
         </div>
         <div class="kvs-row">
           <label class="kvs-lbl">Interna (no se envía al SRI)</label>
-          <ToggleSwitch v-model="form.interna" />
+          <ToggleSwitch v-model="form.interna" :disabled="sinSri" />
           <span style="font-size: 12px; color: #64748b">
-            {{ form.interna ? 'Solo regula saldos: sin comprobante electrónico ni secuencial del SRI.' : 'Comprobante electrónico: se emite al SRI desde la lista.' }}
+            <template v-if="sinSri">Tu plan no incluye la facturación electrónica: la nota es interna, solo regula saldos.</template>
+            <template v-else>{{ form.interna ? 'Solo regula saldos: sin comprobante electrónico ni secuencial del SRI.' : 'Comprobante electrónico: se emite al SRI desde la lista.' }}</template>
           </span>
         </div>
 
@@ -152,8 +158,12 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Checkbox from 'primevue/checkbox'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import { usePlanStore } from '../stores/plan'
 
 const company = useCompanyStore()
+const plan = usePlanStore()
+// Sin facturación electrónica del SRI solo existen las notas internas (regulan saldos y no se envían)
+const sinSri = computed(() => !plan.tiene('facturacion_sri'))
 const rows = ref<any[]>([])
 const invoices = ref<any[]>([])
 const loading = ref(false)
@@ -195,7 +205,7 @@ const tarifasIva = [
 
 const nuevoForm = () => ({
   invoice_id: null as number | null,
-  interna: false,
+  interna: !plan.tiene('facturacion_sri'),
   motivos: [{ razon: '', valor: 0, tarifa: 0 }],
   forma_pago: '01',
 })
@@ -303,6 +313,26 @@ async function confirmarAnular() {
     anularTarget.value = null
   } finally {
     anularBusy.value = false
+  }
+}
+
+// RIDE en PDF (lo arma el servidor con los datos del emisor y de la autorización). Una nota interna no tiene comprobante del SRI.
+const rideBusy = ref<number | null>(null)
+async function descargarRide(r: any) {
+  if (r.interna || rideBusy.value !== null) return
+  rideBusy.value = r.id
+  try {
+    const res = await api.get(`/notas-debito/${r.id}/ride`, { params: { company_id: company.activeId }, responseType: 'blob' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    a.download = 'RIDE-' + (r.numero ?? r.id) + '.pdf'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } catch {
+    msg.value = 'No se pudo generar el RIDE en PDF. Inténtalo de nuevo.'
+    msgOk.value = false
+  } finally {
+    rideBusy.value = null
   }
 }
 

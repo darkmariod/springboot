@@ -60,7 +60,6 @@ const company = useCompanyStore()
 const formas = ref<FormaPago[]>([])
 const docsCruce = ref<DocCruce[]>([])
 const docsCargados = ref(false)
-let nextId = 1
 
 const cruceDisponible = computed(() => props.permiteCruce && !!props.contactId)
 const formasVisibles = computed(() => formas.value.filter(f => !f.es_cruce || cruceDisponible.value))
@@ -90,9 +89,13 @@ async function cargarDocsCruce() {
 watch(hayCruce, (v) => { if (v && !docsCargados.value) cargarDocsCruce() })
 watch(() => [props.contactId, props.lado], () => { docsCargados.value = false; docsCruce.value = []; if (hayCruce.value) cargarDocsCruce() })
 
+// Cada fila nueva toma un id mayor que todos los que ya existen, venga o no sembrada por la pantalla padre
+function siguienteId(): number {
+  return props.modelValue.reduce((max, r) => Math.max(max, Number(r.id) || 0), 0) + 1
+}
 function addRow() {
   const rows = [...props.modelValue]
-  rows.push({ id: nextId++, tipo: null, fecha: '', valor: 0, bank_id: null, documento: null, cuenta: null, documento_cruce: null })
+  rows.push({ id: siguienteId(), tipo: null, fecha: '', valor: 0, bank_id: null, documento: null, cuenta: null, documento_cruce: null })
   emit('update:modelValue', rows)
 }
 function removeRow(id: number) {

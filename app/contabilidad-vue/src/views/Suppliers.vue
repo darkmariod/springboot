@@ -18,6 +18,7 @@ const loading = ref(true)
 const dialog = ref(false)
 const form = ref<any>({})
 const msg = ref<any>(null)
+const aviso = ref('')
 const guardando = ref(false)
 
 const tiposId = [
@@ -35,6 +36,7 @@ async function load() {
 function nuevo() {
   form.value = { tipo_identificacion: '04', es_proveedor: true, es_cliente: false }
   msg.value = null
+  aviso.value = ''
   dialog.value = true
 }
 function editar(r: any) {
@@ -48,8 +50,10 @@ async function guardar() {
   // Un proveedor es un contacto con es_proveedor; puede ser cliente también.
   const payload = { ...form.value, company_id: company.activeId, es_proveedor: true }
   try {
-    if (form.value.id) await api.put('/contacts/' + form.value.id, payload)
+    const edicion = !!form.value.id
+    if (edicion) await api.put('/contacts/' + form.value.id, payload)
     else await api.post('/contacts', payload)
+    aviso.value = 'Proveedor ' + (edicion ? 'actualizado' : 'guardado') + ': ' + (form.value.razon_social ?? '') + '.'
     dialog.value = false
     load()
   } catch (err: any) {
@@ -82,6 +86,8 @@ onShortcut('guardar', () => guardar())
     <p style="color:#94a3b8; font-size:13px; margin:0 0 14px;">
       Cárgalos aquí, o se crean solos al importar compras del SRI.
     </p>
+
+    <Message v-if="aviso" severity="success" :closable="true" style="margin-bottom:12px;" @close="aviso = ''">{{ aviso }}</Message>
 
     <DataTable :value="rows" :loading="loading" size="small" stripedRows paginator :rows="15">
       <Column field="identificacion" header="RUC / CI" />

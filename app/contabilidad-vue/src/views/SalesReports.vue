@@ -20,11 +20,14 @@ import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
 
 const company = useCompanyStore()
 
+// Los módulos de Ventas y de Compras abren esta misma pantalla con el reporte ya elegido
+// (ej. { reporte: 'ventas' }); desde Administración llega sin parámetro y abre en Comprobantes.
+const props = defineProps<{ reporte?: string }>()
+
 const loading = ref(false)
 const msg = ref<{ type: string; text: string } | null>(null)
 const showTable = ref(false)
 
-const tipo = ref('comprobantes')
 const tiposReporte = [
   { label: 'Comprobantes', value: 'comprobantes' },
   { label: 'Ventas', value: 'ventas' },
@@ -32,6 +35,9 @@ const tiposReporte = [
   { label: 'Compras', value: 'compras' },
   { label: 'Compras por sustento tributario', value: 'compras-sustento' },
 ]
+
+// Un valor desconocido en `reporte` se ignora y se abre en Comprobantes
+const tipo = ref(tiposReporte.some((t) => t.value === props.reporte) ? props.reporte! : 'comprobantes')
 
 const titulos: Record<string, string> = {
   comprobantes: 'Reporte de Comprobantes',

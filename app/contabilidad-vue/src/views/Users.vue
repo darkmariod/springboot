@@ -53,7 +53,8 @@ async function load() {
 function seleccionar(r: any) {
   seleccion.value = r
   editando.value = false
-  form.value = { ...r, password: '' }
+  // La casilla solo reconoce true/false: se normaliza por si el servidor devolviera 1/0
+  form.value = { ...r, password: '', activo: Boolean(r.activo) }
 }
 
 function nuevo() {
@@ -170,15 +171,15 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
           <!-- Datos -->
           <div v-show="tab === 'datos'">
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Nombre:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Nombre:</label>
               <InputText v-model="form.name" :disabled="!editando" class="kvs-in" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Email:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Email:</label>
               <InputText v-model="form.email" :disabled="!editando" class="kvs-in" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span v-if="!form.id" class="req">*</span> Contraseña:</label>
+              <label class="kvs-lbl"><span v-if="!form.id" class="req-star">*</span> Contraseña:</label>
               <Password v-model="form.password" :feedback="false" toggleMask :disabled="!editando" class="kvs-in" />
             </div>
           </div>
@@ -186,7 +187,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
           <!-- Permisos -->
           <div v-show="tab === 'permisos'">
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Rol:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Rol:</label>
               <Select v-model="form.rol" :options="roles" optionLabel="label" optionValue="value"
                       :disabled="!editando" class="kvs-in" />
             </div>

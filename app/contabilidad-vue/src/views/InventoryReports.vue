@@ -4,18 +4,25 @@ import RadioButton from 'primevue/radiobutton'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Button from 'primevue/button'
+import Select from 'primevue/select'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 
 // Reportes de inventario con parámetros, al estilo KVS: panel de parámetros + reporte documento.
 const company = useCompanyStore()
-const tipo = ref('existencias')       // existencias | valorado | series
+const tipo = ref('existencias')       // existencias | valorado | series | movimientos
 const filtroArticulo = ref('')
 const existenciaMinima = ref<number | null>(null)
 const generado = ref(false)
+const truncado = ref(false)
 const cargando = ref(false)
 const filas = ref<any[]>([])
 const totales = ref<any>({})
+// Reporte de movimientos con su origen (compra, venta, ajuste, toma física...)
+const desde = ref('')
+const hastaFecha = ref('')
+const origen = ref<string | null>(null)
+const origenes = ref<any[]>([])
 
 const money = (n: any) => '$' + Number(n).toFixed(2)
 const hoy = new Date().toISOString().slice(0, 10)
@@ -25,12 +32,20 @@ const titulos: Record<string, string> = {
   existencias: 'RESUMEN DE EXISTENCIAS POR BODEGA',
   valorado: 'INVENTARIO VALORADO AL COSTO PROMEDIO',
   series: 'RESUMEN GENERAL DE EXISTENCIAS POR SERIES',
+  movimientos: 'MOVIMIENTOS DE INVENTARIO POR ORIGEN',
 }
 
 async function generar() {
   cargando.value = true; generado.value = false
   try {
-    if (tipo.value === 'series') {
+    if (tipo.value === 'movimientos') {
+      const data = (await api.get('/inventory/movimientos', { params: {
+        company_id: company.activeId, desde: desde.value || undefined, hasta: hastaFecha.value || undefined, origen: origen.value || undefined,
+      } })).data
+      origenes.value = data.origenes
+      filas.value = data.movimientos
+      truncado.value = !!data.resumen.truncado
+    } else if (tipo.value === 'series') {
       const series = (await api.get('/series?company_id=' + company.activeId + '&estado=disponible')).data
       const porProducto: Record<string, any> = {}
       for (const s of series) {
@@ -59,7 +74,13 @@ async function generar() {
         (f.codigo ?? '').toLowerCase().includes(q) ||
         (f.descripcion ?? f.nombre ?? '').toLowerCase().includes(q))
     }
-    if (existenciaMinima.value !== null) {
+    if (tipo.value === 'movimientos') {
+      totales.value = {
+        movimientos: filas.value.length,
+        ingresos: filas.value.filter((f: any) => f.tipo === 'ingreso').reduce((s: number, f: any) => s + Number(f.valor), 0),
+        egresos: filas.value.filter((f: any) => f.tipo === 'egreso').reduce((s: number, f: any) => s + Number(f.valor), 0),
+      }
+    } else if (existenciaMinima.value !== null) {
       filas.value = filas.value.filter((f: any) => Number(f.stock ?? f.series) > existenciaMinima.value!)
     }
     generado.value = true
@@ -67,17 +88,22 @@ async function generar() {
 }
 function resetear() {
   tipo.value = 'existencias'; filtroArticulo.value = ''; existenciaMinima.value = null
+  desde.value = ''; hastaFecha.value = ''; origen.value = null
   generado.value = false; filas.value = []
 }
 function imprimir() { window.print() }
 function exportarCsv() {
-  const cab = tipo.value === 'series'
-    ? ['Codigo', 'Nombre', 'Series', 'Precio venta', 'Precio total']
-    : ['Codigo', 'Descripcion', 'Stock', 'Costo promedio', 'Valor']
-  const cuerpo = filas.value.map((f: any) => tipo.value === 'series'
-    ? [f.codigo, f.nombre, f.series, f.precio, (f.series * f.precio).toFixed(2)]
-    : [f.codigo, f.descripcion, f.stock, f.costo_promedio, f.valor])
-  const csv = [cab, ...cuerpo].map((r) => r.join(';')).join('\n')
+  const cab = tipo.value === 'movimientos'
+    ? ['Fecha', 'Codigo', 'Producto', 'Bodega', 'Origen', 'Numero', 'Detalle', 'Tipo', 'Cantidad', 'Costo unitario', 'Valor']
+    : tipo.value === 'series'
+      ? ['Codigo', 'Nombre', 'Series', 'Precio venta', 'Precio total']
+      : ['Codigo', 'Descripcion', 'Stock', 'Costo promedio', 'Valor']
+  const cuerpo = filas.value.map((f: any) => tipo.value === 'movimientos'
+    ? [f.fecha, f.codigo, f.descripcion, f.bodega ?? '', f.origen_label, f.origen_numero ?? '', f.origen_detalle ?? '', f.tipo, f.cantidad, f.costo_unitario, f.valor]
+    : tipo.value === 'series'
+      ? [f.codigo, f.nombre, f.series, f.precio, (f.series * f.precio).toFixed(2)]
+      : [f.codigo, f.descripcion, f.stock, f.costo_promedio, f.valor])
+  const csv = [cab, ...cuerpo].map((r) => r.map((c: any) => String(c ?? '').replace(/;/g, ',')).join(';')).join('\n')
   const a = document.createElement('a')
   a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
   a.download = 'reporte-inventario-' + tipo.value + '.csv'
@@ -99,20 +125,39 @@ function exportarCsv() {
           <RadioButton v-model="tipo" value="valorado" /> Existencias Valorado</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
           <RadioButton v-model="tipo" value="series" /> Existencia - Resumido Series</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+          <RadioButton v-model="tipo" value="movimientos" /> Movimientos por origen</label>
       </div>
 
       <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; margin-bottom:12px;">
         Artículo
         <InputText v-model="filtroArticulo" placeholder="Código o nombre" fluid />
       </label>
-      <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; margin-bottom:12px;">
-        Existencia mayor que
-        <InputNumber v-model="existenciaMinima" :useGrouping="false" fluid />
-      </label>
-      <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; margin-bottom:18px;">
-        Hasta
-        <InputText :modelValue="hoy" disabled fluid />
-      </label>
+      <template v-if="tipo === 'movimientos'">
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; margin-bottom:12px;">
+          Desde
+          <InputText v-model="desde" type="date" fluid aria-label="Desde" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; margin-bottom:12px;">
+          Hasta
+          <InputText v-model="hastaFecha" type="date" fluid aria-label="Hasta" />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; margin-bottom:18px;">
+          Origen
+          <Select v-model="origen" :options="origenes" optionLabel="label" optionValue="tipo" showClear placeholder="Todos los orígenes"
+                  :emptyMessage="'Genera el reporte una vez para ver los orígenes'" fluid />
+        </label>
+      </template>
+      <template v-else>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; margin-bottom:12px;">
+          Existencia mayor que
+          <InputNumber v-model="existenciaMinima" :useGrouping="false" fluid />
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; margin-bottom:18px;">
+          Hasta
+          <InputText :modelValue="hoy" disabled fluid />
+        </label>
+      </template>
 
       <div style="display:flex; gap:8px;">
         <Button label="Generar" icon="pi pi-cog" size="small" :loading="cargando" @click="generar" />
@@ -138,7 +183,12 @@ function exportarCsv() {
           <div style="font-weight:800; font-size:17px;">{{ empresa?.razon_social }}</div>
           <div style="font-weight:700; font-size:14px; margin-top:2px;">{{ titulos[tipo] }}</div>
         </div>
-        <div style="font-size:12px; margin-bottom:12px;">
+        <div v-if="tipo === 'movimientos'" style="font-size:12px; margin-bottom:12px;">
+          <div><b>Período:</b> {{ desde || 'desde el inicio' }} — {{ hastaFecha || hoy }}</div>
+          <div><b>Origen:</b> {{ origenes.find((o: any) => o.tipo === origen)?.label ?? 'Todos' }}</div>
+          <div v-if="truncado" style="color:#b45309;">Hay más movimientos de los que caben en el reporte: acota las fechas para ver el resto.</div>
+        </div>
+        <div v-else style="font-size:12px; margin-bottom:12px;">
           <div><b>Hasta el:</b> {{ hoy }}</div>
           <div><b>Bodega:</b> BODEGA GENERAL</div>
         </div>
@@ -146,9 +196,16 @@ function exportarCsv() {
         <table style="width:100%; border-collapse:collapse; font-size:12px;">
           <thead>
             <tr style="border-top:2px solid #1f2733; border-bottom:2px solid #1f2733;">
+              <th v-if="tipo === 'movimientos'" style="text-align:left; padding:5px 6px;">Fecha</th>
               <th style="text-align:left; padding:5px 6px;">Código</th>
               <th style="text-align:left; padding:5px 6px;">Nombre</th>
-              <template v-if="tipo === 'series'">
+              <template v-if="tipo === 'movimientos'">
+                <th style="text-align:left; padding:5px 6px;">Bodega</th>
+                <th style="text-align:left; padding:5px 6px;">Origen</th>
+                <th style="text-align:right; padding:5px 6px;">Cantidad</th>
+                <th style="text-align:right; padding:5px 6px;">Valor</th>
+              </template>
+              <template v-else-if="tipo === 'series'">
                 <th style="text-align:right; padding:5px 6px;"># Series</th>
                 <th style="text-align:right; padding:5px 6px;">Precio venta</th>
                 <th style="text-align:right; padding:5px 6px;">Precio total</th>
@@ -161,10 +218,22 @@ function exportarCsv() {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="f in filas" :key="f.codigo" style="border-bottom:1px solid #eee;">
-              <td style="padding:4px 6px;">{{ f.codigo }}</td>
+            <tr v-for="f in filas" :key="tipo === 'movimientos' ? f.id : f.codigo" style="border-bottom:1px solid #eee;">
+              <td v-if="tipo === 'movimientos'" style="padding:4px 6px; white-space:nowrap;">{{ f.fecha }}</td>
+              <td style="padding:4px 6px; white-space:nowrap;">{{ f.codigo }}</td>
               <td style="padding:4px 6px;">{{ f.descripcion ?? f.nombre }}</td>
-              <template v-if="tipo === 'series'">
+              <template v-if="tipo === 'movimientos'">
+                <td style="padding:4px 6px;">{{ f.bodega ?? '—' }}</td>
+                <td style="padding:4px 6px;">
+                  <b>{{ f.origen_label }}</b>{{ f.origen_numero ? ' ' + f.origen_numero : '' }}
+                  <div v-if="f.origen_detalle" style="font-size:10.5px; color:#64748b;">{{ f.origen_detalle }}</div>
+                </td>
+                <td style="text-align:right; padding:4px 6px;" :style="{ color: f.tipo === 'egreso' ? '#991b1b' : '#166534' }">
+                  {{ f.tipo === 'egreso' ? '-' : '+' }}{{ Number(f.cantidad) }}
+                </td>
+                <td style="text-align:right; padding:4px 6px;">{{ money(f.valor) }}</td>
+              </template>
+              <template v-else-if="tipo === 'series'">
                 <td style="text-align:right; padding:4px 6px;">{{ f.series }}</td>
                 <td style="text-align:right; padding:4px 6px;">{{ money(f.precio) }}</td>
                 <td style="text-align:right; padding:4px 6px;">{{ money(f.series * f.precio) }}</td>
@@ -177,7 +246,13 @@ function exportarCsv() {
             </tr>
           </tbody>
           <tfoot>
-            <tr style="border-top:2px solid #1f2733; font-weight:700;">
+            <tr v-if="tipo === 'movimientos'" style="border-top:2px solid #1f2733; font-weight:700;">
+              <td colspan="5" style="padding:6px;">Totales: {{ totales.movimientos }} movimientos</td>
+              <td style="text-align:right; padding:6px;" colspan="2">
+                Ingresos {{ money(totales.ingresos ?? 0) }} · Egresos {{ money(totales.egresos ?? 0) }}
+              </td>
+            </tr>
+            <tr v-else style="border-top:2px solid #1f2733; font-weight:700;">
               <td colspan="2" style="padding:6px;">Totales: {{ totales.articulos }} artículos</td>
               <td style="text-align:right; padding:6px;">{{ tipo === 'series' ? totales.series : Number(totales.unidades ?? 0).toFixed(2) }}</td>
               <td></td>

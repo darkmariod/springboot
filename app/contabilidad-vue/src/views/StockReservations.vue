@@ -86,7 +86,7 @@ onMounted(load)
 
 <template>
   <div style="display: flex; flex-direction: column; height: 100%;">
-    <KvsModuleHeader module-name="Inventario" :company="{ ruc: company.activeId, razon_social: 'Reservas de Stock' }" subtitle="Reservar unidades para pedidos pendientes" />
+    <KvsModuleHeader module-name="Inventario" :company="{ ruc: company.activeRuc, razon_social: 'Reservas de Stock' }" subtitle="Reservar unidades para pedidos pendientes" />
     <div style="padding: 20px; flex: 1; overflow: auto;">
       <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom: 14px;">{{ msg.text }}</Message>
 
@@ -96,7 +96,7 @@ onMounted(load)
           <fieldset class="kvs-fieldset">
             <legend>Datos de la reserva</legend>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Artículo:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Artículo:</label>
               <Select v-model="form.product_id" :options="products" optionLabel="descripcion" optionValue="id"
                       filter filterPlaceholder="Buscar..." placeholder="Seleccione artículo" :loading="loading" class="kvs-in" />
             </div>
@@ -106,7 +106,7 @@ onMounted(load)
                       filter placeholder="Opcional" class="kvs-in" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Cantidad:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Cantidad:</label>
               <InputNumber v-model="form.quantity" :min="0.01" class="kvs-in" />
             </div>
             <div class="kvs-row">

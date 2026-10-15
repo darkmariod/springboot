@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import DataTable from 'primevue/datatable'
 import { useTabsStore } from '../stores/tabs'
 import { useQuickActionStore } from '../stores/quickAction'
@@ -17,6 +17,14 @@ import { useCompanyStore } from '../stores/company'
 import { onShortcut } from '../composables/useShortcuts'
 
 // "Listado de Artículos" + "Detalle Artículo" con pestañas — igual al sistema del creador.
+// El menú la abre dos veces: con tipo 'bien' (Bienes / inventario) y con tipo 'servicio' (Servicios).
+// Sin tipo muestra todo, como antes.
+const props = defineProps<{ tipo?: 'bien' | 'servicio' }>()
+const esServicios = computed(() => props.tipo === 'servicio')
+const nombres = computed(() => esServicios.value
+  ? { lista: 'Listado de Servicios', detalle: 'Detalle Servicio', nuevo: 'Nuevo servicio', uno: 'un servicio', guardado: 'Servicio guardado.' }
+  : { lista: 'Listado de Artículos', detalle: 'Detalle Artículo', nuevo: 'Nuevo artículo', uno: 'un artículo', guardado: 'Artículo guardado.' })
+const delTipo = (r: any) => !props.tipo || (props.tipo === 'servicio' ? r.tipo === 'servicio' : r.tipo !== 'servicio')
 const company = useCompanyStore()
 const rows = ref<any[]>([])
 const loading = ref(true)
@@ -56,11 +64,33 @@ const manejos = [
 ]
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 
-const filtrados = computed(() => rows.value.filter((r: any) => {
+// Buscar «por nombre, código o número de serie»: lo que se escribe en Nombre (3 caracteres o más) también se busca entre las
+// series, y el equipo dueño de la serie aparece con la serie que coincidió.
+const porSerie = ref<Record<number, string[]>>({})
+let temporizadorSerie: ReturnType<typeof setTimeout> | undefined
+let busquedaSerieSeq = 0
+watch(() => filtro.value.nombre, (texto) => {
+  clearTimeout(temporizadorSerie)
+  const t = texto.trim()
+  if (t.length < 3) { porSerie.value = {}; return }
+  const seq = ++busquedaSerieSeq
+  temporizadorSerie = setTimeout(async () => {
+    try {
+      const res = await api.get('/products', { params: { company_id: company.activeId, serie: t } })
+      if (seq !== busquedaSerieSeq) return
+      porSerie.value = Object.fromEntries(res.data.map((p: any) => [p.id, (p.series ?? []).map((x: any) => x.serie)]))
+    } catch { if (seq === busquedaSerieSeq) porSerie.value = {} }
+  }, 350)
+})
+onBeforeUnmount(() => clearTimeout(temporizadorSerie))
+const seriesQueCoinciden = (r: any): string[] => (filtro.value.nombre.trim().length >= 3 ? porSerie.value[r.id] : undefined) ?? []
+
+const delModulo = computed(() => rows.value.filter(delTipo))
+const filtrados = computed(() => delModulo.value.filter((r: any) => {
   const c = filtro.value.codigo.toLowerCase()
   const n = filtro.value.nombre.toLowerCase()
   return (!c || (r.codigo ?? '').toLowerCase().includes(c))
-    && (!n || (r.descripcion ?? '').toLowerCase().includes(n))
+    && (!n || (r.descripcion ?? '').toLowerCase().includes(n) || seriesQueCoinciden(r).length > 0)
 }))
 
 async function load() {
@@ -92,7 +122,7 @@ function nuevo() {
   seleccion.value = null
   editando.value = true
   tab.value = 'general'
-  form.value = { tipo: 'bien', tarifa_iva: 15, precio: 0, manejo: 'ninguno',
+  form.value = { tipo: props.tipo ?? 'bien', tarifa_iva: 15, precio: 0, manejo: 'ninguno',
     es_combo: false, stock_minimo: 0, stock_maximo: 0, ubicacion: '', codigo: '', descripcion: '' }
   precios.value = []; codigos.value = []; componentes.value = []
 }
@@ -127,7 +157,7 @@ async function guardar() {
     msg.value = { type: 'error', text: e ? Object.values(e).flat().join(' · ') : 'No se pudo guardar.' }
     return
   }
-  msg.value = { type: 'success', text: 'Artículo guardado.' }
+  msg.value = { type: 'success', text: nombres.value.guardado }
   editando.value = false
   await load()
   const fresco = rows.value.find((r: any) => r.id === form.value.id)
@@ -176,37 +206,45 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
   <div class="kvs-split">
     <!-- ══ Listado de Artículos ══ -->
     <section class="kvs-panel" style="width:440px; flex-shrink:0;">
-      <div class="kvs-panel-title">Listado de Artículos</div>
+      <div class="kvs-panel-title">{{ nombres.lista }}</div>
       <div class="kvs-search">
         <span style="font-size:12px; color:#546e7a;">Búsqueda</span>
         <InputText v-model="filtro.codigo" placeholder="Código" size="small" style="width:90px" />
-        <InputText v-model="filtro.nombre" placeholder="Nombre" size="small" style="flex:1" />
-        <Button icon="pi pi-plus" size="small" text @click="nuevo" title="Nuevo artículo" />
+        <InputText v-model="filtro.nombre" placeholder="Nombre o serie" size="small" style="flex:1"
+                   title="Busca por nombre; con 3 letras o más también por número de serie" />
+        <Button icon="pi pi-plus" size="small" text @click="nuevo" :title="nombres.nuevo" />
       </div>
       <DataTable :value="filtrados" :loading="loading" size="small" scrollable scrollHeight="flex"
                  selectionMode="single" :selection="seleccion" dataKey="id" stripedRows
                  @row-select="(e) => seleccionar(e.data)" class="kvs-grid">
         <Column field="codigo" header="Código" style="width:80px" />
-        <Column field="descripcion" header="Nombre" />
-        <Column header="Stock" style="width:70px">
+        <Column field="descripcion" header="Nombre">
+          <template #body="{ data }">
+            {{ data.descripcion }}
+            <div v-if="seriesQueCoinciden(data).length" class="prod-serie-coincide">
+              <i class="pi pi-tag" /> Serie: {{ seriesQueCoinciden(data).slice(0, 3).join(', ') }}<span v-if="seriesQueCoinciden(data).length > 3"> y {{ seriesQueCoinciden(data).length - 3 }} más</span>
+            </div>
+          </template>
+        </Column>
+        <Column v-if="!esServicios" header="Stock" style="width:70px">
           <template #body="{ data }">{{ Number(data.stock ?? 0) }}</template>
         </Column>
-        <Column header="" style="width:36px">
+        <Column v-if="!esServicios" header="" style="width:36px">
           <template #body="{ data }">
             <Button v-if="data.tipo !== 'servicio'" icon="pi pi-sliders-h" text rounded size="small"
                     title="Ajustar stock" @click.stop="ajustarStock(data)" />
           </template>
         </Column>
       </DataTable>
-      <div class="kvs-panel-foot">Mostrando {{ filtrados.length }} de {{ rows.length }}</div>
+      <div class="kvs-panel-foot">Mostrando {{ filtrados.length }} de {{ delModulo.length }}</div>
     </section>
 
     <!-- ══ Detalle Artículo ══ -->
     <section class="kvs-panel" style="flex:1;">
-      <div class="kvs-panel-title">Detalle Artículo</div>
+      <div class="kvs-panel-title">{{ nombres.detalle }}</div>
 
       <div v-if="!form.id && !editando" class="kvs-empty">
-        Elige un artículo del listado, o toca <b>+</b> para crear uno nuevo.
+        Elige {{ nombres.uno }} del listado, o toca <b>+</b> para crear uno nuevo.
       </div>
 
       <template v-else>
@@ -222,28 +260,28 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
           <!-- General -->
           <div v-show="tab === 'general'">
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Código:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Código:</label>
               <InputText v-model="form.codigo" :disabled="!editando" class="kvs-in" style="max-width:180px" />
               <label class="kvs-lbl" style="margin-left:16px;">Referencia:</label>
               <InputText v-model="form.referencia" :disabled="!editando" class="kvs-in" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Nombre:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Nombre:</label>
               <InputText v-model="form.descripcion" :disabled="!editando" class="kvs-in" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Tipo:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Tipo:</label>
               <Select v-model="form.tipo" :options="tipos" optionLabel="label" optionValue="value"
-                      :disabled="!editando" class="kvs-in" />
-              <label class="kvs-lbl" style="margin-left:16px;"><span class="req">*</span> Aplica Serie/Lote:</label>
+                      :disabled="!editando || !!props.tipo" class="kvs-in" />
+              <label class="kvs-lbl" style="margin-left:16px;"><span class="req-star">*</span> Aplica Serie/Lote:</label>
               <Select v-model="form.manejo" :options="manejos" optionLabel="label" optionValue="value"
                       :disabled="!editando" class="kvs-in" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Porcentaje IVA:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Porcentaje IVA:</label>
               <Select v-model="form.tarifa_iva" :options="ivas" optionLabel="label" optionValue="value"
                       :disabled="!editando" class="kvs-in" style="max-width:120px" />
-              <label class="kvs-lbl" style="margin-left:16px;"><span class="req">*</span> Precio venta:</label>
+              <label class="kvs-lbl" style="margin-left:16px;"><span class="req-star">*</span> Precio venta:</label>
               <InputNumber v-model="form.precio" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()"
                            :disabled="!editando" class="kvs-in" style="max-width:160px" />
             </div>
@@ -344,7 +382,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
               descarga del stock cada componente.
             </p>
             <Message v-if="!form.es_combo" severity="info" :closable="false">
-              Marcá "Es combo" en la pestaña General para armarlo con componentes.
+              Marca «Es combo» en la pestaña General para armarlo con componentes.
             </Message>
             <template v-else>
               <table class="kvs-table">
@@ -393,5 +431,9 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
     </section>
   </div>
 </template>
+
+<style scoped>
+.prod-serie-coincide { font-size: 11px; color: #0f766e; font-family: monospace; }
+</style>
 
 /* KVS classes are global in style.css — no scoped styles needed */

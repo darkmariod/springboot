@@ -65,10 +65,15 @@ onMounted(load)
       <Column header="Valor"><template #body="{ data }">{{ money(data.valor) }}</template></Column>
     </DataTable>
 
-    <Dialog :visible="!!kardex" modal :header="'Kardex — ' + (kardex?.producto?.descripcion ?? '')" style="width:640px" @update:visible="kardex=null">
+    <Dialog :visible="!!kardex" modal :header="'Kardex — ' + (kardex?.producto?.descripcion ?? '')" style="width:960px" @update:visible="kardex=null">
       <DataTable v-if="kardex?.movimientos" :value="kardex.movimientos" size="small" stripedRows>
         <Column header="Fecha"><template #body="{ data }">{{ String(data.fecha).slice(0,10) }}</template></Column>
         <Column field="tipo" header="Tipo" />
+        <!-- De dónde vino el movimiento: el servidor lo arma con la relación real (compra, factura, toma física...) -->
+        <Column header="Origen" style="min-width:200px"><template #body="{ data }">
+          <div><b>{{ data.origen_label }}</b>{{ data.origen_numero ? ' ' + data.origen_numero : '' }}</div>
+          <div v-if="data.origen_detalle" style="font-size:11px; color:#64748b;">{{ data.origen_detalle }}</div>
+        </template></Column>
         <Column field="concepto" header="Concepto" />
         <Column header="Cant."><template #body="{ data }">{{ data.tipo==='egreso'?'-':'+' }}{{ Number(data.cantidad) }}</template></Column>
         <Column header="Saldo"><template #body="{ data }">{{ Number(data.saldo_cantidad) }}</template></Column>

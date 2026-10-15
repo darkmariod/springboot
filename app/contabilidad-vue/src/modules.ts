@@ -1,6 +1,8 @@
 import type { WorkTab } from './stores/tabs'
 
-export type ModuleItem = WorkTab & { feature?: string; disabled?: boolean }
+// oculto: no sale en el lanzador ni en la búsqueda, pero la pantalla sigue existiendo y se abre
+// desde otra (ej. Facturación Masiva, desde el botón de Facturas). Conserva su clave de PERMISOS.
+export type ModuleItem = WorkTab & { feature?: string; disabled?: boolean; oculto?: boolean }
 
 export const modules: { label: string; items: ModuleItem[] }[] = [
   {
@@ -13,7 +15,8 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
     label: 'Catálogo',
     items: [
       { key: 'contacts', label: 'Clientes', icon: 'pi pi-users', component: 'Contacts', feature: 'catalogo' },
-      { key: 'products', label: 'Productos y servicios', icon: 'pi pi-box', component: 'Products', feature: 'catalogo' },
+      { key: 'bienes', label: 'Bienes (inventario)', icon: 'pi pi-box', component: 'Products', feature: 'catalogo', params: { tipo: 'bien' } },
+      { key: 'servicios', label: 'Servicios', icon: 'pi pi-briefcase', component: 'Products', feature: 'catalogo', params: { tipo: 'servicio' } },
       { key: 'accounts', label: 'Plan de cuentas', icon: 'pi pi-sitemap', component: 'Accounts', feature: 'contabilidad' },
     ],
   },
@@ -24,13 +27,16 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'invoices', label: 'Facturas', icon: 'pi pi-file', component: 'Invoices', feature: 'ventas' },
       { key: 'quotes', label: 'Cotizaciones', icon: 'pi pi-file-edit', component: 'Quotes', feature: 'ventas' },
       { key: 'advances', label: 'Anticipos', icon: 'pi pi-arrow-down-left', component: 'Advances', feature: 'cartera' },
-      { key: 'credit-notes', label: 'Notas de crédito', icon: 'pi pi-file-excel', component: 'CreditNotes', feature: 'cartera' },
+      // Notas de crédito y de débito juntas. Van con 'cartera' (no con 'facturacion_sri'): las internas
+      // regulan saldos y existen también en los planes sin facturación electrónica.
+      { key: 'notas-credito-debito', label: 'Notas de crédito y débito', icon: 'pi pi-receipt', component: 'NotasCreditoDebito', feature: 'cartera' },
       { key: 'receivables', label: 'Cuentas por cobrar', icon: 'pi pi-wallet', component: 'Receivables', feature: 'cartera' },
       { key: 'estado-cuenta-clientes', label: 'Estado de cuenta de clientes', icon: 'pi pi-chart-bar', component: 'EstadoCuenta', feature: 'cartera' },
       { key: 'sales-ret', label: 'Retenciones recibidas', icon: 'pi pi-percentage', component: 'Withholdings', feature: 'ventas' },
-      { key: 'notas-debito', label: 'Nota de Débito', icon: 'pi pi-file-edit', component: 'NotaDebito', feature: 'facturacion_sri' },
       { key: 'guias-remision', label: 'Guía de Remisión', icon: 'pi pi-truck', component: 'GuiaRemision', feature: 'facturacion_sri' },
-      { key: 'mass-invoicing', label: 'Facturación Masiva', icon: 'pi pi-copy', component: 'MassInvoicing', feature: 'facturacion_masiva' },
+      { key: 'reportes-ventas', label: 'Reportes de ventas', icon: 'pi pi-file-export', component: 'SalesReports', feature: 'reportes', params: { reporte: 'ventas' } },
+      // Se abre desde el botón "Facturación masiva" de Facturas
+      { key: 'mass-invoicing', label: 'Facturación Masiva', icon: 'pi pi-copy', component: 'MassInvoicing', feature: 'facturacion_masiva', oculto: true },
     ],
   },
   {
@@ -43,6 +49,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'liquidacion-compra', label: 'Liq. de Compra', icon: 'pi pi-file', component: 'LiquidacionCompra', feature: 'facturacion_sri' },
       { key: 'payables', label: 'Cuentas por pagar', icon: 'pi pi-credit-card', component: 'Payables', feature: 'cartera' },
       { key: 'estado-cuenta-proveedores', label: 'Estado de cuenta de proveedores', icon: 'pi pi-chart-bar', component: 'EstadoCuenta', feature: 'cartera' },
+      { key: 'reportes-compras', label: 'Reportes de compras', icon: 'pi pi-file-export', component: 'SalesReports', feature: 'reportes', params: { reporte: 'compras' } },
     ],
   },
   {
@@ -53,6 +60,7 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
       { key: 'series', label: 'Garantías por serie', icon: 'pi pi-qrcode', component: 'Series', feature: 'series' },
       { key: 'inventory-reports', label: 'Reportes de inventario', icon: 'pi pi-print', component: 'InventoryReports', feature: 'reportes' },
       { key: 'inventory-adjustment', label: 'Ajuste Inventario', icon: 'pi pi-sliders-h', component: 'InventoryAdjustment', feature: 'inventario' },
+      { key: 'toma-fisica', label: 'Toma física', icon: 'pi pi-list-check', component: 'TomaFisica', feature: 'inventario' },
       { key: 'inventory-transfer', label: 'Transferencia', icon: 'pi pi-arrow-right-arrow-left', component: 'InventoryTransfer', feature: 'inventario' },
       { key: 'article-conversion', label: 'Conversión Artículos', icon: 'pi pi-refresh', component: 'ArticleConversion', feature: 'conversion_articulos' },
       { key: 'fractionation', label: 'Fraccionamiento', icon: 'pi pi-scissors', component: 'Fractionation', feature: 'fraccionamiento' },
@@ -73,6 +81,9 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
     items: [
       { key: 'journal', label: 'Libro diario', icon: 'pi pi-book', component: 'Accounting', feature: 'contabilidad' },
       { key: 'ledger', label: 'Libro mayor', icon: 'pi pi-list', component: 'Ledger', feature: 'contabilidad' },
+      { key: 'estados-financieros', label: 'Estados financieros', icon: 'pi pi-chart-line', component: 'EstadosFinancieros', feature: 'contabilidad' },
+      { key: 'periodos-contables', label: 'Períodos contables', icon: 'pi pi-calendar', component: 'PeriodosContables', feature: 'contabilidad' },
+      { key: 'activos-fijos', label: 'Activos fijos', icon: 'pi pi-building', component: 'FixedAssets', feature: 'activos_fijos' },
       { key: 'taxes', label: 'Impuestos', icon: 'pi pi-percentage', component: 'Taxes', feature: 'contabilidad' },
     ],
   },
@@ -119,15 +130,15 @@ export const PERMISOS: Record<string, '*' | string[]> = {
   // Lleva la contabilidad y declara. No toca empresas, usuarios ni la firma.
   contador: [
     'inicio',
-    'contacts', 'products', 'accounts',
-    'pos', 'invoices', 'quotes', 'advances', 'credit-notes', 'receivables', 'estado-cuenta-clientes',
-    'sales-ret', 'notas-debito', 'guias-remision', 'mass-invoicing',
+    'contacts', 'bienes', 'servicios', 'accounts',
+    'pos', 'invoices', 'quotes', 'advances', 'notas-credito-debito', 'receivables', 'estado-cuenta-clientes',
+    'sales-ret', 'guias-remision', 'mass-invoicing', 'reportes-ventas',
     'purchases', 'purchase-entry', 'batch-import', 'suppliers',
-    'liquidacion-compra', 'payables', 'estado-cuenta-proveedores',
+    'liquidacion-compra', 'payables', 'estado-cuenta-proveedores', 'reportes-compras',
     'inventory', 'warehouses', 'series', 'inventory-reports',
-    'inventory-adjustment', 'inventory-transfer',
+    'inventory-adjustment', 'toma-fisica', 'inventory-transfer',
     'cash', 'banks', 'reconciliation', 'card-reconciliation',
-    'journal', 'ledger', 'taxes',
+    'journal', 'ledger', 'estados-financieros', 'periodos-contables', 'activos-fijos', 'taxes',
     'employees', 'payroll',
     'documents',
     'audit', 'sales-reports',
@@ -145,8 +156,15 @@ function puedeVer(rol: string | undefined, key: string) {
   return permisos.includes(key)
 }
 
-export function modulesPara(tiene: (f?: string) => boolean, rol?: string) {
+/**
+ * Los módulos que ve un usuario según su plan y su rol. Los ítems `oculto` quedan fuera del
+ * menú salvo que se pida `incluirOcultos` (para resolver una pantalla por su clave).
+ */
+export function modulesPara(tiene: (f?: string) => boolean, rol?: string, incluirOcultos = false) {
   return modules
-    .map((g) => ({ ...g, items: g.items.filter((i) => tiene(i.feature) && puedeVer(rol, i.key)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => (incluirOcultos || !i.oculto) && tiene(i.feature) && puedeVer(rol, i.key)),
+    }))
     .filter((g) => g.items.length > 0)
 }

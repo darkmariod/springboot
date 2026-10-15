@@ -22,6 +22,7 @@ const company = useCompanyStore()
 const products = ref<any[]>([])
 const contacts = ref<any[]>([])
 const emissionPoints = ref<any[]>([])
+const warehouses = ref<any[]>([])
 const loading = ref(true)
 const emitiendo = ref(false)
 const msg = ref<any>(null)
@@ -50,6 +51,13 @@ const seriesDisponibles = ref<any[]>([])
 const seriesSeleccionadas = ref<string[]>([])
 const seriesCargando = ref(false)
 
+// Bodega de la venta: la marcada por defecto (la misma de la que sale la venta si la línea no trae otra).
+// Las series se eligen y se validan contra la bodega de cada línea.
+const bodegaVentaId = computed<number | null>(
+  () => (warehouses.value.find((w: any) => w.por_defecto) ?? warehouses.value[0])?.id ?? null,
+)
+const bodegaDe = (item: any): number | null => item?.warehouse_id ?? bodegaVentaId.value
+
 const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 
 const contactOptions = computed(() =>
@@ -65,14 +73,16 @@ const formasPago = [
 
 async function load() {
   loading.value = true
-  const [pRes, cRes, epRes] = await Promise.all([
+  const [pRes, cRes, epRes, wRes] = await Promise.all([
     api.get(`/products?company_id=${company.activeId}`),
     api.get(`/contacts?company_id=${company.activeId}`),
     api.get('/emission-points').catch(() => ({ data: [] })),
+    api.get(`/warehouses?company_id=${company.activeId}`).catch(() => ({ data: [] })),
   ])
   products.value = pRes.data
   contacts.value = cRes.data
   emissionPoints.value = epRes.data
+  warehouses.value = wRes.data
   if (contacts.value.length && !contactId.value) contactId.value = contacts.value[0]?.id ?? null
   if (emissionPoints.value.length) emissionPointId.value = emissionPoints.value[0]?.id ?? null
   loading.value = false
@@ -93,7 +103,7 @@ async function buscarClientePorId() {
   if (id.length !== 10 && id.length !== 13) {
     msg.value = {
       type: 'warn',
-      text: `Escribe el número completo para consultar al SRI: cédula = 10 dígitos, RUC = 13 (llevás ${id.length}).`,
+      text: `Escribe el número completo para consultar al SRI: cédula = 10 dígitos, RUC = 13 (llevas ${id.length}).`,
     }
     return
   }
@@ -162,46 +172,88 @@ async function guardarNuevoCliente() {
 async function escanear(valor: string) {
   const v = valor.trim()
   if (!v) return
-  // Intentar por serie
+  msg.value = null
+  // Intentar por serie: la serie exacta, disponible en la bodega de la venta
   try {
-    const res = await api.get('/series/lookup?company_id=' + company.activeId + '&serie=' + encodeURIComponent(v))
-    const p = res.data.product
-    addItemFromProduct(p, res.data.serie)
+    const res = await api.get('/series/lookup', {
+      params: { company_id: company.activeId, serie: v, ...(bodegaVentaId.value ? { warehouse_id: bodegaVentaId.value } : {}) },
+    })
+    addItemFromProduct(res.data.product, res.data.serie)
     return
-  } catch { /* no es serie */ }
+  } catch (err: any) {
+    // La serie existe pero está en otra bodega: se avisa en vez de buscarla como si fuera un código
+    const motivo: string | undefined = err.response?.data?.message
+    if (motivo?.startsWith('La serie ')) { msg.value = { type: 'warn', text: motivo }; return }
+  }
   // Intentar por código
   const p = products.value.find((x) => x.codigo === v)
   if (p) addItemFromProduct(p)
   else msg.value = { type: 'warn', text: 'No se encontró serie ni código: ' + v }
 }
 
+// La grilla captura el descuento en porcentaje; el comprobante lleva el valor de la línea en dólares
+const descuentoDe = (i: any) => Math.round(Number(i.cantidad) * Number(i.precio_unitario) * Number(i.pct_descuento ?? 0)) / 100
+
+function nuevaLinea(p: any, serie?: string) {
+  return {
+    producto_id: p.id,
+    codigo_principal: p.codigo,
+    descripcion: p.descripcion,
+    cantidad: 1,
+    precio_unitario: Number(p.precio ?? 0),
+    tarifa: Number(p.tarifa_iva ?? 15),
+    unidad: 'UNI',
+    pct_descuento: 0,
+    warehouse_id: bodegaVentaId.value,
+    series: serie ? [serie] : [],
+  }
+}
+
 function addItemFromProduct(p: any, serie?: string) {
-  const existing = items.value.find((i) => i.producto_id === p.id && (!serie || i.series?.includes(serie)))
+  const existing = items.value.find((i) => i.producto_id === p.id)
+  if (serie) {
+    // Escaneada una serie: el producto entra con esa serie elegida; otra serie del mismo producto se suma a su línea
+    if (items.value.some((i) => (i.series ?? []).includes(serie))) {
+      msg.value = { type: 'warn', text: `La serie ${serie} ya está en el comprobante.` }
+      return
+    }
+    if (existing && bodegaDe(existing) === bodegaVentaId.value) {
+      existing.series = [...(existing.series ?? []), serie]
+      existing.cantidad = existing.series.length
+      existing.descuento = descuentoDe(existing)
+    } else {
+      items.value.push(nuevaLinea(p, serie))
+    }
+    return
+  }
   if (existing) {
+    if (p.maneja_series) {
+      // Producto con series: cada unidad lleva su serie, se eligen en el selector
+      abrirSelectorSeries(items.value.indexOf(existing))
+      return
+    }
     existing.cantidad = Number(existing.cantidad) + 1
-    if (serie) existing.series = [...(existing.series ?? []), serie]
+    existing.descuento = descuentoDe(existing)
   } else {
-    items.value.push({
-      producto_id: p.id,
-      codigo_principal: p.codigo,
-      descripcion: p.descripcion,
-      cantidad: 1,
-      precio_unitario: Number(p.precio ?? 0),
-      tarifa: Number(p.tarifa_iva ?? 15),
-      unidad: 'UNI',
-      pct_descuento: 0,
-      warehouse_id: null,
-      series: serie ? [serie] : [],
-    })
+    items.value.push(nuevaLinea(p))
     // Producto con maneja_series: abrir el selector de series de inmediato
-    if (p.maneja_series && !serie) {
+    if (p.maneja_series) {
       abrirSelectorSeries(items.value.length - 1)
     }
   }
 }
 
 function updateItems(newItems: any[]) {
-  items.value = newItems
+  // El total de la grilla suma `descuento` en dólares: se recalcula con cada cambio de cantidad, precio o porcentaje
+  items.value = newItems.map((i, k) => {
+    const antes = items.value[k]
+    // Cambiar la bodega de una línea con series: esas series son de la bodega anterior, hay que elegirlas otra vez
+    if (antes && (antes.series ?? []).length && antes.warehouse_id !== i.warehouse_id) {
+      msg.value = { type: 'warn', text: `Cambiaste la bodega de ${i.codigo_principal}: elige otra vez sus series.` }
+      return { ...i, series: [], descuento: descuentoDe(i) }
+    }
+    return { ...i, descuento: descuentoDe(i) }
+  })
 }
 
 function removeItem(index: number) {
@@ -218,7 +270,7 @@ function addItem() {
     tarifa: 15,
     unidad: 'UNI',
     pct_descuento: 0,
-    warehouse_id: null,
+    warehouse_id: bodegaVentaId.value,
     series: [],
   })
 }
@@ -236,10 +288,12 @@ async function abrirSelectorSeries(index: number) {
   seriesCargando.value = true
   seriesDialog.value = true
   try {
-    const res = await api.get(`/series?company_id=${company.activeId}&product_id=${item.producto_id}&estado=disponible`)
+    // Solo las series disponibles en la bodega de la línea: la venta sale de esa bodega
+    const bodega = bodegaDe(item)
+    const res = await api.get(`/series?company_id=${company.activeId}&product_id=${item.producto_id}&estado=disponible${bodega ? '&warehouse_id=' + bodega : ''}`)
     seriesDisponibles.value = res.data
     if (!seriesDisponibles.value.length) {
-      msg.value = { type: 'warn', text: 'No hay series disponibles para este artículo.' }
+      msg.value = { type: 'warn', text: 'No hay series disponibles para este artículo en la bodega de la venta.' }
     }
   } catch {
     msg.value = { type: 'error', text: 'No se pudieron cargar las series.' }
@@ -258,7 +312,9 @@ function confirmarSeries() {
   const idx = seriesItemIndex.value
   if (idx === null) return
   const newItems = [...items.value]
-  newItems[idx] = { ...newItems[idx], series: [...seriesSeleccionadas.value] }
+  // En un producto con series cada unidad lleva su serie: la cantidad es el número de series elegidas
+  newItems[idx] = { ...newItems[idx], series: [...seriesSeleccionadas.value], cantidad: seriesSeleccionadas.value.length }
+  newItems[idx].descuento = descuentoDe(newItems[idx])
   items.value = newItems
   seriesDialog.value = false
   seriesItemIndex.value = null
@@ -278,6 +334,17 @@ async function emitir() {
     msg.value = { type: 'warn', text: `El artículo ${sinSeries.codigo_principal} maneja series; selecciona las series antes de emitir.` }
     return
   }
+  const descuadrada = items.value.find((i: any) => {
+    const prod = products.value.find((x: any) => x.codigo === i.codigo_principal)
+    return prod?.maneja_series && (i.series ?? []).length !== Number(i.cantidad)
+  })
+  if (descuadrada) {
+    msg.value = {
+      type: 'warn',
+      text: `El artículo ${descuadrada.codigo_principal}: vendes ${Number(descuadrada.cantidad)} unidad(es) y elegiste ${(descuadrada.series ?? []).length} serie(s); deben coincidir.`,
+    }
+    return
+  }
 
   emitiendo.value = true
   msg.value = null
@@ -294,14 +361,19 @@ async function emitir() {
         cantidad: Number(i.cantidad),
         precio_unitario: Number(i.precio_unitario),
         tarifa: Number(i.tarifa),
+        descuento: descuentoDe(i),
         series: i.series ?? [],
+        ...(i.warehouse_id ? { warehouse_id: i.warehouse_id } : {}),
       })),
     })
     ok.value = res.data.invoice
     items.value = []
     msg.value = { type: 'success', text: `Factura ${res.data.invoice.numero} emitida.` }
   } catch (err: any) {
-    msg.value = { type: 'error', text: err.response?.data?.message ?? err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(' · ') : 'No se pudo emitir.' }
+    // Un 422 de validación trae `errors`; los avisos del negocio (serie en otra bodega, stock) traen solo `message`
+    const data = err.response?.data
+    const errores = data?.errors ? Object.values(data.errors).flat().join(' · ') : ''
+    msg.value = { type: 'error', text: errores || data?.message || 'No se pudo emitir.' }
   } finally {
     emitiendo.value = false
   }
@@ -316,7 +388,7 @@ async function guardarCotizacion() {
       items: items.value.map((i) => ({
         codigo_principal: i.codigo_principal, descripcion: i.descripcion,
         cantidad: Number(i.cantidad), precio_unitario: Number(i.precio_unitario),
-        tarifa: Number(i.tarifa),
+        tarifa: Number(i.tarifa), descuento: descuentoDe(i),
       })),
     })
     ok.value = { numero: 'Cotización guardada' }
@@ -342,7 +414,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('input[place
 
 <template>
   <div class="pos-root">
-    <KvsModuleHeader module-name="Ventas" :company="{ ruc: company.activeId, razon_social: 'Punto de Venta' }" subtitle="Facturación" />
+    <KvsModuleHeader module-name="Ventas" :company="{ ruc: company.activeRuc, razon_social: 'Punto de Venta' }" subtitle="Facturación" />
     <div class="pos-layout">
     <!-- ══ Panel izquierdo: productos ══ -->
     <section class="pos-products">
@@ -390,7 +462,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('input[place
           </div>
         </div>
         <div class="kvs-row">
-          <label class="kvs-lbl"><span class="req">*</span> Cliente:</label>
+          <label class="kvs-lbl"><span class="req-star">*</span> Cliente:</label>
           <Select v-model="contactId" :options="contactOptions" optionValue="id"
                   optionLabel="label" placeholder="Seleccionar cliente" filter
                   class="kvs-in" />
@@ -421,6 +493,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('input[place
         <KvsDocGrid
           :items="items"
           :product-options="products"
+          :warehouse-options="warehouses"
           show-series
           show-discount
           show-kardex

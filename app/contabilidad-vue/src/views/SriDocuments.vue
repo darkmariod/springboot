@@ -24,6 +24,11 @@ const estadoSev = (e: string) => {
   return 'warn'
 }
 const resultadoSev: Record<string, string> = { autorizado: 'success', pendiente: 'warn', error: 'danger' }
+// El servidor guarda el tipo con el nombre técnico del SRI; en pantalla se muestra el nombre de siempre
+const tipoTxt: Record<string, string> = {
+  factura: 'Factura', notaCredito: 'Nota de crédito', notaDebito: 'Nota de débito',
+  comprobanteRetencion: 'Retención', liquidacionCompra: 'Liquidación de compra', guiaRemision: 'Guía de remisión',
+}
 const resultadoTxt: Record<string, string> = { autorizado: 'Autorizado', pendiente: 'Pendiente', error: 'Con error' }
 const hayPendientes = computed(() => rows.value.length > 0)
 
@@ -91,7 +96,7 @@ onMounted(load)
       <h4 style="margin:0 0 6px;">Resultado</h4>
       <DataTable :value="resultado.resultados" size="small" stripedRows>
         <Column header="Número"><template #body="{ data }">{{ data.numero ?? '—' }}</template></Column>
-        <Column field="tipo_comprobante" header="Tipo" />
+        <Column header="Tipo"><template #body="{ data }">{{ tipoTxt[data.tipo_comprobante] ?? data.tipo_comprobante }}</template></Column>
         <Column header="Estado"><template #body="{ data }"><Tag :value="data.estado" :severity="estadoSev(data.estado)" /></template></Column>
         <Column header="Resultado"><template #body="{ data }">
           <Tag :value="resultadoTxt[data.resultado] ?? data.resultado" :severity="resultadoSev[data.resultado] ?? 'secondary'" />
@@ -104,7 +109,7 @@ onMounted(load)
     <DataTable v-model:selection="seleccion" :value="rows" :loading="loading" size="small" stripedRows dataKey="id">
       <Column selectionMode="multiple" headerStyle="width:3rem" />
       <Column header="Número"><template #body="{ data }">{{ data.numero ?? '—' }}</template></Column>
-      <Column field="tipo_comprobante" header="Tipo" />
+      <Column header="Tipo"><template #body="{ data }">{{ tipoTxt[data.tipo_comprobante] ?? data.tipo_comprobante }}</template></Column>
       <Column header="Clave de acceso"><template #body="{ data }"><span style="font-family:monospace; font-size:11px;">{{ data.clave_acceso }}</span></template></Column>
       <Column header="Estado"><template #body="{ data }"><Tag :value="data.estado" :severity="estadoSev(data.estado)" /></template></Column>
       <Column header="Último mensaje"><template #body="{ data }"><span style="font-size:12px; color:#b45309;">{{ data.detalle ?? '' }}</span></template></Column>

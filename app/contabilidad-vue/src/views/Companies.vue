@@ -160,13 +160,13 @@ onMounted(load)
         <fieldset class="kvs-fieldset">
           <legend>Datos de la empresa</legend>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> RUC:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> RUC:</label>
             <InputText v-model="editDialog.ruc" maxlength="13" class="kvs-in" style="max-width:190px" />
             <label class="kvs-lbl" style="margin-left:14px;">Régimen:</label>
             <InputText v-model="editDialog.regimen" class="kvs-in" />
           </div>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Razón social:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Razón social:</label>
             <InputText v-model="editDialog.razon_social" class="kvs-in" />
           </div>
           <div class="kvs-row">
@@ -174,7 +174,7 @@ onMounted(load)
             <InputText v-model="editDialog.nombre_comercial" class="kvs-in" />
           </div>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Dir. matriz:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Dir. matriz:</label>
             <InputText v-model="editDialog.dir_matriz" class="kvs-in" />
           </div>
           <div class="kvs-row">
@@ -209,15 +209,15 @@ onMounted(load)
         <fieldset class="kvs-fieldset" style="margin-top:14px;">
           <legend>Facturación electrónica</legend>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Establecimiento:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Establecimiento:</label>
             <InputText v-model="editDialog.estab" maxlength="3" class="kvs-in" style="max-width:90px" />
-            <label class="kvs-lbl" style="margin-left:14px;"><span class="req">*</span> Pto. emisión:</label>
+            <label class="kvs-lbl" style="margin-left:14px;"><span class="req-star">*</span> Pto. emisión:</label>
             <InputText v-model="editDialog.pto_emi" maxlength="3" class="kvs-in" style="max-width:90px" />
             <label class="kvs-lbl" style="margin-left:14px;">Secuencial:</label>
             <InputNumber v-model="editDialog.secuencial" :useGrouping="false" class="kvs-in" style="max-width:120px" />
           </div>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Ambiente:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Ambiente:</label>
             <Select v-model="editDialog.ambiente" :options="ambientes" optionLabel="label" optionValue="value"
                     class="kvs-in" style="max-width:230px" />
             <label style="display:flex; align-items:center; gap:7px; margin-left:18px; font-size:13px; white-space:nowrap;">

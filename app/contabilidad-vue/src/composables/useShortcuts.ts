@@ -25,6 +25,8 @@ export type ShortcutAction =
   | 'modulos'
   | 'cerrar-pestana'
   | 'pestana'
+  | 'atras'
+  | 'adelante'
 
 type Handler = (payload?: unknown) => void
 
@@ -40,6 +42,8 @@ export const SHORTCUTS: { keys: string; action: ShortcutAction; label: string }[
   { keys: 'F4', action: 'modulos', label: 'Volver a Módulos' },
   { keys: 'F8', action: 'cerrar-pestana', label: 'Cerrar pestaña' },
   { keys: 'Alt + 1…9', action: 'pestana', label: 'Ir a la pestaña N' },
+  { keys: 'Alt + ←', action: 'atras', label: 'Pantalla anterior' },
+  { keys: 'Alt + →', action: 'adelante', label: 'Pantalla siguiente' },
 ]
 
 function subscribe(action: ShortcutAction, fn: Handler) {
@@ -87,6 +91,12 @@ export function actionFor(e: KeyboardEvent): { action: ShortcutAction; payload?:
     return { action: 'pestana', payload: Number(e.code.slice(5)) - 1 }
   }
 
+  // Alt+flechas: atrás / adelante entre las pantallas visitadas (como el historial del navegador)
+  if (e.altKey && !mod && !e.shiftKey) {
+    if (key === 'arrowleft') return { action: 'atras' }
+    if (key === 'arrowright') return { action: 'adelante' }
+  }
+
   if (!mod || e.altKey) return null
 
   // Ctrl/Cmd combos the browser lets us keep
@@ -98,4 +108,4 @@ export function actionFor(e: KeyboardEvent): { action: ShortcutAction; payload?:
 }
 
 /** Actions the layout itself owns; they always take precedence over the browser. */
-export const LAYOUT_ACTIONS: ShortcutAction[] = ['modulos', 'cerrar-pestana', 'pestana']
+export const LAYOUT_ACTIONS: ShortcutAction[] = ['modulos', 'cerrar-pestana', 'pestana', 'atras', 'adelante']

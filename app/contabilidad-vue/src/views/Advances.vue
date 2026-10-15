@@ -94,7 +94,7 @@ onMounted(async () => { await cargarCatalogos(); await load() })
     <DataTable :value="rows" :loading="loading" size="small" stripedRows>
       <Column header="Fecha"><template #body="{ data }">{{ String(data.fecha).slice(0,10) }}</template></Column>
       <Column :header="esProveedor ? 'Proveedor' : 'Cliente'"><template #body="{ data }">{{ data.contact?.razon_social }}</template></Column>
-      <Column field="forma_pago" header="Forma de pago" />
+      <Column header="Forma de pago"><template #body="{ data }">{{ formas.find(f => f.value === data.forma_pago)?.label ?? data.forma_pago }}</template></Column>
       <Column header="Monto"><template #body="{ data }">{{ money(data.monto) }}</template></Column>
       <Column header="Saldo sin usar"><template #body="{ data }"><b>{{ money(data.saldo) }}</b></template></Column>
       <template #empty>No hay anticipos {{ esProveedor ? 'a proveedores' : 'de clientes' }} registrados.</template>

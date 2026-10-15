@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import api from '../lib/api'
 
 export interface Company {
@@ -17,6 +17,10 @@ export const useCompanyStore = defineStore('company', () => {
     localStorage.getItem('company_id') ? Number(localStorage.getItem('company_id')) : null,
   )
 
+  // Empresa activa y su RUC real (las cabeceras de las pantallas lo muestran; activeId es solo el número interno)
+  const active = computed(() => companies.value.find((c) => c.id === activeId.value) ?? null)
+  const activeRuc = computed(() => active.value?.ruc ?? '')
+
   async function load() {
     const res = await api.get('/companies')
     companies.value = res.data
@@ -31,5 +35,5 @@ export const useCompanyStore = defineStore('company', () => {
     else localStorage.removeItem('company_id')
   }
 
-  return { companies, activeId, load, setActive }
+  return { companies, activeId, active, activeRuc, load, setActive }
 })

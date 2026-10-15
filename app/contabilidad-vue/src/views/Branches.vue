@@ -130,9 +130,9 @@ onShortcut('guardar', () => guardar())
         <fieldset class="kvs-fieldset">
           <legend>Datos de la sucursal</legend>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Establecimiento:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Establecimiento:</label>
             <InputText v-model="dialog.estab" maxlength="3" class="kvs-in" style="max-width:100px" />
-            <label class="kvs-lbl" style="margin-left:14px;"><span class="req">*</span> Nombre:</label>
+            <label class="kvs-lbl" style="margin-left:14px;"><span class="req-star">*</span> Nombre:</label>
             <InputText v-model="dialog.nombre" class="kvs-in" placeholder="Matriz, Sucursal Norte…" />
           </div>
           <div class="kvs-row">

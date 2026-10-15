@@ -127,7 +127,7 @@ onMounted(load)
 
 <template>
   <div style="display: flex; flex-direction: column; height: 100%;">
-    <KvsModuleHeader module-name="Ventas" :company="{ ruc: company.activeId, razon_social: 'Facturación Masiva' }" subtitle="Emisión de lotes de facturas" />
+    <KvsModuleHeader module-name="Ventas" :company="{ ruc: company.activeRuc, razon_social: 'Facturación Masiva' }" subtitle="Emisión de lotes de facturas" />
     <div style="padding: 20px; flex: 1; overflow: auto;">
 
     <Message v-if="msg" :severity="msg.type" :closable="false" style="margin-bottom: 14px;">{{ msg.text }}</Message>
@@ -144,7 +144,7 @@ onMounted(load)
       </div>
       <div style="padding: 12px;">
         <div class="kvs-row">
-          <label class="kvs-lbl"><span class="req">*</span> Cliente:</label>
+          <label class="kvs-lbl"><span class="req-star">*</span> Cliente:</label>
           <Select v-model="inv.contact_id" :options="contacts" optionLabel="razon_social" optionValue="id"
                   filter placeholder="Seleccione cliente" class="kvs-in" />
           <label class="kvs-lbl" style="margin-left: 12px;">Forma pago:</label>

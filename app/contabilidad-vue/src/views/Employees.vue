@@ -8,12 +8,16 @@ import InputNumber from 'primevue/inputnumber'
 import Checkbox from 'primevue/checkbox'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
+import Select from 'primevue/select'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { onShortcut } from '../composables/useShortcuts'
+import MovimientosEmpleado from '../components/MovimientosEmpleado.vue'
+import PermisosVacaciones from '../components/PermisosVacaciones.vue'
 
 const company = useCompanyStore()
 const rows = ref<any[]>([])
+const clientes = ref<any[]>([])
 const loading = ref(true)
 const seleccion = ref<any>(null)
 const form = ref<any>({})
@@ -26,6 +30,8 @@ const money = (n: any) => '$' + Number(n ?? 0).toFixed(2)
 const tabs = [
   { key: 'general', label: 'General' },
   { key: 'laboral', label: 'Laboral' },
+  { key: 'movimientos', label: 'Movimientos' },
+  { key: 'permisos', label: 'Permisos y vacaciones' },
 ]
 
 const filtrados = computed(() => rows.value.filter((r: any) => {
@@ -41,6 +47,13 @@ async function load() {
   loading.value = false
 }
 
+// Clientes a quienes se les puede facturar un consumo del empleado (se descuenta del rol)
+async function cargarClientes() {
+  try {
+    clientes.value = (await api.get('/contacts?company_id=' + company.activeId)).data.filter((c: any) => c.es_cliente)
+  } catch { clientes.value = [] }
+}
+
 function seleccionar(r: any) {
   seleccion.value = r
   editando.value = false
@@ -51,7 +64,7 @@ function nuevo() {
   seleccion.value = null
   editando.value = true
   tab.value = 'general'
-  form.value = { cedula: '', nombres: '', cargo: '', fecha_ingreso: '', sueldo: 470, fondos_reserva: false }
+  form.value = { cedula: '', nombres: '', cargo: '', fecha_ingreso: '', sueldo: 470, fondos_reserva: false, contact_id: null }
 }
 
 async function guardar() {
@@ -87,7 +100,7 @@ function cancelar() {
   else form.value = {}
 }
 
-onMounted(load)
+onMounted(() => { load(); cargarClientes() })
 
 // Atajos de teclado (ver composables/useShortcuts): solo actúan con esta pestaña al frente.
 onShortcut('nuevo', () => nuevo())
@@ -132,7 +145,7 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
       <template v-else>
         <div class="kvs-tabs">
           <button v-for="t in tabs" :key="t.key" class="kvs-tab"
-                  :class="{ active: tab === t.key }" @click="tab = t.key">{{ t.label }}</button>
+                  :class="{ active: tab === t.key }" @click="tab = t.key; msg = null">{{ t.label }}</button>
         </div>
 
         <div class="kvs-tabbody">
@@ -141,11 +154,11 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
           <!-- General -->
           <div v-show="tab === 'general'">
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Cédula:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Cédula:</label>
               <InputText v-model="form.cedula" :disabled="!editando" class="kvs-in" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Nombres:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Nombres:</label>
               <InputText v-model="form.nombres" :disabled="!editando" class="kvs-in" />
             </div>
             <div class="kvs-row">
@@ -157,11 +170,11 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
           <!-- Laboral -->
           <div v-show="tab === 'laboral'">
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Fecha de ingreso:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Fecha de ingreso:</label>
               <InputText v-model="form.fecha_ingreso" type="date" :disabled="!editando" class="kvs-in" style="max-width:180px" />
             </div>
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Sueldo:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Sueldo:</label>
               <InputNumber v-model="form.sueldo" mode="currency" currency="USD" @focus="($event: FocusEvent) => ($event.target as HTMLInputElement).select()" :disabled="!editando" class="kvs-in" style="max-width:160px" />
             </div>
             <div class="kvs-row">
@@ -170,6 +183,27 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
                 <span>Recibe fondos de reserva (más de 1 año)</span>
               </label>
             </div>
+            <div class="kvs-row">
+              <label class="kvs-lbl">Cliente vinculado:</label>
+              <Select v-model="form.contact_id" :options="clientes" optionLabel="razon_social" optionValue="id" filter showClear
+                      placeholder="Ninguno" :disabled="!editando" class="kvs-in" data-testid="emp-cliente" />
+            </div>
+            <p style="font-size:12px; color:#64748b; margin:0 0 0 4px;">
+              Las facturas a crédito que la empresa le haga a este cliente aparecen solas como «Consumos de la empresa» en el rol de pagos
+              y, al cerrar el rol, se cobran descontándolas del sueldo.
+            </p>
+          </div>
+
+          <!-- Movimientos (anticipos, préstamos, descuentos, ingresos extra) -->
+          <div v-if="tab === 'movimientos'">
+            <MovimientosEmpleado v-if="form.id" :employee="form" />
+            <p v-else class="kvs-empty">Guarda el empleado para registrarle movimientos.</p>
+          </div>
+
+          <!-- Permisos y vacaciones -->
+          <div v-if="tab === 'permisos'">
+            <PermisosVacaciones v-if="form.id" :employee="form" />
+            <p v-else class="kvs-empty">Guarda el empleado para registrarle permisos y vacaciones.</p>
           </div>
         </div>
 

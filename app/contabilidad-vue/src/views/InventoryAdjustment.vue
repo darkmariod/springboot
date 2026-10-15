@@ -5,8 +5,8 @@ import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
-import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
+import SeriesInput from '../components/SeriesInput.vue'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { useQuickActionStore } from '../stores/quickAction'
@@ -49,32 +49,21 @@ const diferencia = computed(() => {
 // La cantidad de series debe coincidir con la diferencia, para que stock y series no se separen.
 const seriesDisponibles = ref<string[]>([])
 const seriesElegidas = ref<string[]>([])
-const seriesNuevas = ref('')
+const listaNuevas = ref<string[]>([])
+const nuevasValidas = ref(false)   // SeriesInput: la cantidad cuadra y no hay repetidas ni series que ya existan
 const manejaSeries = computed(() => !!selectedProduct.value?.maneja_series)
 const necesitaSeries = computed(
   () => manejaSeries.value && form.value.stock_fisico != null && diferencia.value !== 0,
 )
 const cantidadSeries = computed(() => Math.abs(diferencia.value))
 const esEntero = computed(() => Number.isInteger(cantidadSeries.value))
-const listaNuevas = computed(() =>
-  seriesNuevas.value
-    .split(/[\n,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean),
-)
-const repetidasNuevas = computed(() => [
-  ...new Set(listaNuevas.value.filter((s, i) => listaNuevas.value.indexOf(s) !== i)),
-])
 const seriesCompletas = computed(() => {
   if (!necesitaSeries.value) return true
   if (!esEntero.value) return false
   if (diferencia.value < 0) return seriesElegidas.value.length === cantidadSeries.value
-  return listaNuevas.value.length === cantidadSeries.value && repetidasNuevas.value.length === 0
+  return listaNuevas.value.length === cantidadSeries.value && nuevasValidas.value
 })
-const seriesPendientes = computed(() => {
-  const hechas = diferencia.value < 0 ? seriesElegidas.value.length : listaNuevas.value.length
-  return `${hechas} de ${cantidadSeries.value}`
-})
+const seriesPendientes = computed(() => `${seriesElegidas.value.length} de ${cantidadSeries.value}`)
 
 // Si el usuario cambia rápido de producto o bodega, solo vale la última respuesta.
 let contextoSeq = 0
@@ -83,15 +72,15 @@ async function cargarContexto() {
   stockBodega.value = null
   seriesDisponibles.value = []
   seriesElegidas.value = []
-  seriesNuevas.value = ''
+  listaNuevas.value = []
   const { product_id, warehouse_id } = form.value
   if (!product_id || !warehouse_id) return
   try {
     const [stock, series] = await Promise.all([
       api.get('/inventory/stock-bodega', { params: { product_id, warehouse_id } }),
-      // Las series se llevan por producto (no por bodega): se ofrecen las que están disponibles.
+      // Un faltante da de baja series de ESA bodega: solo se ofrecen las disponibles allí.
       manejaSeries.value
-        ? api.get('/series', { params: { company_id: company.activeId, product_id, estado: 'disponible' } })
+        ? api.get('/series', { params: { company_id: company.activeId, product_id, estado: 'disponible', warehouse_id } })
         : Promise.resolve({ data: [] as any[] }),
     ])
     if (seq !== contextoSeq) return
@@ -131,7 +120,7 @@ async function ajustar() {
     msg.value = {
       type: 'warn',
       text: esEntero.value
-        ? `Este producto maneja series: indique exactamente ${cantidadSeries.value} serie(s).`
+        ? `Este producto maneja series: indica exactamente ${cantidadSeries.value} serie(s) correctas (sin repetir ni existentes).`
         : 'Este producto maneja series: la diferencia debe ser un número entero de unidades.',
     }
     return
@@ -181,7 +170,7 @@ onMounted(load)
         <fieldset class="kvs-fieldset">
           <legend>Producto y bodega</legend>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Producto:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Producto:</label>
             <Select
               v-model="form.product_id"
               :options="products"
@@ -195,8 +184,12 @@ onMounted(load)
             />
           </div>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Bodega:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Bodega:</label>
+            <small v-if="!loading && !warehouses.length" class="kvs-in" style="color: #b45309;">
+              Esta empresa aún no tiene bodegas. Crea una en Inventario → Bodegas.
+            </small>
             <Select
+              v-else
               v-model="form.warehouse_id"
               :options="warehouses"
               optionLabel="nombre"
@@ -219,7 +212,7 @@ onMounted(load)
         <fieldset class="kvs-fieldset" style="margin-top: 14px;">
           <legend>Conteo físico</legend>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Stock físico:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Stock físico:</label>
             <InputNumber v-model="form.stock_fisico" :min="0" class="kvs-in" />
           </div>
           <div v-if="diferencia !== 0 && form.stock_fisico != null"
@@ -231,7 +224,7 @@ onMounted(load)
             </span>
           </div>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Motivo:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Motivo:</label>
             <InputText v-model="form.motivo" placeholder="Ej: Conteo de mercadería, rotura, muestreo..." class="kvs-in" />
           </div>
         </fieldset>
@@ -243,7 +236,7 @@ onMounted(load)
           </Message>
           <template v-else-if="diferencia < 0">
             <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Series que faltan:</label>
+              <label class="kvs-lbl"><span class="req-star">*</span> Series que faltan:</label>
               <MultiSelect
                 v-model="seriesElegidas"
                 :options="seriesDisponibles"
@@ -264,23 +257,16 @@ onMounted(load)
             </div>
           </template>
           <template v-else>
-            <div class="kvs-row">
-              <label class="kvs-lbl"><span class="req">*</span> Series nuevas:</label>
-              <Textarea
-                v-model="seriesNuevas"
-                rows="4"
-                placeholder="Una serie por línea"
-                class="kvs-in"
-                style="width: 100%;"
-              />
+            <div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">
+              <span class="req-star">*</span> Series nuevas: una por unidad que sobra. Quedan en la bodega elegida.
             </div>
-            <div style="font-size: 12px; margin-bottom: 9px;"
-              :style="{ color: seriesCompletas ? '#166534' : '#b45309' }">
-              Ingrese exactamente {{ cantidadSeries }} serie(s) nueva(s), una por línea: {{ seriesPendientes }}.
-              <span v-if="repetidasNuevas.length" style="color: #991b1b;">
-                Hay series repetidas: {{ repetidasNuevas.join(', ') }}.
-              </span>
-            </div>
+            <SeriesInput
+              v-model="listaNuevas"
+              :cantidad="cantidadSeries"
+              :filas="4"
+              style="margin-bottom: 9px;"
+              @valido="(v: boolean) => (nuevasValidas = v)"
+            />
           </template>
         </fieldset>
       </div>

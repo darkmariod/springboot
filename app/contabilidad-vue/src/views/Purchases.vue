@@ -5,9 +5,9 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import RetencionCompra from '../components/RetencionCompra.vue'
+import SeriesInput from '../components/SeriesInput.vue'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { usePlanStore } from '../stores/plan'
@@ -41,29 +41,32 @@ async function retencionRegistrada() {
   if (fresco && retencionDialog.value) retencionDialog.value.compra = fresco
 }
 
-const seriesDialog = ref<any>(null)
-
-async function pedirSeries(purchase: any) {
-  const productos = (await api.get('/products?company_id=' + company.activeId)).data
-  const pendientes = (purchase.items ?? [])
-    .map((it: any) => {
-      const p = productos.find((x: any) => x.codigo === it.codigo_principal)
-      return p?.maneja_series ? { product: p, cantidad: Number(it.cantidad), series: [] as string[] } : null
-    })
-    .filter(Boolean)
-  if (pendientes.length) seriesDialog.value = { purchase, pendientes, idx: 0 }
+// Una factura con productos que manejan series no se puede importar sin ellas (el XML no las trae y el stock no sube sin sus
+// series): el servidor responde 422 con las líneas que las necesitan, aquí se piden y se vuelve a mandar el mismo archivo.
+const archivoPendiente = ref<File | null>(null)
+const seriesImport = ref<{
+  mensaje: string
+  error: string
+  lineas: any[]
+  series: Record<string, string[]>
+  valido: Record<string, boolean>
+} | null>(null)
+const seriesCompletas = computed(
+  () => !!seriesImport.value && seriesImport.value.lineas.every((l: any) => seriesImport.value!.valido[l.codigo]),
+)
+function marcarValida(codigo: string, v: boolean) {
+  if (seriesImport.value) seriesImport.value.valido[codigo] = v
 }
-async function guardarSeries() {
-  for (const p of seriesDialog.value.pendientes) {
-    const limpias = p.series.filter((s: string) => s.trim())
-    if (limpias.length) {
-      await api.post('/series', {
-        company_id: company.activeId, product_id: p.product.id,
-        purchase_id: seriesDialog.value.purchase.id, series: limpias,
-      })
-    }
+function cancelarSeries() {
+  seriesImport.value = null
+  archivoPendiente.value = null
+  msg.value = { type: 'warn', text: 'No se importó la factura: faltaron las series de los productos que las manejan.' }
+}
+function importarConSeries() {
+  if (archivoPendiente.value && seriesImport.value) {
+    seriesImport.value.error = ''
+    enviarImportacion(archivoPendiente.value, seriesImport.value.series)
   }
-  seriesDialog.value = null
 }
 
 const money = (n: any) => `$${Number(n).toFixed(2)}`
@@ -80,19 +83,43 @@ async function loadSustentos() {
 async function importar(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
+  await enviarImportacion(file, null)
+}
+async function enviarImportacion(file: File, series: Record<string, string[]> | null) {
   importing.value = true; msg.value = null
   const form = new FormData()
   form.append('company_id', String(company.activeId))
   form.append('xml', file)
   if (sustento.value) form.append('sustento_tributario', sustento.value)
+  if (series) form.append('series', JSON.stringify(series))
   try {
     const res = await api.post('/purchases/import', form)
+    seriesImport.value = null
+    archivoPendiente.value = null
     importada.value = res.data
     msg.value = { type: 'success', text: `Compra ${res.data.numero} de ${res.data.contact.razon_social} importada con sustento ${res.data.sustento_tributario} — ${money(res.data.importe_total)}` }
     load()
-    pedirSeries(res.data)
   } catch (err: any) {
-    msg.value = { type: 'error', text: err.response?.data?.errors?.xml?.[0] ?? err.response?.data?.message ?? 'No se pudo importar.' }
+    const data = err.response?.data
+    if (err.response?.status === 422 && data?.requiere_series) {
+      // Paso de captura de series: una entrada por producto, con lo que ya se había escrito
+      archivoPendiente.value = file
+      const previas = seriesImport.value?.series ?? series ?? {}
+      seriesImport.value = {
+        mensaje: data.message,
+        error: series ? data.message : '',
+        lineas: data.lineas,
+        series: Object.fromEntries(data.lineas.map((l: any) => [l.codigo, previas[l.codigo] ?? []])),
+        valido: {},
+      }
+      return
+    }
+    const textoSeries = data?.errors?.series?.join(' ')
+    if (seriesImport.value && textoSeries) {
+      seriesImport.value.error = textoSeries   // series repetidas o que ya existen: se corrigen en el mismo diálogo
+      return
+    }
+    msg.value = { type: 'error', text: data?.errors?.xml?.[0] ?? textoSeries ?? data?.message ?? 'No se pudo importar.' }
   } finally {
     importing.value = false
     if (fileRef.value) fileRef.value.value = ''
@@ -147,24 +174,27 @@ onMounted(() => { load(); loadSustentos() })
                        @registrada="retencionRegistrada" />
     </Dialog>
 
-    <Dialog :visible="!!seriesDialog" modal header="Ingresar series de los productos" style="width:520px"
-            @update:visible="seriesDialog=null">
-      <div v-if="seriesDialog" style="display:flex; flex-direction:column; gap:18px;">
+    <Dialog :visible="!!seriesImport" modal header="Series de la factura" style="width:560px"
+            @update:visible="(v: boolean) => { if (!v) cancelarSeries() }">
+      <div v-if="seriesImport" style="display:flex; flex-direction:column; gap:18px; max-height:65vh; overflow:auto;">
         <Message severity="info" :closable="false">
-          Puede usar el lector de código de barras: escanee y presione Enter en cada campo.
+          Esta factura trae productos que manejan series y el XML no las incluye. Escribe o escanea una serie por cada
+          unidad: sin ellas el stock no puede subir. Puedes usar el lector de código de barras.
         </Message>
-        <div v-for="p in seriesDialog.pendientes" :key="p.product.id">
-          <b>{{ p.product.descripcion }}</b>
-          <span style="color:#94a3b8;"> — {{ p.cantidad }} unidades</span>
-          <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
-            <InputText v-for="n in p.cantidad" :key="n" v-model="p.series[n-1]"
-                       :placeholder="'Serie ' + n" />
+        <Message v-if="seriesImport.error" severity="error" :closable="false">{{ seriesImport.error }}</Message>
+        <div v-for="l in seriesImport.lineas" :key="l.codigo">
+          <b>{{ l.descripcion }}</b>
+          <span style="color:#64748b;"> · {{ l.codigo }} · {{ l.cantidad }} unidad{{ l.cantidad === 1 ? '' : 'es' }}</span>
+          <div style="margin-top:8px;">
+            <SeriesInput v-model="seriesImport.series[l.codigo]" :cantidad="l.cantidad"
+                         @valido="(v: boolean) => marcarValida(l.codigo, v)" />
           </div>
         </div>
       </div>
       <template #footer>
-        <Button label="Después" text @click="seriesDialog=null" />
-        <Button label="Guardar series" @click="guardarSeries" />
+        <Button label="Cancelar" text @click="cancelarSeries" />
+        <Button label="Importar factura" icon="pi pi-upload" :loading="importing" :disabled="!seriesCompletas"
+                @click="importarConSeries" />
       </template>
     </Dialog>
   </div>

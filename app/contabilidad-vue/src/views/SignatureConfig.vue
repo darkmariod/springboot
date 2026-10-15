@@ -112,9 +112,9 @@ onMounted(load)
       <div style="padding:0 12px 12px;">
         <!-- Identificación -->
         <div class="kvs-row">
-          <label class="kvs-lbl"><span class="req">*</span> Código:</label>
+          <label class="kvs-lbl"><span class="req-star">*</span> Código:</label>
           <InputText :modelValue="cfg.codigo" disabled class="kvs-in" style="max-width:120px" />
-          <label class="kvs-lbl" style="margin-left:20px;"><span class="req">*</span> Nombre:</label>
+          <label class="kvs-lbl" style="margin-left:20px;"><span class="req-star">*</span> Nombre:</label>
           <Select v-model="companyId" :options="companies" optionLabel="razon_social" optionValue="id"
                   class="kvs-in" style="flex:1" @change="load" />
         </div>
@@ -123,18 +123,18 @@ onMounted(load)
         <fieldset class="kvs-fieldset" style="margin-top:14px;">
           <legend>Credenciales SRI</legend>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Usuario Sri:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Usuario Sri:</label>
             <InputText v-model="cfg.sri_usuario" placeholder="RUC" class="kvs-in" />
             <label class="kvs-lbl" style="margin-left:20px;">Clave Sri:</label>
             <Password v-model="claveSri" :feedback="false" toggleMask class="kvs-in"
                       placeholder="vacía = no cambiar" />
           </div>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> URL producción:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> URL producción:</label>
             <InputText v-model="cfg.sri_url_produccion" class="kvs-in" />
           </div>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> URL pruebas:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> URL pruebas:</label>
             <InputText v-model="cfg.sri_url_pruebas" class="kvs-in" />
           </div>
         </fieldset>
@@ -160,7 +160,7 @@ onMounted(load)
             </div>
           </div>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Tipo Token:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Tipo Token:</label>
             <Select v-model="cfg.tipo_token" :options="tokens" optionLabel="label" optionValue="value"
                     class="kvs-in" placeholder="Elige el proveedor de la firma" />
           </div>
@@ -216,9 +216,9 @@ onMounted(load)
         <fieldset class="kvs-fieldset" style="margin-top:14px;">
           <legend>Estado</legend>
           <div class="kvs-row">
-            <label class="kvs-lbl"><span class="req">*</span> Tipo Ambiente:</label>
+            <label class="kvs-lbl"><span class="req-star">*</span> Tipo Ambiente:</label>
             <Select v-model="cfg.ambiente" :options="ambientes" optionLabel="label" optionValue="value" class="kvs-in" />
-            <label class="kvs-lbl" style="margin-left:20px;"><span class="req">*</span> Estado:</label>
+            <label class="kvs-lbl" style="margin-left:20px;"><span class="req-star">*</span> Estado:</label>
             <Select v-model="cfg.edoc_estado" :options="estados" optionLabel="label" optionValue="value" class="kvs-in" />
           </div>
         </fieldset>
