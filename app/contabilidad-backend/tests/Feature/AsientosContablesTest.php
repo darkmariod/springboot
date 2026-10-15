@@ -309,7 +309,8 @@ class AsientosContablesTest extends TestCase
             'company_id' => $demo->id, 'contact_id' => $cliente->id, 'monto' => 100, 'forma_pago' => 'efectivo',
         ])->assertCreated();
 
-        // 2) Rol de pagos cerrado (IESS y beneficios)
+        // 2) Rol de pagos cerrado (IESS y beneficios). La nómina es del administrador y del contador (T7.1): el usuario de la prueba declara su rol.
+        Sanctum::actingAs(User::factory()->create(['rol' => 'admin', 'activo' => true]));
         $empleado = Employee::create(['company_id' => $demo->id, 'cedula' => '1700000003',
             'nombres' => 'Empleado Test', 'fecha_ingreso' => '2025-01-01', 'sueldo' => 1000]);
         $rol = Payroll::create(['company_id' => $demo->id, 'anio' => 2026, 'mes' => 9]);
@@ -340,7 +341,7 @@ class AsientosContablesTest extends TestCase
         $this->assertLineas($retRenta, [['2.1.01', 2, 0], ['2.1.10', 0, 2]]);
         $this->assertLineas($nomina, [
             ['5.2.01', 1000, 0], ['5.2.02', 121.50, 0], ['5.2.03', 164.17, 0],
-            ['2.1.04', 0, 216.00], ['2.1.05', 0, 164.17], ['2.1.06', 0, 0], ['2.1.07', 0, 905.50],
+            ['2.1.04', 0, 216.00], ['2.1.05', 0, 164.17], ['2.1.07', 0, 905.50],
         ]);
 
         // El nombre de cada cuenta corresponde al concepto que se asentó ahí

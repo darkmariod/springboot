@@ -14,6 +14,7 @@ use App\Models\Purchase;
 use App\Models\SriDocument;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Support\Cuentas;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -174,16 +175,18 @@ class MovimientosBancoTest extends TestCase
             'pagos' => [['tipo' => 'cheque_banco', 'valor' => 115, 'bank_id' => $this->banco->id, 'documento' => '004512']],
         ])->assertOk();
 
-        // Manual, como siempre: sin documento ni origen
+        // Manual, sin documento ni origen. Desde T5.3 un movimiento a mano lleva contrapartida y asiento, salvo que se marque
+        // "ya contabilizado" (solo para conciliar): este lo es, así que no se asienta
         $this->postJson('/api/bank-movements', [
             'company_id' => $this->company->id, 'bank_id' => $this->banco->id, 'fecha' => '2026-10-01',
-            'tipo' => 'credito', 'monto' => 500, 'concepto' => 'Aporte inicial',
+            'tipo' => 'credito', 'monto' => 500, 'concepto' => 'Aporte inicial', 'ya_contabilizado' => true,
         ])->assertCreated();
 
-        // y uno manual con número de documento (opcional)
+        // y uno manual con número de documento (opcional) y su contrapartida
         $this->postJson('/api/bank-movements', [
             'company_id' => $this->company->id, 'bank_id' => $this->banco->id, 'fecha' => '2026-10-02',
             'tipo' => 'credito', 'monto' => 0.01, 'concepto' => 'Depósito', 'documento' => 'DEP-77',
+            'cuenta_contrapartida_id' => Cuentas::cuenta($this->company->id, 'capital')->id,
         ])->assertCreated()->assertJsonPath('documento', 'DEP-77');
 
         $lista = $this->getJson('/api/bank-movements?company_id='.$this->company->id.'&bank_id='.$this->banco->id)->assertOk();

@@ -623,7 +623,7 @@ class EstadoCuentaTest extends TestCase
         $this->assertStringContainsString('"Fecha","Factura","Total","Notas de crédito","Notas de débito","Retenciones","Cobros","Anticipos","Saldo","Días"', $csv);
         $this->assertStringContainsString('"'.$factura->numero.'","100.00","NCI-000001 (10.00)","","001-001-000000001 (1.00)","0.00","0.00","89.00"', $csv);
         $this->assertStringContainsString('"","TOTAL","100.00","10.00","0.00","1.00","0.00","0.00","89.00"', $csv);
-        $this->assertStringContainsString('"","SALDO NETO (saldo − saldos a favor)"', $csv);
+        $this->assertStringContainsString('"","SALDO NETO (saldo - saldos a favor)"', $csv);
 
         $mov = $this->get("/api/estado-cuenta/clientes/{$this->cliente->id}?".http_build_query($base + ['vista' => 'movimientos']))->assertOk();
         $this->assertStringContainsString('-movimientos.csv', (string) $mov->headers->get('content-disposition'));
@@ -652,6 +652,43 @@ class EstadoCuentaTest extends TestCase
         foreach (['/api/estado-cuenta/proveedores', "/api/estado-cuenta/proveedores/{$this->ambos->id}"] as $url) {
             $pdf = $this->get($url.'?'.http_build_query(['company_id' => $this->company->id, 'formato' => 'pdf']))->assertOk();
             $this->assertStringContainsString('application/pdf', (string) $pdf->headers->get('content-type'));
+        }
+    }
+
+    /**
+     * Fase 8 / S5: dompdf no dibuja el signo menos Unicode (U+2212) y el PDF imprimía "saldo ? saldos a favor".
+     * Se lee el PDF de verdad con pdftotext.
+     */
+    public function test_el_pdf_del_detalle_no_imprime_signos_de_interrogacion_en_el_saldo_neto(): void
+    {
+        $pdftotext = trim((string) shell_exec('command -v pdftotext'));
+        if ($pdftotext === '') {
+            $this->markTestSkipped('pdftotext no está instalado: no se puede leer el PDF.');
+        }
+        $factura = $this->facturar($this->cliente, 100, 0);
+        $this->nota($factura, 'interna', 10, 0)->assertCreated();
+        $compra = $this->comprar($this->ambos, 100);
+        $this->postJson("/api/payables/{$compra->id}/pay", ['pagos' => [['tipo' => 'efectivo', 'valor' => 15]]])->assertOk();
+
+        $casos = [
+            ["/api/estado-cuenta/clientes/{$this->cliente->id}", 'SALDO NETO (saldo - saldos a favor)'],
+            ["/api/estado-cuenta/proveedores/{$this->ambos->id}", 'SALDO NETO (saldo - anticipos sin aplicar)'],
+        ];
+        foreach ($casos as [$url, $esperado]) {
+            $csv = $this->get($url.'?'.http_build_query(['company_id' => $this->company->id, 'formato' => 'excel']))->assertOk()->getContent();
+            $this->assertStringContainsString($esperado, $csv);
+            $this->assertStringNotContainsString('−', $csv, 'Sin el signo menos Unicode: se usa el guion normal');
+
+            $pdf = $this->get($url.'?'.http_build_query(['company_id' => $this->company->id, 'formato' => 'pdf']))->assertOk()->getContent();
+            $ruta = tempnam(sys_get_temp_dir(), 'ec').'.pdf';
+            file_put_contents($ruta, $pdf);
+            try {
+                $texto = (string) shell_exec(escapeshellarg($pdftotext).' -layout '.escapeshellarg($ruta).' - 2>/dev/null');
+            } finally {
+                @unlink($ruta);
+            }
+            $this->assertStringContainsString($esperado, preg_replace('/\s+/', ' ', $texto), "El PDF debe decir «{$esperado}»");
+            $this->assertStringNotContainsString('?', $texto, 'Ningún carácter se imprime como signo de interrogación');
         }
     }
 
