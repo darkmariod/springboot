@@ -6,8 +6,11 @@ use App\Models\Company;
 use App\Models\Contact;
 use App\Models\CreditNote;
 use App\Models\Invoice;
+use App\Models\Purchase;
 use App\Models\SriDocument;
+use App\Models\Withholding;
 use App\Support\Code128;
+use App\Support\ComprobantesCompra;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -89,7 +92,8 @@ class RideBuilder
         $d = $this->base($company, $interna ? null : $n->sriDocument, null);
         $d += [
             'tipo' => 'NOTA DE CRÉDITO'.($interna ? ' INTERNA' : ''),
-            'numero' => $n->numero ?: 'SIN NÚMERO',
+            // La nota del SRI guarda su número DESPUÉS de emitirse: mientras tanto es el de su comprobante
+            'numero' => $n->numero ?: (($interna ? null : $n->sriDocument?->numeroComprobante()) ?: 'SIN NÚMERO'),
             'fecha_emision' => $this->fecha($n->fecha),
             'comprador' => $this->comprador($n->contact),
             'detalle' => 'items',
@@ -145,6 +149,67 @@ class RideBuilder
         $d['info_adicional'] = $this->infoAdicional($nd->contact);
 
         return $this->conEstado($d, $nd->estado === 'anulado', $interna ? 'interna' : 'nota de débito');
+    }
+
+    // ------------------------------------------------------------ retención emitida a un proveedor (comprobante 07)
+
+    /**
+     * RIDE de la retención que la empresa emite a un proveedor. Recibe cualquiera de las filas del comprobante (una por línea,
+     * todas con el mismo número) y arma el comprobante completo: sujeto retenido, documento sustento y cada línea retenida.
+     */
+    public function paraRetencion(Withholding $w): array
+    {
+        $filas = Withholding::where('company_id', $w->company_id)->where('tipo', 'emitida')->where('numero', $w->numero)
+            ->when($w->purchase_id, fn ($q, $id) => $q->where('purchase_id', $id))->orderBy('id')->get();
+        $principal = $filas->first() ?? $w;
+        $filas = $filas->isEmpty() ? collect([$w]) : $filas;
+        $principal->loadMissing('sriDocument');
+        $company = Company::findOrFail($principal->company_id);
+        $compra = $principal->purchase_id ? Purchase::with('contact')->find($principal->purchase_id) : null;
+        $proveedor = $compra?->contact ?? ($principal->contact_id ? Contact::find($principal->contact_id) : null);
+        $sustento = $compra
+            ? mb_strtoupper(ComprobantesCompra::nombre(ComprobantesCompra::codigo($compra->tipo_comprobante))).' No. '.$compra->numero
+            : '—';
+        $fechaSustento = $compra?->fecha_emision ? $this->fecha($compra->fecha_emision) : null;
+
+        $renta = 0.0; $iva = 0.0;
+        $lineas = $filas->map(function (Withholding $f) use ($sustento, $fechaSustento, &$renta, &$iva) {
+            $extra = json_decode((string) $f->xml, true) ?: [];
+            $esIva = ($extra['tipo'] ?? ($f->codigo_retencion ? 'renta' : 'iva')) === 'iva';
+            $valor = round((float) $f->total_retenido, 2);
+            $esIva ? $iva += $valor : $renta += $valor;
+
+            return [
+                'sustento' => $sustento, 'fecha_sustento' => $fechaSustento ?: '—',
+                'impuesto' => $esIva ? 'IVA' : 'RENTA', 'codigo' => (string) ($extra['codigo'] ?? $f->codigo_retencion ?? ''),
+                'base' => $this->m($f->base_imponible), 'porcentaje' => rtrim(rtrim(number_format((float) $f->porcentaje, 2, '.', ''), '0'), '.'),
+                'valor' => $this->m($valor),
+            ];
+        })->values()->all();
+
+        $totales = [];
+        if ($renta > 0) { $totales[] = ['etiqueta' => 'RETENCIÓN RENTA', 'valor' => $this->m($renta), 'fuerte' => false]; }
+        if ($iva > 0) { $totales[] = ['etiqueta' => 'RETENCIÓN IVA', 'valor' => $this->m($iva), 'fuerte' => false]; }
+        $totales[] = ['etiqueta' => 'TOTAL RETENIDO', 'valor' => $this->m($renta + $iva), 'fuerte' => true];
+
+        $d = $this->base($company, $principal->sriDocument, null);
+        $d += [
+            'tipo' => 'COMPROBANTE DE RETENCIÓN',
+            'numero' => (string) $principal->numero,
+            'fecha_emision' => $this->fecha($principal->fecha),
+            'periodo_fiscal' => $principal->fecha ? Carbon::parse($principal->fecha)->format('m/Y') : null,
+            'comprador' => $this->comprador($proveedor),
+            'detalle' => 'retenciones',
+            'lineas' => $lineas,
+            'modificado' => null,
+            'motivo' => null,
+            'totales' => $totales,
+            'pagos' => [],
+            'condicion_pago' => null,
+        ];
+        $d['info_adicional'] = $this->infoAdicional($proveedor);
+
+        return $this->conEstado($d, false, 'retención');
     }
 
     // ------------------------------------------------------------ emisor, autorización y leyendas

@@ -2,23 +2,42 @@
 namespace App\Http\Controllers;
 use App\Actions\EmitirSriDocument;
 use App\Models\Company;
+use App\Models\CreditNote;
+use App\Models\EmailLog;
+use App\Models\Invoice;
 use App\Models\SriDocument;
+use App\Services\EnviarComprobanteCorreo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 
 class SriDocumentController extends Controller {
     /** Comprobantes que aún no están autorizados, con el número del documento y el último mensaje del SRI. */
     public function pending(Request $r) {
-        return SriDocument::with('documentable')
+        $docs = SriDocument::with('documentable')
             ->when($r->company_id, fn($q,$id)=>$q->where('company_id',$id))
             ->whereNotIn('estado', ['AUTORIZADO','autorizado'])
             ->latest()->get()
-            ->reject(fn(SriDocument $d)=>$d->documentoAnulado())
-            ->map(fn(SriDocument $d)=>[
-                'id'=>$d->id,'tipo_comprobante'=>$d->tipo_comprobante,'clave_acceso'=>$d->clave_acceso,
-                'estado'=>$d->estado,'fecha_emision'=>$d->fecha_emision,
-                'numero'=>$d->documentable?->numero,
-                'detalle'=>$this->detalle($d),
-            ])->values();
+            ->reject(fn(SriDocument $d)=>$d->documentoAnulado())->values();
+        $correos = EmailLog::resumenDe($docs->map->documentable);
+
+        return $docs->map(fn(SriDocument $d)=>$this->fila($d, $correos))->values();
+    }
+
+    /**
+     * Los últimos comprobantes AUTORIZADOS (hasta 100) con el estado de su correo: son los que se envían al cliente.
+     * El estado del correo de toda la lista sale de UNA consulta (EmailLog::resumenDe), no de una por fila.
+     */
+    public function authorized(Request $r) {
+        $docs = SriDocument::with(['documentable' => fn(MorphTo $m) => $m->morphWith([
+                Invoice::class => ['contact:id,razon_social'], CreditNote::class => ['contact:id,razon_social'],
+            ])])
+            ->when($r->company_id, fn($q,$id)=>$q->where('company_id',$id))
+            ->whereIn('estado', ['AUTORIZADO','autorizado'])
+            ->latest('id')->limit(100)->get()
+            ->reject(fn(SriDocument $d)=>$d->documentoAnulado())->values();
+        $correos = EmailLog::resumenDe($docs->map->documentable);
+
+        return $docs->map(fn(SriDocument $d)=>$this->fila($d, $correos))->values();
     }
 
     /**
@@ -55,6 +74,27 @@ class SriDocumentController extends Controller {
         return ['procesados'=>$docs->count(),'autorizados'=>$ok,'pendientes'=>$pendientes,'fallidos'=>$fallidos,
             'sin_firma'=>$sinFirma,'resultados'=>$resultados,
             'mensaje'=>$sinFirma>0 ? "$sinFirma comprobantes sin firmar: carga el certificado .p12 de la empresa para poder firmarlos y enviarlos." : null];
+    }
+
+    /**
+     * Una fila de la lista. `correo` es el estado del envío por correo (enviado | error | sin_enviar) y `comprobante` dice con qué
+     * tipo e id se envía por correo desde la pantalla (null si ese comprobante no se envía: nota interna, guía, liquidación).
+     */
+    private function fila(SriDocument $d, array $correos): array {
+        $doc = $d->documentable;
+        $tipo = $doc ? EnviarComprobanteCorreo::tipoDe($doc) : null;
+        $enviable = $tipo !== null && ! EnviarComprobanteCorreo::esInterna($doc);
+        return [
+            'id'=>$d->id,'tipo_comprobante'=>$d->tipo_comprobante,'clave_acceso'=>$d->clave_acceso,
+            'estado'=>$d->estado,'fecha_emision'=>$d->fecha_emision,
+            'numero'=>$doc?->numero ?: $d->numeroComprobante(),
+            'cliente'=>$doc?->relationLoaded('contact') ? $doc->contact?->razon_social : null,
+            'detalle'=>$this->detalle($d),
+            'comprobante'=>$enviable ? ['tipo'=>$tipo,'id'=>$doc->getKey()] : null,
+            'correo'=>$enviable
+                ? ($correos[$doc->getMorphClass().':'.$doc->getKey()] ?? ['estado'=>'sin_enviar','enviado_en'=>null,'destinatarios'=>[],'motivo'=>null])
+                : null,
+        ];
     }
 
     /** El último problema que guardó el sistema o el SRI para este comprobante (para mostrarlo en la lista). */

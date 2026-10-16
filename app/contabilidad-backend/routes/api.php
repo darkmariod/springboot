@@ -89,6 +89,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("invoices/{invoice}/ride", [\App\Http\Controllers\RideController::class, "factura"]);
     Route::get("credit-notes/{creditNote}/ride", [\App\Http\Controllers\RideController::class, "notaCredito"]);
     Route::get("notas-debito/{notaDebito}/ride", [\App\Http\Controllers\RideController::class, "notaDebito"]);
+    // Comprobantes por correo (RIDE en PDF + XML) con el servidor de correo de la empresa; también el historial de envíos
+    Route::middleware('rol:admin,contador,cajero')->group(function () {
+        Route::post('comprobantes/{tipo}/{id}/enviar-correo', [\App\Http\Controllers\ComprobanteCorreoController::class, 'enviar'])->whereNumber('id');
+        Route::get('comprobantes/{tipo}/{id}/correos', [\App\Http\Controllers\ComprobanteCorreoController::class, 'correos'])->whereNumber('id');
+    });
 
     // Compras
     Route::get("purchases", [\App\Http\Controllers\PurchaseController::class, "index"]);
@@ -168,6 +173,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Documentos SRI
     Route::middleware('feature:facturacion_sri')->group(function () { Route::get("sri-documents/pending", [\App\Http\Controllers\SriDocumentController::class, "pending"]); });
+    Route::middleware('feature:facturacion_sri')->group(function () { Route::get("sri-documents/authorized", [\App\Http\Controllers\SriDocumentController::class, "authorized"]); });
     Route::middleware('feature:facturacion_sri')->group(function () { Route::post("sri-documents/authorize-batch", [\App\Http\Controllers\SriDocumentController::class, "authorizeBatch"]); });
 
     // Cotizaciones

@@ -16,6 +16,7 @@ import { useCompanyStore } from '../stores/company'
 import { useTabsStore } from '../stores/tabs'
 import { usePlanStore } from '../stores/plan'
 import KvsModuleHeader from '../components/kvs/KvsModuleHeader.vue'
+import EnviarCorreoDialog from '../components/EnviarCorreoDialog.vue'
 import { onShortcut } from '../composables/useShortcuts'
 
 const company = useCompanyStore()
@@ -33,6 +34,15 @@ const anularError = ref('')
 const confirmaSri = ref(false)
 // Aviso que queda en pantalla hasta que se cierre (la respuesta del servidor dice si hace falta anular también en el SRI)
 const avisoAnulacion = ref<{ texto: string; requiere: boolean } | null>(null)
+// Enviar la factura por correo (RIDE en PDF + XML) con el servidor de correo de la empresa
+const correoVisible = ref(false)
+const correoDe = ref<any>(null)
+const puedeEnviarCorreo = (r: any) => !!r?.sri_document
+function enviarCorreo(r: any) {
+  if (!puedeEnviarCorreo(r)) return
+  correoDe.value = r
+  correoVisible.value = true
+}
 // Descarga del RIDE en PDF (lo arma el servidor con los datos del emisor y de la autorización del SRI)
 const rideBusy = ref(false)
 const rideError = ref('')
@@ -232,6 +242,10 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
                 :disabled="!seleccion" @click="seleccion && editar(seleccion)" />
         <Button label="Descargar RIDE (PDF)" icon="pi pi-file-pdf" size="small" outlined
                 :loading="rideBusy" :disabled="!seleccion" @click="seleccion && descargarRide(seleccion)" />
+        <Button label="Enviar por correo" icon="pi pi-envelope" size="small" outlined data-test="enviar-correo"
+                :disabled="!puedeEnviarCorreo(seleccion)"
+                :title="seleccion && !puedeEnviarCorreo(seleccion) ? 'Esta factura no tiene comprobante electrónico del SRI' : 'Enviar la factura por correo al cliente (RIDE y XML)'"
+                @click="enviarCorreo(seleccion)" />
         <Button label="Anular" icon="pi pi-ban" size="small" outlined severity="danger"
                 :disabled="!seleccion || seleccion?.estado === 'anulado'" @click="seleccion && pedirAnular(seleccion)" />
         <Button label="Salir" icon="pi pi-times" size="small" text @click="salir" />
@@ -263,7 +277,7 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
             <th style="width:60px">Asiento</th>
             <th style="width:104px">Creado</th>
             <th style="width:104px">Editado</th>
-            <th style="width:84px"></th>
+            <th style="width:112px"></th>
           </tr>
         </thead>
         <tbody>
@@ -294,6 +308,8 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
             <td>
               <Button icon="pi pi-eye" size="small" text @click.stop="ver(r)" title="Ver RIDE" />
               <Button icon="pi pi-file-pdf" size="small" text :disabled="rideBusy" @click.stop="descargarRide(r)" title="Descargar RIDE (PDF)" />
+              <Button icon="pi pi-envelope" size="small" text :disabled="!puedeEnviarCorreo(r)" @click.stop="enviarCorreo(r)"
+                      title="Enviar por correo" aria-label="Enviar por correo" data-test="fila-enviar-correo" />
             </td>
           </tr>
           <tr v-if="!filtrados.length">
@@ -445,6 +461,9 @@ onShortcut('cancelar', () => { if (preview.value) preview.value = null })
         <div v-if="empresa?.nota_pie" class="ride-nota">{{ empresa.nota_pie }}</div>
       </div>
     </Dialog>
+
+    <EnviarCorreoDialog v-if="correoDe" v-model:visible="correoVisible" tipo="factura" :comprobanteId="correoDe.id"
+                        :etiqueta="'Factura ' + correoDe.numero" />
   </div>
 </template>
 

@@ -8,6 +8,7 @@ import Tag from 'primevue/tag'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { usePlanStore } from '../stores/plan'
+import EnviarCorreoDialog from '../components/EnviarCorreoDialog.vue'
 
 const company = useCompanyStore()
 const plan = usePlanStore()
@@ -65,6 +66,13 @@ function etiquetaEstado(estado: string | null) {
   if (!estado) return 'Sin comprobante'
   const e = estado.toLowerCase()
   return ({ generado: 'Generado', firmado: 'Firmado', enviado: 'Enviado al SRI', autorizado: 'Autorizado' } as any)[e] ?? estado
+}
+// Enviar la retención emitida al proveedor por correo (RIDE en PDF + XML). El id es el de la primera fila del comprobante.
+const correoVisible = ref(false)
+const correoDe = ref<any>(null)
+function enviarCorreo(c: any) {
+  correoDe.value = c
+  correoVisible.value = true
 }
 const severidadEstado = (estado: string | null) =>
   (estado ?? '').toLowerCase() === 'autorizado' ? 'success' : (estado ?? '').toLowerCase() === 'generado' ? 'info' : 'warn'
@@ -131,8 +139,18 @@ onMounted(load)
                     :loading="reintentando === data.id" @click="generarComprobante(data)" />
           </template>
         </Column>
+        <Column header="Correo">
+          <template #body="{ data }">
+            <span :title="data.estado ? 'Enviar la retención por correo al proveedor (RIDE y XML)' : 'Genera el comprobante electrónico para poder enviarla por correo.'">
+              <Button label="Enviar por correo" icon="pi pi-envelope" size="small" text data-test="fila-enviar-correo"
+                      :disabled="!data.estado" @click="enviarCorreo(data)" />
+            </span>
+          </template>
+        </Column>
         <template #empty>Todavía no hay retenciones emitidas.</template>
       </DataTable>
+      <EnviarCorreoDialog v-if="correoDe" v-model:visible="correoVisible" tipo="retencion" :comprobanteId="correoDe.id"
+                          :etiqueta="'Retención ' + correoDe.numero" />
     </template>
   </div>
 </template>

@@ -5,6 +5,7 @@ import Password from 'primevue/password'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Checkbox from 'primevue/checkbox'
+import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
@@ -65,6 +66,7 @@ async function guardar() {
   }
   form.append('smtp_ssl', cfg.value.smtp_ssl ? '1' : '0')
   form.append('modo_online', cfg.value.modo_online ? '1' : '0')
+  form.append('enviar_comprobantes_automaticamente', cfg.value.enviar_comprobantes_automaticamente ? '1' : '0')
   if (claveSri.value) form.append('sri_clave', claveSri.value)
   if (clavecorreo.value) form.append('smtp_password', clavecorreo.value)
   const file = fileRef.value?.files?.[0]
@@ -187,7 +189,7 @@ onMounted(load)
         <fieldset class="kvs-fieldset" style="margin-top:14px;">
           <legend>Servidor de correo</legend>
           <p style="margin:0 0 10px; font-size:12px; color:#64748b;">
-            Con esto la factura llega sola al correo del cliente (XML + PDF). El SRI lo exige.
+            Con esto los comprobantes llegan al correo del cliente, con el RIDE en PDF y el XML adjuntos.
             Con Gmail usa una <b>contraseña de aplicación</b>, no la clave normal de la cuenta.
           </p>
           <div class="kvs-row">
@@ -200,8 +202,8 @@ onMounted(load)
             <label class="kvs-lbl">Usuario correo:</label>
             <InputText v-model="cfg.smtp_user" placeholder="facturacion@suempresa.com" class="kvs-in" />
             <label class="kvs-lbl" style="margin-left:20px;">Clave:</label>
-            <Password v-model="clavecorreo" :feedback="false" toggleMask class="kvs-in"
-                      placeholder="vacía = no cambiar" />
+            <Password v-model="clavecorreo" :feedback="false" toggleMask class="kvs-in" data-test="smtp-clave"
+                      :placeholder="cfg.smtp_password_guardada ? 'Ya hay una clave guardada (vacía = no cambiar)' : 'Escribe la clave del correo'" />
           </div>
           <div class="kvs-row">
             <label class="kvs-lbl">Correo de envío:</label>
@@ -210,6 +212,33 @@ onMounted(load)
               <Checkbox v-model="cfg.smtp_ssl" :binary="true" /> Usar SSL
             </label>
           </div>
+
+          <!-- Envío automático al autorizarse el comprobante -->
+          <div class="kvs-row" style="margin-top:6px; align-items:flex-start;">
+            <ToggleSwitch v-model="cfg.enviar_comprobantes_automaticamente" inputId="auto-correo" data-test="auto-correo" style="margin-top:2px;" />
+            <div style="margin-left:10px;">
+              <label for="auto-correo" style="font-size:13px; font-weight:600; cursor:pointer;">
+                Enviar los comprobantes por correo automáticamente cuando el SRI los autorice
+              </label>
+              <div style="font-size:12px; color:#64748b; margin-top:2px;">
+                Necesita el servidor de correo configurado y guardado. No se envía nada antes de cargar el certificado de firma:
+                sin firma los comprobantes quedan "generados" y no llegan al SRI. Siempre podrás enviar uno a mano desde Facturas,
+                Notas de crédito y débito o Retenciones.
+              </div>
+              <Message v-if="cfg.enviar_comprobantes_automaticamente && !cfg.smtp_configurado" severity="warn" :closable="false"
+                       style="margin-top:6px;" data-test="auto-correo-aviso-smtp">
+                Todavía no hay un servidor de correo guardado (servidor, usuario y clave): hasta entonces no saldrá ningún correo.
+              </Message>
+              <Message v-if="cfg.enviar_comprobantes_automaticamente && !cfg.firma_cargada" severity="info" :closable="false"
+                       style="margin-top:6px;" data-test="auto-correo-aviso-firma">
+                Todavía no hay una firma cargada: los comprobantes quedan "generados" y no se envía ningún correo hasta que la cargues.
+              </Message>
+            </div>
+          </div>
+          <p style="margin:10px 0 0; font-size:12px; color:#64748b;">
+            «Probar correo» envía un mensaje de prueba con la configuración que está <b>guardada</b>, por el mismo camino que los comprobantes:
+            guarda los cambios antes de probar.
+          </p>
         </fieldset>
 
         <!-- Estado y ambiente -->
@@ -226,7 +255,8 @@ onMounted(load)
 
       <!-- Botonera al pie, como KVS -->
       <div class="kvs-footer">
-        <Button label="Probar correo" icon="pi pi-send" size="small" outlined :loading="probando" @click="probarCorreo" />
+        <Button label="Probar correo" icon="pi pi-send" size="small" outlined :loading="probando" @click="probarCorreo"
+                title="Envía un correo de prueba con la configuración de correo guardada" />
         <Button label="Guardar" icon="pi pi-save" size="small" :loading="guardando" @click="guardar" />
       </div>
     </div>

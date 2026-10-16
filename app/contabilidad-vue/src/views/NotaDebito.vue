@@ -43,7 +43,7 @@
           <span v-else style="color: #94a3b8">Sin emitir</span>
         </template>
       </Column>
-      <Column header="Acciones" style="width: 260px">
+      <Column header="Acciones" style="width: 340px">
         <template #body="{ data }">
           <Button v-if="!data.interna && data.estado !== 'anulado' && !data.sri_document" icon="pi pi-send" size="small" label="Emitir"
                   @click="emitir(data)" :loading="emitting === data.id" />
@@ -51,6 +51,11 @@
           <span :title="data.interna ? 'Una nota interna no se envía al SRI, por eso no tiene RIDE.' : 'Descargar RIDE (PDF)'">
             <Button icon="pi pi-file-pdf" size="small" text aria-label="Descargar RIDE (PDF)" label="RIDE"
                     :loading="rideBusy === data.id" :disabled="data.interna" @click="descargarRide(data)" />
+          </span>
+          <!-- Solo la nota del SRI ya emitida se envía por correo; el span lleva el aviso porque un botón deshabilitado no recibe el ratón -->
+          <span v-if="data.estado !== 'anulado'" :title="data.interna ? 'Las notas internas no se envían por correo.' : (data.sri_document ? 'Enviar la nota por correo al cliente (RIDE y XML)' : 'Emite la nota para poder enviarla por correo.')">
+            <Button icon="pi pi-envelope" size="small" text aria-label="Enviar por correo" label="Correo" data-test="fila-enviar-correo"
+                    :disabled="data.interna || !data.sri_document" @click="enviarCorreo(data)" />
           </span>
           <Button v-if="data.estado !== 'anulado'" icon="pi pi-ban" size="small" label="Anular" severity="danger" text
                   @click="pedirAnular(data)" />
@@ -140,6 +145,9 @@
                 :disabled="esAutorizada(anularTarget) && !confirmaSri" @click="confirmarAnular" />
       </template>
     </Dialog>
+
+    <EnviarCorreoDialog v-if="correoDe" v-model:visible="correoVisible" tipo="nota_debito" :comprobanteId="correoDe.id"
+                        :etiqueta="'Nota de débito ' + (correoDe.numero ?? '')" />
   </div>
 </template>
 
@@ -159,6 +167,7 @@ import Checkbox from 'primevue/checkbox'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { usePlanStore } from '../stores/plan'
+import EnviarCorreoDialog from '../components/EnviarCorreoDialog.vue'
 
 const company = useCompanyStore()
 const plan = usePlanStore()
@@ -334,6 +343,14 @@ async function descargarRide(r: any) {
   } finally {
     rideBusy.value = null
   }
+}
+
+// Enviar la nota por correo (RIDE en PDF + XML). Una nota interna no se envía: no es un comprobante del SRI.
+const correoVisible = ref(false)
+const correoDe = ref<any>(null)
+function enviarCorreo(r: any) {
+  correoDe.value = r
+  correoVisible.value = true
 }
 
 onMounted(() => { load() })

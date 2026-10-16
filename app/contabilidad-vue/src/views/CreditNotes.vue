@@ -15,6 +15,7 @@ import Checkbox from 'primevue/checkbox'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
 import { usePlanStore } from '../stores/plan'
+import EnviarCorreoDialog from '../components/EnviarCorreoDialog.vue'
 
 const company = useCompanyStore()
 const plan = usePlanStore()
@@ -245,6 +246,14 @@ async function descargarRide(r: any) {
     rideBusy.value = null
   }
 }
+
+// Enviar la nota por correo (RIDE en PDF + XML). Una nota interna no se envía: no es un comprobante del SRI.
+const correoVisible = ref(false)
+const correoDe = ref<any>(null)
+function enviarCorreo(r: any) {
+  correoDe.value = r
+  correoVisible.value = true
+}
 onMounted(load)
 </script>
 
@@ -286,13 +295,18 @@ onMounted(load)
         <Tag v-else-if="estadoSri(data)" :value="estadoSri(data)" severity="success" />
         <span v-else style="color:#94a3b8;">Sin emitir</span>
       </template></Column>
-      <Column header="" style="width:260px"><template #body="{ data }">
+      <Column header="" style="width:340px"><template #body="{ data }">
         <Button v-if="data.tipo === 'sri' && !data.sri_document" label="Emitir" icon="pi pi-send" size="small"
                 :loading="emitiendo === data.id" @click="emitir(data)" />
         <!-- El span lleva el aviso: un botón deshabilitado no recibe el ratón -->
         <span :title="data.interna ? 'Una nota interna no se envía al SRI, por eso no tiene RIDE.' : 'Descargar RIDE (PDF)'">
           <Button icon="pi pi-file-pdf" size="small" text aria-label="Descargar RIDE (PDF)" label="RIDE"
                   :loading="rideBusy === data.id" :disabled="data.interna" @click="descargarRide(data)" />
+        </span>
+        <!-- Solo la nota del SRI ya emitida se envía por correo; el span lleva el aviso porque un botón deshabilitado no recibe el ratón -->
+        <span v-if="data.tipo !== 'anulado'" :title="data.interna ? 'Las notas internas no se envían por correo.' : (data.sri_document ? 'Enviar la nota por correo al cliente (RIDE y XML)' : 'Emite la nota para poder enviarla por correo.')">
+          <Button icon="pi pi-envelope" size="small" text aria-label="Enviar por correo" label="Correo" data-test="fila-enviar-correo"
+                  :disabled="data.interna || !data.sri_document" @click="enviarCorreo(data)" />
         </span>
         <Button v-if="data.tipo !== 'anulado'" label="Anular" icon="pi pi-ban" size="small" severity="danger" text
                 @click="pedirAnular(data)" />
@@ -417,5 +431,8 @@ onMounted(load)
         </div>
       </template>
     </Dialog>
+
+    <EnviarCorreoDialog v-if="correoDe" v-model:visible="correoVisible" tipo="nota_credito" :comprobanteId="correoDe.id"
+                        :etiqueta="'Nota de crédito ' + (correoDe.numero ?? '')" />
   </div>
 </template>

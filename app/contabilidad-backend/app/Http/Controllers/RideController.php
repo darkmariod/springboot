@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Services\RideBuilder;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\RidePdf;
 use Illuminate\Http\Request;
 
 /**
@@ -54,12 +54,7 @@ class RideController extends Controller
 
     private function pdf(array $datos)
     {
-        $archivo = 'RIDE-'.preg_replace('/[^A-Za-z0-9._-]+/', '-', (string) $datos['numero']).'.pdf';
-
-        // Con subconjunto de fuentes el PDF pesa unos KB en vez de llevar la fuente completa (más de 1 MB)
-        return Pdf::loadView('ride.documento', ['d' => $datos])
-            ->setOption(['enable_font_subsetting' => true])
-            ->setPaper('a4', 'portrait')
-            ->download($archivo);
+        // La plantilla y su configuración viven en RidePdf: el correo del comprobante adjunta exactamente el mismo PDF
+        return RidePdf::crear($datos)->download(RidePdf::nombreArchivo($datos));
     }
 }

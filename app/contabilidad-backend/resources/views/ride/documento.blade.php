@@ -1,5 +1,5 @@
 {{--
-    RIDE (representación impresa del comprobante electrónico) de una factura, una nota de crédito o una nota de débito.
+    RIDE (representación impresa del comprobante electrónico) de una factura, una nota de crédito, una nota de débito o una retención.
     Solo dibuja los datos que arma App\Services\RideBuilder: no calcula nada ni decide qué es válido.
     Está escrita con tablas y CSS 2.1 porque la convierte dompdf (no entiende flex ni grid).
 --}}
@@ -8,6 +8,7 @@
     $a = $d['autorizacion'];
     $c = $d['comprador'];
     $esMotivos = $d['detalle'] === 'motivos';
+    $esRetencion = $d['detalle'] === 'retenciones';
     // Solo un comprobante AUTORIZADO lleva número; si no lo está se dice que está pendiente, sin inventar nada
     $numeroAutorizacion = $a['autorizado'] ? ($a['numero'] ?: 'No disponible') : 'PENDIENTE DE AUTORIZACIÓN';
 @endphp
@@ -132,7 +133,7 @@
 <div class="bloque">
     <table>
         <tr>
-            <td class="et" style="width: 24%;">Razón social / nombres y apellidos:</td>
+            <td class="et" style="width: 24%;">{{ $esRetencion ? 'Sujeto retenido (razón social):' : 'Razón social / nombres y apellidos:' }}</td>
             <td style="width: 46%;">{{ $c['razon_social'] }}</td>
             <td class="et" style="width: 12%;">{{ $c['tipo_identificacion'] }}:</td>
             <td style="width: 18%;">{{ $c['identificacion'] }}</td>
@@ -149,6 +150,12 @@
             <td class="et">E-mail:</td>
             <td>{{ $c['email'] ?: '—' }}</td>
         </tr>
+        @if($esRetencion)
+        <tr>
+            <td class="et">Período fiscal:</td>
+            <td colspan="3">{{ $d['periodo_fiscal'] ?: '—' }}</td>
+        </tr>
+        @endif
         @if($d['modificado'])
         <tr>
             <td class="et">Comprobante que se modifica:</td>
@@ -171,6 +178,16 @@
     <thead>
     @if($esMotivos)
         <tr><th>Razón de la modificación</th><th class="der" style="width: 90px;">Valor</th></tr>
+    @elseif($esRetencion)
+        <tr>
+            <th>Comprobante de venta (sustento)</th>
+            <th style="width: 52px;">Fecha</th>
+            <th style="width: 40px;">Impuesto</th>
+            <th style="width: 34px;">Código</th>
+            <th class="der" style="width: 56px;">Base imponible</th>
+            <th class="der" style="width: 34px;">% Ret.</th>
+            <th class="der" style="width: 56px;">Valor retenido</th>
+        </tr>
     @else
         <tr>
             <th style="width: 62px;">Código</th>
@@ -186,6 +203,16 @@
     @foreach($d['lineas'] as $i => $l)
         @if($esMotivos)
             <tr class="{{ $loop->last ? 'ultima' : '' }}"><td>{{ $l['descripcion'] }}</td><td class="der">{{ $l['total'] }}</td></tr>
+        @elseif($esRetencion)
+            <tr class="{{ $loop->last ? 'ultima' : '' }}">
+                <td>{{ $l['sustento'] }}</td>
+                <td>{{ $l['fecha_sustento'] }}</td>
+                <td>{{ $l['impuesto'] }}</td>
+                <td class="mono" style="font-size: 6.9px;">{{ $l['codigo'] }}</td>
+                <td class="der">{{ $l['base'] }}</td>
+                <td class="der">{{ $l['porcentaje'] }}</td>
+                <td class="der">{{ $l['valor'] }}</td>
+            </tr>
         @else
             <tr class="{{ $loop->last ? 'ultima' : '' }}">
                 <td class="mono" style="font-size: 6.9px;">{{ $l['codigo'] }}</td>

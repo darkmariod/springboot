@@ -7,9 +7,12 @@ import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 import api from '../lib/api'
 import { useCompanyStore } from '../stores/company'
+import EnviarCorreoDialog from '../components/EnviarCorreoDialog.vue'
 
 const company = useCompanyStore()
 const rows = ref<any[]>([])
+// Los últimos autorizados: son los que se mandan al cliente, aquí se ve si el correo ya salió
+const autorizados = ref<any[]>([])
 const seleccion = ref<any[]>([])
 const loading = ref(true)
 const procesando = ref<'seleccion' | 'todos' | null>(null)
@@ -32,10 +35,30 @@ const tipoTxt: Record<string, string> = {
 const resultadoTxt: Record<string, string> = { autorizado: 'Autorizado', pendiente: 'Pendiente', error: 'Con error' }
 const hayPendientes = computed(() => rows.value.length > 0)
 
+// Estado del correo de cada comprobante (lo calcula el servidor con una sola consulta para toda la lista)
+const correoTxt: Record<string, string> = { enviado: 'Enviado', error: 'Error', sin_enviar: 'Sin enviar' }
+const correoSev: Record<string, string> = { enviado: 'success', error: 'danger', sin_enviar: 'secondary' }
+function correoTitulo(c: any) {
+  if (!c) return ''
+  if (c.estado === 'enviado') return 'Enviado a ' + (c.destinatarios ?? []).join(', ')
+  if (c.estado === 'error') return c.motivo ?? 'No se pudo enviar el correo'
+  return 'Todavía no se ha enviado por correo'
+}
+
+// Diálogo "Enviar por correo" del comprobante elegido
+const correoVisible = ref(false)
+const correoDe = ref<any>(null)
+function abrirCorreo(fila: any) {
+  if (!fila.comprobante) return
+  correoDe.value = { tipo: fila.comprobante.tipo, id: fila.comprobante.id, etiqueta: (tipoTxt[fila.tipo_comprobante] ?? 'Comprobante') + ' ' + (fila.numero ?? '') }
+  correoVisible.value = true
+}
+
 async function load() {
   loading.value = true
   try {
     rows.value = (await api.get('/sri-documents/pending?company_id=' + company.activeId)).data
+    autorizados.value = (await api.get('/sri-documents/authorized?company_id=' + company.activeId)).data
   } finally {
     loading.value = false
   }
@@ -113,9 +136,39 @@ onMounted(load)
       <Column header="Clave de acceso"><template #body="{ data }"><span style="font-family:monospace; font-size:11px;">{{ data.clave_acceso }}</span></template></Column>
       <Column header="Estado"><template #body="{ data }"><Tag :value="data.estado" :severity="estadoSev(data.estado)" /></template></Column>
       <Column header="Último mensaje"><template #body="{ data }"><span style="font-size:12px; color:#b45309;">{{ data.detalle ?? '' }}</span></template></Column>
+      <Column header="Correo"><template #body="{ data }">
+        <template v-if="data.correo">
+          <Tag :value="correoTxt[data.correo.estado]" :severity="correoSev[data.correo.estado]" :title="correoTitulo(data.correo)" data-test="correo-estado" />
+          <Button icon="pi pi-envelope" size="small" text title="Enviar por correo" aria-label="Enviar por correo" @click="abrirCorreo(data)" />
+        </template>
+        <span v-else style="color:#94a3b8;" title="Este comprobante no se envía por correo">—</span>
+      </template></Column>
       <Column header="Fecha"><template #body="{ data }">{{ String(data.fecha_emision).slice(0,10) }}</template></Column>
     </DataTable>
     <p v-if="!loading && !rows.length" style="color:#22a06b; text-align:center; padding:20px;">
       ✓ Todos los comprobantes están autorizados.</p>
+
+    <!-- Autorizados: el correo sale al cliente con el RIDE y el XML autorizado -->
+    <h4 style="margin:22px 0 2px;">Autorizados recientes</h4>
+    <p style="color:#94a3b8; font-size:12.5px; margin:0 0 6px;">
+      Los últimos comprobantes que el SRI ya autorizó y el estado de su correo al cliente.</p>
+    <DataTable :value="autorizados" :loading="loading" size="small" stripedRows dataKey="id" data-test="tabla-autorizados">
+      <Column header="Número"><template #body="{ data }">{{ data.numero ?? '—' }}</template></Column>
+      <Column header="Tipo"><template #body="{ data }">{{ tipoTxt[data.tipo_comprobante] ?? data.tipo_comprobante }}</template></Column>
+      <Column header="Cliente"><template #body="{ data }">{{ data.cliente ?? '—' }}</template></Column>
+      <Column header="Fecha"><template #body="{ data }">{{ String(data.fecha_emision).slice(0,10) }}</template></Column>
+      <Column header="Correo"><template #body="{ data }">
+        <template v-if="data.correo">
+          <Tag :value="correoTxt[data.correo.estado]" :severity="correoSev[data.correo.estado]" :title="correoTitulo(data.correo)" data-test="correo-estado" />
+          <Button :label="data.correo.estado === 'enviado' ? 'Reenviar' : 'Enviar'" icon="pi pi-envelope" size="small" text
+                  data-test="correo-accion" @click="abrirCorreo(data)" />
+        </template>
+        <span v-else style="color:#94a3b8;" title="Este comprobante no se envía por correo">—</span>
+      </template></Column>
+      <template #empty>Todavía no hay comprobantes autorizados.</template>
+    </DataTable>
+
+    <EnviarCorreoDialog v-if="correoDe" v-model:visible="correoVisible" :tipo="correoDe.tipo" :comprobanteId="correoDe.id"
+                        :etiqueta="correoDe.etiqueta" @enviado="load" />
   </div>
 </template>

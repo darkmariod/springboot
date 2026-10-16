@@ -14,9 +14,12 @@ class Company extends Model
         'estab', 'pto_emi', 'secuencial', 'regimen', 'obligado_contabilidad',
         'ambiente', 'certificado_p12', 'certificado_clave', 'email_envio', 'cert_sujeto', 'cert_valido_hasta',
         'sbu', 'plan', 'plan_vence',
+        // Correo de la empresa para enviar sus comprobantes (T10): la clave va cifrada por el cast `encrypted`
+        'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'enviar_comprobantes_automaticamente',
     ];
 
-    protected $hidden = ['certificado_p12', 'certificado_clave'];
+    // Las dos claves se guardan cifradas, pero el cast `encrypted` las devuelve en claro al serializar la empresa: nunca salen por la API
+    protected $hidden = ['certificado_p12', 'certificado_clave', 'sri_clave', 'smtp_password'];
 
     /** Plan con el que nace una empresa nueva si no se elige otro. Debe existir en config/planes.php. */
     public const PLAN_POR_DEFECTO = 'completo';
@@ -41,6 +44,8 @@ class Company extends Model
             'sri_clave' => 'encrypted',
             'smtp_password' => 'encrypted',
             'smtp_ssl' => 'boolean',
+            'smtp_port' => 'integer',
+            'enviar_comprobantes_automaticamente' => 'boolean',
             'modo_online' => 'boolean',
             'plan_vence' => 'date',
             'cert_valido_hasta' => 'date',

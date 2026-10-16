@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Services\EnviarComprobanteCorreo;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -38,6 +39,11 @@ class EdocConfigController extends Controller
             'smtp_user' => $company->smtp_user,
             'smtp_ssl' => (bool) $company->smtp_ssl,
             'email_envio' => $company->email_envio,
+            // La clave del correo nunca se devuelve; solo si ya hay una guardada, para que la pantalla lo diga
+            'smtp_password_guardada' => (bool) $company->smtp_password,
+            'smtp_configurado' => app(EnviarComprobanteCorreo::class)->configuracionSmtp($company) !== null,
+            // Envío automático de los comprobantes por correo cuando el SRI los autoriza (apagado por defecto)
+            'enviar_comprobantes_automaticamente' => (bool) $company->enviar_comprobantes_automaticamente,
             'ambiente' => (int) ($company->ambiente ?? 2),
             'edoc_estado' => $company->edoc_estado ?? 'ACTIVO',
             'modo_online' => (bool) $company->modo_online,
@@ -62,6 +68,7 @@ class EdocConfigController extends Controller
             'smtp_password' => ['nullable', 'string'],
             'smtp_ssl' => ['nullable', 'boolean'],
             'email_envio' => ['nullable', 'email'],
+            'enviar_comprobantes_automaticamente' => ['nullable', 'boolean'],
             'ambiente' => ['nullable', 'in:1,2'],
             'edoc_estado' => ['nullable', 'in:ACTIVO,INACTIVO'],
             'modo_online' => ['nullable', 'boolean'],
