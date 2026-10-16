@@ -155,6 +155,10 @@ class EmpresaDemo
         DB::table('purchase_payments')->whereIn('purchase_id', $de('purchases'))->delete();
         DB::table('cash_movements')->whereIn('cash_session_id', $de('cash_sessions'))->delete();
         DB::table('payroll_lines')->whereIn('payroll_id', $de('payrolls'))->delete();
+        // Las tomas físicas y los activos fijos apuntan a productos, bodegas y empleados: primero sus hijas
+        if (Schema::hasTable('physical_count_lines')) {
+            DB::table('physical_count_lines')->whereIn('physical_count_id', $de('physical_counts'))->delete();
+        }
         foreach (['price_lists', 'product_codes'] as $tabla) {
             DB::table($tabla)->whereIn('product_id', $de('products'))->delete();
         }
@@ -165,6 +169,7 @@ class EmpresaDemo
 
         // Con company_id, de las hijas a las padres
         $orden = [
+            'stock_transformations', 'physical_counts', 'fixed_asset_depreciations', 'fixed_assets', 'email_logs',
             'payment_splits', 'card_transactions', 'card_settlements', 'withholdings', 'sri_documents',
             'stock_reservations', 'advances', 'journal_entries', 'bank_movements', 'cash_sessions',
             'cash_registers', 'banks', 'inventory_movements', 'product_series', 'credit_notes', 'invoices',
@@ -172,7 +177,9 @@ class EmpresaDemo
             'contacts', 'audit_logs',
         ];
         foreach ($orden as $tabla) {
-            DB::table($tabla)->where('company_id', $id)->delete();
+            if (Schema::hasTable($tabla)) {
+                DB::table($tabla)->where('company_id', $id)->delete();
+            }
         }
 
         // Red de seguridad: cualquier otra tabla nueva con company_id (menos la configuración que se conserva)
@@ -339,7 +346,7 @@ class EmpresaDemo
             $this->lineaCompra('TEC-001', 20, 15),
             $this->lineaCompra('MOU-001', 20, 7),
             $this->lineaCompra('CAB-001', 30, 4.5),
-        ]));
+        ], '06'));
         $this->en(0.15, function () use ($compra1) {
             $this->api(PayableController::class, 'pay', [
                 'pagos' => [['tipo' => 'transferencia', 'valor' => 2000, 'bank_id' => $this->banco->id]],
@@ -351,7 +358,7 @@ class EmpresaDemo
         $this->en(0.2, fn () => $this->comprar($this->contactos['suministros'], '001-001-000001873', 'Compra de suministros a crédito', [
             $this->lineaCompra('TON-001', 12, 30),
             $this->lineaCompra('LIB-001', 15, 12, 0),
-        ]));
+        ], '06'));
 
         // Compra 3: un servicio, pagado en efectivo
         $compra3 = $this->en(0.3, fn () => $this->comprar($this->contactos['servicios'], '001-001-000000642', 'Servicio técnico contratado', [
@@ -416,12 +423,13 @@ class EmpresaDemo
         });
     }
 
-    private function comprar(Contact $proveedor, string $numero, string $observacion, array $items): array
+    /** $sustento: 06 = inventario con crédito tributario de IVA (la mercadería para vender); 01 = servicios y gastos. */
+    private function comprar(Contact $proveedor, string $numero, string $observacion, array $items, string $sustento = '01'): array
     {
         return $this->api(PurchaseController::class, 'store', [
             'company_id' => $this->empresa->id, 'contact_id' => $proveedor->id, 'numero' => $numero,
             'fecha_emision' => now()->toDateString(), 'warehouse_id' => $this->bodega->id,
-            'observacion' => $observacion, 'items' => $items,
+            'observacion' => $observacion, 'items' => $items, 'sustento_tributario' => $sustento,
         ]);
     }
 

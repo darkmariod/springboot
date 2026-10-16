@@ -245,6 +245,42 @@ class EmpresaDemoTest extends TestCase
         $this->artisan('contable:chequeo', ['--company' => $demo->id, '--estricto' => true])->assertExitCode(0);
     }
 
+    public function test_las_compras_de_mercaderia_de_la_demo_usan_sustento_06_y_el_servicio_01(): void
+    {
+        $this->crear();
+        $demo = $this->demo();
+        $sustento = fn (string $numero) => Purchase::where('company_id', $demo->id)->where('numero', $numero)->value('sustento_tributario');
+
+        $this->assertSame('06', $sustento('001-001-000004521'), 'Equipos para la venta: inventario con crédito tributario');
+        $this->assertSame('06', $sustento('001-001-000001873'), 'Suministros para la venta: inventario con crédito tributario');
+        $this->assertSame('01', $sustento('001-001-000000642'), 'Servicio técnico: crédito tributario de servicios');
+    }
+
+    public function test_rehacer_funciona_aunque_la_demo_tenga_fraccionamientos_y_tomas_fisicas(): void
+    {
+        $this->crear();
+        $demo = $this->demo();
+        $bodega = Warehouse::where('company_id', $demo->id)->orderBy('id')->firstOrFail();
+        $padre = Product::where('company_id', $demo->id)->where('codigo', 'CAB-001')->firstOrFail();
+        $hijo = Product::where('company_id', $demo->id)->where('codigo', 'MOU-001')->firstOrFail();
+
+        // Lo que se hace en la grabación del video: un fraccionamiento y una toma física (apuntan a productos y bodega)
+        Sanctum::actingAs($this->admin);
+        $this->postJson('/api/fractionations', [
+            'company_id' => $demo->id, 'product_id' => $padre->id, 'child_product_id' => $hijo->id, 'quantity' => 1, 'units_per_parent' => 2,
+        ])->assertCreated();
+        $this->postJson('/api/physical-counts', ['company_id' => $demo->id, 'warehouse_id' => $bodega->id])->assertCreated();
+        $this->assertSame(1, \App\Models\StockTransformation::where('company_id', $demo->id)->count());
+        $this->assertSame(1, \App\Models\PhysicalCount::where('company_id', $demo->id)->count());
+
+        $this->artisan('demo:crear', ['--rehacer' => true, '--force' => true])->assertExitCode(0);
+
+        $this->assertSame(0, \App\Models\StockTransformation::where('company_id', $demo->id)->count());
+        $this->assertSame(0, \App\Models\PhysicalCount::where('company_id', $demo->id)->count());
+        $this->assertSame(0, \App\Models\PhysicalCountLine::count());
+        $this->artisan('contable:chequeo', ['--company' => $demo->id, '--estricto' => true])->assertExitCode(0);
+    }
+
     public function test_rehacer_no_toca_una_empresa_con_ese_ruc_que_no_es_la_demo(): void
     {
         Company::create(['ruc' => self::RUC_DEMO, 'razon_social' => 'Otra Empresa Real SA', 'dir_matriz' => 'Av. 1']);
