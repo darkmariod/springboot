@@ -10,6 +10,12 @@
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <exclude>tests/Feature/Reuniones</exclude>
+        </testsuite>
+        <!-- Pruebas de aceptación de las reuniones (consultores, contadora, competidor y plataforma). Van en su propio suite para poder
+             correrlas solas con testsuite=Reuniones o con el grupo reuniones; un php artisan test completo las incluye igual. -->
+        <testsuite name="Reuniones">
+            <directory>tests/Feature/Reuniones</directory>
         </testsuite>
     </testsuites>
     <source>
