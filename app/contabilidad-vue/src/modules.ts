@@ -1,8 +1,12 @@
 import type { WorkTab } from './stores/tabs'
+import { useAuthStore } from './stores/auth'
 
 // oculto: no sale en el lanzador ni en la búsqueda, pero la pantalla sigue existiendo y se abre
 // desde otra (ej. Facturación Masiva, desde el botón de Facturas). Conserva su clave de PERMISOS.
-export type ModuleItem = WorkTab & { feature?: string; disabled?: boolean; oculto?: boolean }
+//
+// soloSuperadmin: lo ve únicamente el operador de la plataforma (Empresas: todas las empresas, altas y planes).
+// soloEmpresaPropia: lo ve quien NO es superadmin (Mi empresa: la misma pantalla, limitada a su empresa y sin controles de plan).
+export type ModuleItem = WorkTab & { feature?: string; disabled?: boolean; oculto?: boolean; soloSuperadmin?: boolean; soloEmpresaPropia?: boolean }
 
 export const modules: { label: string; items: ModuleItem[] }[] = [
   {
@@ -108,7 +112,8 @@ export const modules: { label: string; items: ModuleItem[] }[] = [
     label: 'Administración',
     items: [
       { key: 'branches', label: 'Sucursales', icon: 'pi pi-building-columns', component: 'Branches', feature: 'sucursales' },
-      { key: 'companies', label: 'Empresas', icon: 'pi pi-building', component: 'Companies' },
+      { key: 'companies', label: 'Empresas', icon: 'pi pi-building', component: 'Companies', soloSuperadmin: true },
+      { key: 'mi-empresa', label: 'Mi empresa', icon: 'pi pi-building', component: 'Companies', soloEmpresaPropia: true },
       { key: 'users', label: 'Usuarios y roles', icon: 'pi pi-shield', component: 'Users', feature: 'usuarios' },
       { key: 'audit', label: 'Auditoría', icon: 'pi pi-history', component: 'Audit', feature: 'auditoria' },
       { key: 'sales-reports', label: 'Reportes de ventas y compras', icon: 'pi pi-file-export', component: 'SalesReports', feature: 'reportes' },
@@ -160,11 +165,18 @@ function puedeVer(rol: string | undefined, key: string) {
  * Los módulos que ve un usuario según su plan y su rol. Los ítems `oculto` quedan fuera del
  * menú salvo que se pida `incluirOcultos` (para resolver una pantalla por su clave).
  */
-export function modulesPara(tiene: (f?: string) => boolean, rol?: string, incluirOcultos = false) {
+export function modulesPara(
+  tiene: (f?: string) => boolean,
+  rol?: string,
+  incluirOcultos = false,
+  esSuperadmin: boolean = useAuthStore().esSuperadmin,
+) {
   return modules
     .map((g) => ({
       ...g,
-      items: g.items.filter((i) => (incluirOcultos || !i.oculto) && tiene(i.feature) && puedeVer(rol, i.key)),
+      items: g.items.filter((i) =>
+        (incluirOcultos || !i.oculto) && tiene(i.feature) && puedeVer(rol, i.key)
+        && (!i.soloSuperadmin || esSuperadmin) && (!i.soloEmpresaPropia || !esSuperadmin)),
     }))
     .filter((g) => g.items.length > 0)
 }

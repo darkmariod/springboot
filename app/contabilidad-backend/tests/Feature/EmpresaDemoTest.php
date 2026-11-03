@@ -71,7 +71,8 @@ class EmpresaDemoTest extends TestCase
             'company_id' => $this->otra->id, 'codigo' => 'EXI-1', 'descripcion' => 'Producto existente',
             'tipo' => 'bien', 'precio' => 10, 'stock' => 7, 'costo_promedio' => 4,
         ]);
-        $this->admin = User::factory()->create(['rol' => 'admin', 'company_id' => $this->otra->id]);
+        // «El administrador de siempre»: con la Fase 11 (T11.6) es el superadministrador de la plataforma, el único que abre todas las empresas
+        $this->admin = User::factory()->create(['rol' => 'admin', 'company_id' => $this->otra->id, 'es_superadmin' => true]);
     }
 
     // ---------------------------------------------------------------- (a) creación

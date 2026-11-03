@@ -136,9 +136,9 @@ class CorreoComprobanteManualTest extends CorreoTestCase
         // Pidiéndola desde mi empresa
         $this->enviar('factura', $ajena->id)->assertNotFound();
         $this->getJson("/api/comprobantes/factura/{$ajena->id}/correos?company_id=".$this->company->id)->assertNotFound();
-        // Un usuario que no es admin tampoco puede pedir la empresa ajena
+        // Un usuario que no es admin tampoco puede pedir la empresa ajena (T11.6: 403 del aislamiento, antes 404 del controlador)
         $this->actuarComo('cajero', $this->company);
-        $this->enviar('factura', $ajena->id, [], $otra->id)->assertNotFound();
+        $this->enviar('factura', $ajena->id, [], $otra->id)->assertForbidden();
         $this->assertCount(0, $this->transporte->messages());
         $this->assertSame(0, EmailLog::count());
     }

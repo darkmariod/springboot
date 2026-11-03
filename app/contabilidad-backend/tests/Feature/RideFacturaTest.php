@@ -311,10 +311,12 @@ class RideFacturaTest extends TestCase
         $this->get("/api/invoices/{$f->id}/ride?company_id={$otra->id}")->assertNotFound();
 
         // Un usuario (que no es administrador) de la otra empresa no ve la factura aunque ponga el company_id de la dueña
+        // (T11.6: lo corta el aislamiento entre empresas con 403, antes de llegar al controlador)
         Sanctum::actingAs(User::factory()->create(['company_id' => $otra->id, 'rol' => 'cajero']));
-        $this->get("/api/invoices/{$f->id}/ride?company_id={$this->company->id}")->assertNotFound();
+        $this->get("/api/invoices/{$f->id}/ride?company_id={$this->company->id}")->assertForbidden();
 
-        // Y sin company_id no hay RIDE
+        // Y sin company_id no hay RIDE (un usuario sin empresa propia: a uno con empresa el aislamiento le pone la suya, T11.6)
+        Sanctum::actingAs(User::factory()->create());
         $this->getJson("/api/invoices/{$f->id}/ride")->assertStatus(422);
     }
 

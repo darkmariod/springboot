@@ -45,9 +45,27 @@ const filtrados = computed(() => rows.value.filter((r: any) => {
 
 async function load() {
   loading.value = true
-  rows.value = (await api.get('/users?company_id=' + company.activeId)).data
-  puntos.value = (await api.get('/emission-points?company_id=' + company.activeId)).data
-  loading.value = false
+  try {
+    rows.value = (await api.get('/users?company_id=' + company.activeId)).data
+    puntos.value = (await api.get('/emission-points?company_id=' + company.activeId)).data
+  } catch (err: any) {
+    msg.value = { type: 'error', text: textoDeError(err, 'No se pudo cargar la lista de usuarios.') }
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * Lo que se le muestra a la persona cuando una llamada falla: el mensaje del servidor si es una respuesta de negocio (4xx:
+ * «tiene documentos registrados», datos inválidos, sin permiso). Un error interno (5xx) o la falta de red nunca se muestran
+ * tal cual: pueden traer SQL o rutas del servidor.
+ */
+function textoDeError(err: any, porDefecto: string): string {
+  const r = err?.response
+  if (!r || r.status >= 500) return porDefecto
+  const errores = r.data?.errors
+  if (errores) return Object.values(errores).flat().join(' · ')
+  return r.data?.message ?? porDefecto
 }
 
 function seleccionar(r: any) {
@@ -74,7 +92,8 @@ async function eliminar() {
     await load()
     msg.value = { type: 'success', text: 'Usuario eliminado.' }
   } catch (err: any) {
-    msg.value = { type: 'error', text: err.response?.data?.message ?? 'No se pudo eliminar.' }
+    // Con historial el servidor responde 422 «Desactívalo en lugar de eliminarlo»: se muestra en pantalla y el usuario se conserva
+    msg.value = { type: 'error', text: textoDeError(err, 'No se pudo eliminar.') }
   }
 }
 
@@ -88,8 +107,7 @@ async function guardar() {
       form.value.id = res.data.id
     }
   } catch (err: any) {
-    const e = err.response?.data?.errors
-    msg.value = { type: 'error', text: e ? Object.values(e).flat().join(' · ') : 'No se pudo guardar.' }
+    msg.value = { type: 'error', text: textoDeError(err, 'No se pudo guardar.') }
     return
   }
   msg.value = { type: 'success', text: 'Usuario guardado.' }
@@ -155,6 +173,8 @@ onShortcut('buscar', () => document.querySelector<HTMLInputElement>('.kvs-search
     <section class="kvs-panel" style="flex:1;">
       <div class="kvs-panel-title">Detalle Usuario</div>
 
+      <!-- Sin nada seleccionado también se ve el resultado de la última acción (eliminado, error al cargar) -->
+      <Message v-if="msg && !form.id && !editando" :severity="msg.type" :closable="false" style="margin:10px;">{{ msg.text }}</Message>
       <div v-if="!form.id && !editando" class="kvs-empty">
         Elige un usuario del listado, o toca <b>+</b> para crear uno nuevo.
       </div>

@@ -48,9 +48,14 @@ return [
     | considered expired. This will override any values set in the token's
     | "expires_at" attribute, but first-party sessions are not affected.
     |
+    | Aquí vencen a las 24 horas (1440 minutos) de emitidos; el valor se puede
+    | cambiar con SANCTUM_EXPIRATION sin tocar código. Sin esa variable aplica
+    | el valor por defecto, así que el servidor no necesita configuración nueva.
+    | Una variable vacía, 0 o negativa no apaga el vencimiento: cae en 1440 o en 1.
+    |
     */
 
-    'expiration' => null,
+    'expiration' => max(1, (int) (env('SANCTUM_EXPIRATION') ?: 1440)),
 
     /*
     |--------------------------------------------------------------------------

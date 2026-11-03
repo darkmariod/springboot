@@ -384,8 +384,10 @@ class AsientosManualesTest extends TestCase
         $entry = app(GenerateInvoiceJournalEntry::class)->handle($this->facturaCredito(100));
         $cuerpo = ['fecha' => '2026-03-06', 'concepto' => 'Corrección', 'lines' => $this->payload([['1.1.09', 100, 0], ['4.1.01', 0, 100]])];
 
-        // La contadora sembrada pertenece a otra empresa pero trabaja en la que elige en el selector
-        Sanctum::actingAs(User::factory()->create(['rol' => 'contador', 'activo' => true, 'company_id' => $this->otra->id]));
+        // La contadora trabaja en la empresa que elige en el selector: sin empresa propia (T11.6: un usuario con empresa queda
+        // confinado a ella con 403 antes del controlador; eso lo prueban AislamientoEntreEmpresasTest y compañía). Aquí se
+        // conserva lo que verifica el controlador: pedir el asiento con la empresa equivocada es 404 y no cambia nada.
+        Sanctum::actingAs(User::factory()->create(['rol' => 'contador', 'activo' => true, 'company_id' => null]));
         // Pedir el asiento con la empresa equivocada: 404 y no cambia nada
         $this->putJson("/api/journal-entries/{$entry->id}", ['company_id' => $this->otra->id] + $cuerpo)->assertNotFound();
         $this->deleteJson("/api/journal-entries/{$entry->id}?company_id={$this->otra->id}")->assertNotFound();

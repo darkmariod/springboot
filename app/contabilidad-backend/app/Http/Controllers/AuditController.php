@@ -22,7 +22,8 @@ class AuditController extends Controller
         return [
             'modelos'  => (clone $base)->distinct()->orderBy('modelo')->pluck('modelo'),
             'acciones' => (clone $base)->distinct()->orderBy('accion')->pluck('accion'),
-            'usuarios' => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            // Solo los usuarios de la empresa consultada: el combo no debe mostrar a los de otras empresas
+            'usuarios' => \App\Models\User::when($r->company_id, fn ($q, $id) => $q->where('company_id', $id))->orderBy('name')->get(['id', 'name']),
         ];
     }
 

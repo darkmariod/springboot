@@ -26,11 +26,13 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
-        // Usuario admin
-        User::firstOrCreate(
+        // Usuario admin: es el operador de la plataforma (superadministrador, T11.6), el único que ve todas las empresas.
+        // `es_superadmin` no es asignable en masa, por eso se fija aparte; si el usuario ya existía también queda como superadmin.
+        $admin = User::firstOrCreate(
             ['email' => 'admin@demo.com'],
             ['name' => 'Administrador', 'password' => Hash::make('password123'), 'company_id' => $company->id, 'rol' => 'admin'],
         );
+        $admin->forceFill(['es_superadmin' => true])->save();
 
         // Usuario para la contadora (pedido del cliente) — rol contador
         User::firstOrCreate(

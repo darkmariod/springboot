@@ -11,6 +11,7 @@ import './style.css'
 
 import App from './App.vue'
 import router from './router'
+import { instalarInterceptoresDeSesion } from './stores/auth'
 
 // Textos de PrimeVue en español (calendario, listas vacías, filtros, contraseña, etc.).
 // No hay paquete de idiomas instalado, por eso va aquí.
@@ -135,6 +136,9 @@ const localeEs = {
     listLabel: 'Lista de opciones',
   },
 }
+
+// Sesión vencida o usuario desactivado → login bajo /app/ (reemplaza el interceptor de lib/api.ts, que mandaba a '/login')
+instalarInterceptoresDeSesion()
 
 const app = createApp(App)
 

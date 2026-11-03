@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
-import { useAuthStore } from '../stores/auth'
+import { CLAVE_MOTIVO, useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -14,6 +14,13 @@ const password = ref('')
 const error = ref<string | null>(null)
 const loading = ref(false)
 
+// Si la sesión se cerró sola (venció, o el administrador desactivó al usuario) el aviso queda aquí; se muestra una sola vez
+const aviso = ref<string | null>(null)
+try {
+  aviso.value = sessionStorage.getItem(CLAVE_MOTIVO)
+  sessionStorage.removeItem(CLAVE_MOTIVO)
+} catch { /* sin almacenamiento: no hay aviso */ }
+
 async function submit() {
   loading.value = true
   error.value = null
@@ -21,7 +28,9 @@ async function submit() {
     await auth.login(email.value, password.value)
     router.push({ name: 'app' })
   } catch (e: any) {
-    error.value = e.response?.data?.message ?? 'No se pudo iniciar sesión.'
+    // Un error interno (5xx) puede traer SQL o rutas: no se muestra tal cual
+    const interno = !e.response || e.response.status >= 500
+    error.value = interno ? 'No se pudo iniciar sesión. Inténtalo de nuevo en unos minutos.' : (e.response?.data?.message ?? 'No se pudo iniciar sesión.')
   } finally {
     loading.value = false
   }
@@ -46,6 +55,7 @@ async function submit() {
           <Password v-model="password" placeholder="Ingrese su contraseña" :feedback="false" toggleMask fluid />
         </label>
 
+        <small v-if="aviso && !error" class="login-aviso">{{ aviso }}</small>
         <small v-if="error" class="login-error">{{ error }}</small>
 
         <Button type="submit" label="Ingresar" :loading="loading" fluid class="login-btn"
@@ -114,6 +124,7 @@ async function submit() {
 .login-form { display: flex; flex-direction: column; gap: 14px; }
 .login-form label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #475569; }
 .login-error { color: #d93025; font-size: 12px; }
+.login-aviso { color: #b45309; font-size: 12px; }
 /* Botón Ingresar en AZUL de marca (no el verde del tema) — pedido del cliente */
 .login-btn {
   background: var(--hr-blue) !important;

@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import { useCompanyStore } from '../stores/company'
 import { useTabsStore } from '../stores/tabs'
 import { usePlanStore } from '../stores/plan'
+import { PERMISOS } from '../modules'
 import Home from '../views/Home.vue'
 import SignatureConfig from '../views/SignatureConfig.vue'
 import Dashboard from '../views/Dashboard.vue'
@@ -70,6 +71,17 @@ const plan = usePlanStore()
 const HOME = { key: 'home', label: 'Módulos', icon: 'pi pi-th-large', component: 'Home' }
 
 const maximized = ref(false)
+
+// El resumen del negocio es de administrador y contador: el cajero no lo tiene en su menú y la API se lo niega (T11.5).
+// Para él, «inicio» es el lanzador de módulos.
+function irAlInicio() {
+  const permisos = PERMISOS[auth.user?.rol ?? '']
+  if (permisos === '*' || permisos?.includes('inicio')) {
+    tabs.open({ key: 'inicio', label: 'Resumen del negocio', icon: 'pi pi-home', component: 'Dashboard' })
+  } else {
+    tabs.open(HOME)
+  }
+}
 
 const componentMap: Record<string, any> = {
   Home, SignatureConfig, Dashboard, Accounts, Placeholder, Contacts, Products, Banks, Pos,
@@ -154,13 +166,16 @@ function atajoDeLayout(action: string, payload?: unknown) {
   <div class="layout" :class="{ maximized }">
     <div class="main">
       <header class="topbar">
-        <button class="brand" title="Ir al inicio" @click="tabs.open({ key: 'inicio', label: 'Resumen del negocio', icon: 'pi pi-home', component: 'Dashboard' })">
+        <button class="brand" title="Ir al inicio" @click="irAlInicio()">
           <img src="/logo-marca-blanca.png" alt="" class="hr-logo" />
           <span class="hr-wordmark">HasReset</span>
         </button>
         <Button label="Módulos" icon="pi pi-th-large" text size="small"
                 @click="tabs.open(HOME)" />
+        <!-- El selector lista solo lo que el servidor devuelve en /companies: el superadministrador ve todas; el usuario de un
+             cliente, la suya, y entonces no hay nada que cambiar y se muestra el nombre fijo. -->
         <Select
+          v-if="company.puedeCambiar"
           v-model="company.activeId"
           :options="company.companies"
           :optionLabel="(c) => c.razon_social || 'Empresa sin configurar'"
@@ -169,6 +184,7 @@ function atajoDeLayout(action: string, payload?: unknown) {
           class="company-select"
           @change="(e) => cambiarEmpresa(e.value)"
         />
+        <span v-else class="company-fixed" data-testid="empresa-fija">{{ company.active?.razon_social || 'Empresa' }}</span>
         <div class="topbar-right">
           <Tag v-if="plan.vencido" value="Plan vencido" severity="danger" />
           <span class="user">
@@ -268,6 +284,8 @@ function atajoDeLayout(action: string, payload?: unknown) {
 /* El selector de empresa era una píldora blanca que partía la barra en dos.
    Ahora es un campo oscuro que se funde con el fondo. */
 .company-select { min-width: 300px; }
+/* Usuario de un cliente: su empresa, como texto (no hay otra a la que cambiar) */
+.company-fixed { color: #e2e8f0; font-size: 14px; font-weight: 600; padding: 0 14px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar :deep(.company-select) {
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.15);

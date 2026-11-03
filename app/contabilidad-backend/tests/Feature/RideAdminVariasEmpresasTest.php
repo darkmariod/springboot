@@ -60,9 +60,15 @@ class RideAdminVariasEmpresasTest extends TestCase
         ]);
     }
 
+    /**
+     * T11.6: «el administrador de siempre» (el que abre todas las empresas desde el selector) es ahora el superadministrador de la
+     * plataforma; los demás roles quedan confinados a su empresa y el middleware `tenant` les responde 403 ante la empresa ajena.
+     */
     private function como(string $rol, Company $empresa): void
     {
-        Sanctum::actingAs(User::factory()->create(['rol' => $rol, 'activo' => true, 'company_id' => $empresa->id]));
+        Sanctum::actingAs(User::factory()->create([
+            'rol' => $rol, 'activo' => true, 'company_id' => $empresa->id, 'es_superadmin' => $rol === 'admin',
+        ]));
     }
 
     public function test_un_administrador_de_la_empresa_a_descarga_el_ride_de_la_factura_de_la_empresa_b(): void
@@ -94,19 +100,20 @@ class RideAdminVariasEmpresasTest extends TestCase
     {
         $this->como('cajero', $this->a);
 
-        // Pidiendo la empresa B, que no es la suya
-        $this->get("/api/invoices/{$this->facturaB->id}/ride?company_id={$this->b->id}")->assertNotFound();
-        $this->get("/api/credit-notes/{$this->ncB->id}/ride?company_id={$this->b->id}")->assertNotFound();
-        $this->get("/api/notas-debito/{$this->ndB->id}/ride?company_id={$this->b->id}")->assertNotFound();
-        // Y pidiéndolo con la suya: la factura no es de A
-        $this->get("/api/invoices/{$this->facturaB->id}/ride?company_id={$this->a->id}")->assertNotFound();
+        // Pidiendo la empresa B, que no es la suya (T11.6: antes 404 del controlador; ahora el aislamiento lo corta antes con 403)
+        $this->get("/api/invoices/{$this->facturaB->id}/ride?company_id={$this->b->id}")->assertForbidden();
+        // T11.5: las notas de crédito y de débito no son del cajero (su menú no las tiene): ni siquiera llega a buscarlas, 403 antes del 404
+        $this->get("/api/credit-notes/{$this->ncB->id}/ride?company_id={$this->b->id}")->assertForbidden();
+        $this->get("/api/notas-debito/{$this->ndB->id}/ride?company_id={$this->b->id}")->assertForbidden();
+        // Y pidiéndolo con la suya: la factura no es de A (403 del aislamiento, que también cubre el id de la URL)
+        $this->get("/api/invoices/{$this->facturaB->id}/ride?company_id={$this->a->id}")->assertForbidden();
     }
 
     public function test_un_contador_de_la_empresa_a_tampoco_ve_documentos_de_la_empresa_b(): void
     {
         $this->como('contador', $this->a);
 
-        $this->get("/api/invoices/{$this->facturaB->id}/ride?company_id={$this->b->id}")->assertNotFound();
+        $this->get("/api/invoices/{$this->facturaB->id}/ride?company_id={$this->b->id}")->assertForbidden();
     }
 
     public function test_el_cajero_de_la_empresa_b_si_descarga_sus_propios_documentos(): void

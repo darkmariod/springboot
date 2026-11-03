@@ -4,12 +4,57 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\AuditLog;
+use App\Support\NuevaEmpresa;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class CompanyController extends Controller
 {
-    public function index()
+    public const SOLO_SUPERADMIN = 'Solo el administrador de la plataforma puede hacer esto.';
+
+    /**
+     * Las empresas que el usuario puede abrir: el superadministrador (y quien no tiene empresa) ve todas; el usuario de un cliente,
+     * solo la suya. El selector de empresas del menú se llena con esta lista, así que a un cliente no le deja cambiar de empresa.
+     */
+    public function index(Request $r)
     {
-        return Company::orderBy('razon_social')->get();
+        $u = $r->user();
+
+        return Company::when($u?->estaConfinadoAEmpresa(), fn ($q) => $q->whereKey($u->company_id))
+            ->orderBy('razon_social')->get();
+    }
+
+    /**
+     * Alta de una empresa cliente con lo que necesita para trabajar: plan de cuentas, bodega, punto de emisión y su primer
+     * administrador (T11.6c). Solo el superadministrador. No devuelve la contraseña.
+     */
+    public function store(Request $r, NuevaEmpresa $alta)
+    {
+        $this->exigirSuperadmin($r);
+        $d = $r->validate(NuevaEmpresa::reglas(), NuevaEmpresa::mensajes());
+
+        try {
+            $resultado = $alta->crear($d);
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+        $admin = $resultado['admin'];
+
+        return response()->json([
+            'ok' => true,
+            'mensaje' => 'Empresa creada. Su administrador ya puede ingresar con el correo y la contraseña indicados.',
+            'company' => $resultado['empresa'],
+            'admin' => ['id' => $admin->id, 'name' => $admin->name, 'email' => $admin->email, 'rol' => $admin->rol],
+        ], 201);
+    }
+
+    /** El plan y su vencimiento los cambia solo el operador de la plataforma: de lo contrario un cliente se "mejoraría" el plan gratis. */
+    private function exigirSuperadmin(Request $r): void
+    {
+        abort_unless($r->user()?->esSuperadmin(), 403, self::SOLO_SUPERADMIN);
     }
 
     public function show(Company $company)
@@ -24,7 +69,7 @@ class CompanyController extends Controller
     public function update(\Illuminate\Http\Request $request, Company $company)
     {
         $data = $request->validate([
-            'ruc' => ['sometimes', 'string', 'size:13'],
+            'ruc' => ['sometimes', 'string', 'size:13', Rule::unique('companies', 'ruc')->ignore($company->id)],
             'razon_social' => ['sometimes', 'string', 'max:300'],
             'nombre_comercial' => ['nullable', 'string', 'max:300'],
             'dir_matriz' => ['sometimes', 'string', 'max:300'],
@@ -40,7 +85,26 @@ class CompanyController extends Controller
             'sitio_web' => ['nullable','string','max:160'],
             'nota_pie' => ['nullable','string','max:600'],
             'email_envio' => ['nullable', 'email'],
+            'plan' => ['sometimes', 'in:basico,negocio,completo'],
+            'plan_vence' => ['sometimes', 'nullable', 'date'],
         ]);
+
+        // El plan y su vencimiento no los cambia el administrador de la empresa. Si su formulario los reenvía tal cual están no pasa
+        // nada; si traen otro valor se le dice por qué no, y no se cambia nada.
+        if (! $request->user()?->esSuperadmin()) {
+            $errores = [];
+            if (array_key_exists('plan', $data) && $data['plan'] !== $company->plan) {
+                $errores['plan'] = ['Solo el administrador de la plataforma cambia el plan.'];
+            }
+            if (array_key_exists('plan_vence', $data)
+                && ($data['plan_vence'] === null ? null : Carbon::parse($data['plan_vence'])->toDateString()) !== optional($company->plan_vence)->toDateString()) {
+                $errores['plan_vence'] = ['Solo el administrador de la plataforma cambia el vencimiento del plan.'];
+            }
+            if ($errores) {
+                throw ValidationException::withMessages($errores);
+            }
+            unset($data['plan'], $data['plan_vence']);
+        }
 
         $company->update($data);
 
@@ -88,6 +152,7 @@ class CompanyController extends Controller
         ];
     }
     public function cambiarPlan(\Illuminate\Http\Request $r, Company $company) {
+        $this->exigirSuperadmin($r);
         $d = $r->validate([
             'plan' => ['required', 'in:basico,negocio,completo'],
             'plan_vence' => ['nullable', 'date'],

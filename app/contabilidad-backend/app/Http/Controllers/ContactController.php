@@ -1,7 +1,16 @@
 <?php
 namespace App\Http\Controllers;
+use App\Models\Advance;
 use App\Models\Contact;
+use App\Models\CreditNote;
+use App\Models\Employee;
+use App\Models\Invoice;
+use App\Models\Purchase;
+use App\Models\Quote;
+use App\Models\StockReservation;
+use App\Models\Withholding;
 use App\Support\ClaseContribuyente;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 class ContactController extends Controller {
@@ -65,5 +74,32 @@ class ContactController extends Controller {
             ]);
         }
     }
-    public function destroy(Contact $contact) { $contact->delete(); return response()->noContent(); }
+    /**
+     * Un contacto con documentos (facturas, compras, cotizaciones, notas de crédito, anticipos, retenciones, reservas de stock o
+     * consumos de un empleado) no se elimina: borrarlo dejaría esos documentos sin su cliente o proveedor (T11.4).
+     * El contacto no tiene casilla de «activo», así que el aviso no ofrece desactivarlo.
+     */
+    public function destroy(Contact $contact) {
+        if ($this->tieneDocumentos($contact)) return $this->conDocumentos();
+        try {
+            $contact->delete();
+        } catch (QueryException $e) {
+            // Una tabla nueva apunta al contacto y no está en la lista: la base lo rechaza; que no salga como un 500 con SQL
+            if (! str_starts_with((string) $e->getCode(), '23')) throw $e;
+            return $this->conDocumentos();
+        }
+        return response()->noContent();
+    }
+
+    private function tieneDocumentos(Contact $contact): bool {
+        foreach ([Invoice::class, Purchase::class, Quote::class, CreditNote::class, Advance::class, Withholding::class,
+                  StockReservation::class, Employee::class] as $modelo) {
+            if ($modelo::where('contact_id', $contact->id)->exists()) return true;
+        }
+        return false;
+    }
+
+    private function conDocumentos() {
+        return response()->json(['message'=>'No se puede eliminar: tiene documentos registrados.'], 422);
+    }
 }
