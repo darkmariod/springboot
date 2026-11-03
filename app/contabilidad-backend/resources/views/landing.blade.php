@@ -1,3 +1,4 @@
+@php($whatsapp = '593000000000') {{-- ← número de WhatsApp de ventas, con código de país y sin signos (ej.: 593991234567) --}}
 <!doctype html>
 <html lang="es">
 <head>
@@ -209,7 +210,8 @@
       <li>Firma con tu certificado <span class="mono">.p12</span> y envío automático al SRI</li>
       <li>Los datos del cliente se traen del SRI con el RUC o la cédula</li>
       <li>Cada venta descarga el inventario y genera su asiento</li>
-      <li>Reportes para los formularios 103 y 104</li>
+      <li>El RIDE y el XML llegan al correo de tu cliente cuando el SRI autoriza</li>
+      <li>Retenciones, formularios 103 y 104 y estados financieros listos para tu contador</li>
     </ul>
     <a class="verplanes" href="#planes">Ver planes y precios</a>
   </div>
@@ -266,9 +268,10 @@
       <p class="desc">Para el negocio que todavía anota en cuaderno o en Excel y necesita control de stock y caja al día.</p>
       <ul>
         <li>Punto de venta y cierres de caja</li>
-        <li>Inventario, kárdex y bodegas</li>
-        <li>Garantías por número de serie</li>
-        <li>Cuentas por cobrar y bancos</li>
+        <li>Inventario, kárdex, bodegas y toma física</li>
+        <li>Series por unidad con búsqueda y garantías</li>
+        <li>Cuentas por cobrar y estado de cuenta de clientes y proveedores</li>
+        <li>Caja con comprobantes, depósitos a banco y cheques</li>
         <li>Auditoría de todo lo que pasa</li>
         <li class="serv">Implementación gratuita</li>
         <li class="serv">Capacitación incluida</li>
@@ -303,9 +306,12 @@
         <li>Plan Básico +</li>
         <li>Facturación electrónica del SRI</li>
         <li>Los seis comprobantes autorizados</li>
+        <li>RIDE en PDF y envío por correo a tu cliente</li>
         <li>Importar compras del SRI por lote</li>
-        <li>Facturación masiva</li>
-        <li>Conciliación bancaria y de tarjetas</li>
+        <li>Retención al registrar la compra</li>
+        <li>Notas de crédito y débito ligadas a su factura</li>
+        <li>Facturación masiva y varias cotizaciones en una factura</li>
+        <li>Conciliación con el archivo de tu banco y de tarjetas</li>
         <li>Usuarios con permisos por módulo</li>
         <li class="serv">Implementación y carga de tu certificado</li>
         <li class="serv">Capacitación incluida</li>
@@ -339,9 +345,11 @@
       <ul>
         <li>Plan Negocio +</li>
         <li>Multisucursales con su establecimiento</li>
-        <li>Contabilidad, balances y mayores</li>
+        <li>Contabilidad: asientos manuales, períodos y cierre</li>
+        <li>Estados financieros por período, mayores y balances</li>
         <li>Formularios 103, 104 y ATS</li>
-        <li>Nómina y rol de pagos</li>
+        <li>Nómina con préstamos, permisos y vacaciones</li>
+        <li>Activos fijos con depreciación automática</li>
         <li>Centros de costo por área o local</li>
         <li class="serv">Implementación y migración de tus datos</li>
         <li class="serv">Capacitación personalizada</li>
@@ -399,12 +407,20 @@
     <summary>¿Mi contador puede acceder?</summary>
     <p>Sí. Puedes crear usuarios con permisos por módulo, de manera que tu contador vea la información contable sin tocar la operación diaria.</p>
   </details>
+  <details>
+    <summary>¿Mis clientes reciben la factura por correo?</summary>
+    <p>Sí, desde el plan Negocio. Cuando el SRI autoriza el comprobante, el sistema envía al correo de tu cliente el RIDE en PDF y el XML autorizado, desde tu propio correo. Configuras el servidor de correo una sola vez y puedes reenviar cualquier comprobante cuando quieras.</p>
+  </details>
+  <details>
+    <summary>¿Puedo corregir un asiento contable?</summary>
+    <p>Sí, en el plan Completo. Puedes crear asientos manuales, corregir el asiento que generó una factura o una compra y cerrar el mes cuando tu contador lo revisa: un mes cerrado no admite cambios hasta que lo reabras.</p>
+  </details>
 </div></section>
 
 <section class="end" id="contacto"><div class="w">
   <h2>Conversemos sobre tu negocio</h2>
   <p>Te mostramos el sistema funcionando con un caso parecido al tuyo y resolvemos tus dudas sobre la facturación electrónica.</p>
-  <a class="b b-wa" href="https://wa.me/593000000000" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.5 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.3 0 .5l-.3.5-.3.3c-.1.1-.3.3-.1.6.1.3.6 1.1 1.4 1.8 1 .8 1.7 1.1 2 1.2.2.1.4.1.6-.1l.8-.9c.2-.2.4-.2.6-.1l1.8.9c.2.1.4.2.5.3 0 .1 0 .7-.2 1.3z"/></svg>Escribir por WhatsApp</a>
+  <a class="b b-wa" href="https://wa.me/{{ $whatsapp }}" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.5 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.3 0 .5l-.3.5-.3.3c-.1.1-.3.3-.1.6.1.3.6 1.1 1.4 1.8 1 .8 1.7 1.1 2 1.2.2.1.4.1.6-.1l.8-.9c.2-.2.4-.2.6-.1l1.8.9c.2.1.4.2.5.3 0 .1 0 .7-.2 1.3z"/></svg>Escribir por WhatsApp</a>
 </div></section>
 
 <footer><div class="w">
@@ -452,7 +468,7 @@
       if (nombre) txt += ' Soy ' + nombre + '.';
       if (negocio) txt += ' Mi negocio es ' + negocio + '.';
       txt += ' Necesito: ' + necesita + '.';
-      window.open('https://wa.me/593000000000?text=' + encodeURIComponent(txt), '_blank', 'noopener');
+      window.open('https://wa.me/{{ $whatsapp }}?text=' + encodeURIComponent(txt), '_blank', 'noopener');
     });
   })();
 </script>
